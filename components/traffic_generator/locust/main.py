@@ -45,29 +45,22 @@ def run_locust():
     connection_rate = environ.get("RATE_OF_NEW_CONNECTIONS")
     connection_rate = int(connection_rate)
 
-    # successful exit
-    signal(SIGTERM, stop_handler)
+    signal(SIGTERM, stop)  # successful exit
 
     # run locust
     command = f"locust -f {LOCUSTFILE} --headless -u {connection_max} -r {connection_rate} "
-    command += "--csv-full-history --csv csv/results"
-    s, o = getstatusoutput(command)
+    command += "--csv-full-history --csv csv/results 1> /dev/null"
+    getstatusoutput(command)
 
-    # locust error
+    stop(None, None)  # unsuccessful exit
+
+
+def stop(signal, frame):
+    s, _ = getstatusoutput("pkill locust")
     getstatusoutput(f"cp csv/results_stats_history.csv {OUTPUT}")
-    print(o)
-
-    return s
-
-
-def stop_handler(sig, frame):
-    getstatusoutput("pkill locust")
-    s, _ = getstatusoutput(f"cp csv/results_stats_history.csv {OUTPUT}")
     exit(s)
 
 
 if __name__ == "__main__":
     conf_locust()
-    status = run_locust()
-
-    exit(status)
+    run_locust()
