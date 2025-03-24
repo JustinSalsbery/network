@@ -10,7 +10,8 @@
 - Shutdown network with `make down`.
 
 ## Notes:
-- If Makefile fails, update `make`.
+- If the Makefile fails, update `make`. [Mac]
+- Add the user to the `docker` group. [Linux]
 
 ## Useful `docker` commands:
 - List:
@@ -28,8 +29,10 @@
     - Remove container: `docker container rm <ID>`
     - Remove image: `docker image rm <IMAGE>`
     - Remove network: `docker network rm <ID>`
-- Inspect container: `docker inspect <ID>`
-- Resource usage: `docker stats`
+- Container information:
+    - Container logs: `docker logs <ID>`
+    - Inspect container: `docker inspect <ID>`
+    - Resource usage: `docker stats`
 
 ## Misc:
 - Access container ID w/in container: `$HOSTNAME`

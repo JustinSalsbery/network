@@ -23,8 +23,9 @@ build image:
 
 compose up:
 	# may be undesired
-	# clean up csv's from previous runs
-	rm shared/*.csv || true
+	# remove output from previous runs
+	rm shared/*.csv -f || true
+	rm shared/*.txt -f || true
 	
 	${PYTHON} scripts/network/main.py
 	docker compose up -d
@@ -37,7 +38,8 @@ stats monitor:
 	${PYTHON} scripts/stats/main.py
 
 clean reset:
-	rm shared/*.csv || true
+	rm shared/*.csv -f || true
+	rm shared/*.txt -f || true
 	
 	docker container stop $$(docker container ls -a -q)
 	docker image rm $$(docker image ls -a -q)

@@ -4,7 +4,7 @@ from subprocess import getstatusoutput
 from signal import signal, SIGTERM
 
 
-OUTPUT = "output/locust-$HOSTNAME.csv"
+OUTPUT = "shared/locust-$HOSTNAME.csv"
 LOCUSTFILE = "locustfile.py"
 
 
@@ -53,7 +53,7 @@ def run_locust():
     command += "--csv-full-history --csv csv/results"
     s, o = getstatusoutput(command)
 
-    # locust error exit
+    # locust error
     getstatusoutput(f"cp csv/results_stats_history.csv {OUTPUT}")
     print(o)
 
