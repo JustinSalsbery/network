@@ -1,0 +1,12 @@
+
+# Ignore:
+.*
+docker-compose.yml
+
+shared
+www
+__pycache__
+
+# Exceptions:
+!.gitignore
+!www/index.html
