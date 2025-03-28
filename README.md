@@ -68,6 +68,7 @@
             - Proxy (HAProxy)
     - Network:
         - Router
+        - NAT Router
         - ECMP Router
         - BGP Router
         - Switch

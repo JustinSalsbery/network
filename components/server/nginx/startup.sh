@@ -12,6 +12,5 @@ for interface in $interfaces; do
     done
 done
 
-top
-
-# CMD ["nginx", "-g", "daemon off;"]
+# run nginx in the foreground
+nginx -g "daemon off;"
