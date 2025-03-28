@@ -42,7 +42,7 @@
 ---
 
 # Todo:
-## Containers:
+## Containers: [Brainstorming]
 - TOR: (1-step)
     - Client
     - Bridge
@@ -58,18 +58,31 @@
         - Locust
         - Cricket
     - Load Balancers:
-        - LVS IPVS
-        - LVS KTCPVS
-        - Katran
-        - GitHub Load Balancer
-        - Proxy (Nginx)
+        - L4:
+            - LVS IPVS
+            - Katran
+        - L5:
+            - LVS KTCPVS
+            - GitHub Load Balancer
+            - Proxy (Nginx)
+            - Proxy (HAProxy)
     - Network:
         - Router
         - ECMP Router
         - BGP Router
         - Switch
+    - Security:
+        - Firewall
+        - IPS
+        - IDS
+    - Databases: [How would this interact with the server and traffic generator?]
+        - Postgres
+        - Redis
     - Miscellaneous:
         - Identifier: Utilizing ISN and Timestamp to fingerprint servers and identify the quantity of servers behind a load balancer.
+        - Port scan (`nmap`)
+        - IP scan (`nmap`)
+        - Metasploitable2
 - Kubernetes: (2-step)
     - Node            (1. Physical Setup)
     - Configurations: (2. YAML/Configurations)

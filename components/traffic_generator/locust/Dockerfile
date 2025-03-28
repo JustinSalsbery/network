@@ -25,18 +25,21 @@ RUN apk upgrade --no-cache
 
 RUN apk add python3
 
-COPY --from=0 app app
+COPY --from=0 /app /app
 
 # recreate environment
 
 WORKDIR /app
 
-RUN mkdir shared
-COPY main.py main.py
+RUN mkdir ./shared
+COPY ./main.py ./main.py
 
 ENV PATH="venv/bin:$PATH"
 
 # typically utilities, such as apk, are removed for security
 # for convenience, I am leaving all such utilities
 
-CMD ["venv/bin/python3", "main.py"]
+COPY ./startup.sh .
+RUN chmod +x ./startup.sh
+
+CMD ["./startup.sh"]

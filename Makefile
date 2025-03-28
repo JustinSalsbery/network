@@ -25,9 +25,8 @@ compose up:
 	# may be undesired
 	# remove output from previous runs
 	rm shared/*.csv -f || true
-	rm shared/*.txt -f || true
 	
-	${PYTHON} scripts/network/main.py
+	# ${PYTHON} scripts/network/main.py
 	docker compose up -d
 
 decompose down:
@@ -39,7 +38,6 @@ stats monitor:
 
 clean reset:
 	rm shared/*.csv -f || true
-	rm shared/*.txt -f || true
 	
 	docker container stop $$(docker container ls -a -q)
 	docker image rm $$(docker image ls -a -q)
