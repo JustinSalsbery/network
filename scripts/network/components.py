@@ -3,7 +3,7 @@ from enum import Enum, auto
 from random import choice
 
 
-__comps = {} # Created components are registered here. Used for unique naming.
+comps = {} # Created components are registered here. Used for unique naming.
 
 
 # DOMAIN NAME SYSTEM **********************************************************
@@ -14,6 +14,9 @@ class Domain():
         """
         @params:
             - name: The domain name.
+        WARNING:
+            - Do not call this function!
+              DNS will call this function on your behalf.
         """
 
         self.name = name
@@ -23,9 +26,6 @@ class Domain():
         """
         @params:
             - ip: The IPv4 address.
-        WARNING:
-            - Do not call this function!
-              The server will call this function on your behalf.
         """
 
         if ip not in self.ips:
@@ -46,7 +46,7 @@ class Domain():
         return f"{"{"} {self.name}, {self.ips} {"}"}"
 
 
-class DomainNameSystem():
+class DNS():
     __domains = {}
 
     def __init__(self):
@@ -61,12 +61,12 @@ class DomainNameSystem():
             - You can only register a domain name once!
         """
 
-        if name in DomainNameSystem.__domains:
+        if name in DNS.__domains:
             print(f"error: Domain {name} registered multiple times.")
             exit(1)
 
         domain = Domain(name)
-        DomainNameSystem.__domains[name] = domain
+        DNS.__domains[name] = domain
 
         return domain
 
@@ -77,11 +77,11 @@ class DomainNameSystem():
         @return: The resolved domain.
         """
         
-        if name not in DomainNameSystem.__domains:
+        if name not in DNS.__domains:
             print(f"error: Domain {name} not registered.")
             exit(1)
 
-        return DomainNameSystem.__domains[name]
+        return DNS.__domains[name]
     
     def __str__(self) -> str:
         return f"{"{"} {self.__domains} {"}"}"
@@ -97,11 +97,11 @@ class Iface():
             - subnet: The IP subnet in CIDR notation; ex. "169.254.1.0/24"
         """
 
-        if "Iface" not in __comps:
-            __comps["Iface"] = 0
+        if "Iface" not in comps:
+            comps["Iface"] = 0
         
-        count = __comps["Iface"]
-        __comps["Iface"] += 1
+        count = comps["Iface"]
+        comps["Iface"] += 1
 
         self.name = f"network-{count}"
         self.subnet = subnet
@@ -143,7 +143,7 @@ class Iface():
             - gateway: The service to add as the gateway.
         WARNING:
             - Do not call this function!
-              The service will call this function on your behalf.
+              IfaceConfig will call this function on your behalf.
         """
         
         if self.gateway != None:
@@ -157,15 +157,12 @@ class Iface():
 
 
 class IfaceConfig():
-    def __init__(self, iface: Iface, src_ip: str, domain: Domain = None, is_gateway: bool = False,
-                 is_nat: bool = False):
+    def __init__(self, iface: Iface, src_ip: str, is_gateway: bool = False):
         """
         @params:
             - iface: The network interface.
             - src_ip: The IPv4 address.
-            - domain: A domain that resolves to this interface.
             - is_gateway: IPs not within the network subnet are routed to the gateway.
-            - is_nat: Only implemented on the NAT router image.
         WARNING:
             - Each network may only have 1 network gateway!
         """
@@ -173,12 +170,9 @@ class IfaceConfig():
         self.iface = iface
         self.src_ip = src_ip
 
-        self.domain = domain
-        if domain != None:
-            domain.add_ip(src_ip)
-
         self.is_gateway = is_gateway
-        self.is_nat = is_nat
+        if is_gateway:
+            iface.add_gateway(src_ip)
 
     def __str__(self) -> str:
         return f"{"{"} {self.iface}, {self.src_ip} {"}"}"
@@ -194,7 +188,7 @@ class ServiceType(Enum):
     router = auto()
 
 
-class Service():
+class __Service():
     def __init__(self, type: ServiceType, image: str, cpu_limit: str, mem_limit: str, 
                  disable_swap: bool):
         """
@@ -213,11 +207,11 @@ class Service():
         self.disable_swap = disable_swap
 
         name = type.name
-        if name not in __comps:
-            __comps[name] = 0
+        if name not in comps:
+            comps[name] = 0
 
-        count = __comps[name]
-        __comps[name] += 1
+        count = comps[name]
+        comps[name] += 1
 
         self.name = f"{name}-{count}"
         self.ifaces = []
@@ -227,10 +221,8 @@ class Service():
         @params:
             - iface_config: The configuration for the interface.
         """
-        self.ifaces.append(iface_config)
 
-        if iface_config.is_gateway:
-            iface_config.iface.add_gateway(iface_config.src_ip)
+        self.ifaces.append(iface_config)
 
     def __str__(self):
         return f"{"{"} {self.name}, {self.image}, {self.cpu_limit}, {self.mem_limit}, " \
@@ -245,7 +237,7 @@ class Protocol(Enum):
     https = auto()
 
 
-class TrafficGenerator(Service):
+class TrafficGenerator(__Service):
     def __init__(self, target: Domain | str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.1", 
@@ -287,7 +279,7 @@ class TrafficGenerator(Service):
 # SERVER **********************************************************************
 
 
-class Server(Service):
+class Server(__Service):
     def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", disable_swap: bool = False):
         """
         @params:
@@ -302,13 +294,17 @@ class Server(Service):
 # ROUTER **********************************************************************
 
 
-class Router(Service):
-    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", disable_swap: bool = False):
+class Router(__Service):
+    def __init__(self, is_nat: bool, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+                 disable_swap: bool = False):
         """
         @params:
+            - is_nat: Enable or disable network address translation.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
         """
 
         super().__init__(ServiceType.router, "nat", cpu_limit, mem_limit, disable_swap)
+
+        self.is_nat = is_nat
