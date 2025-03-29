@@ -1,23 +1,20 @@
 FROM alpine:latest
 RUN apk upgrade --no-cache
 
+# additional tools
+
+RUN apk add curl tcpdump net-tools bind-tools
+RUN apk add iptables iputils busybox-extras
+
+# setup nginx
+
 RUN apk add nginx
 
 WORKDIR /app
 
-# create certificate
-
-RUN apk add openssl
-
-RUN mkdir ./ssl
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ssl/private.key -out ssl/public.crt \
-    -subj "/C=US/ST=Washington/L=Spokane/O=Eastern Washington University/OU=Department of Computer Science/CN=Nil"
-
-RUN apk del openssl
-
-# setup nginx
-
+COPY ./ssl ./ssl
 COPY ./www ./www
+
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./default.conf /etc/nginx/http.d/default.conf
 

@@ -23,13 +23,18 @@ RUN pip3 install locust
 FROM alpine:latest
 RUN apk upgrade --no-cache
 
-RUN apk add python3
+# additional tools
 
-COPY --from=0 /app /app
+RUN apk add curl tcpdump net-tools bind-tools
+RUN apk add iptables iputils busybox-extras
 
 # recreate environment
 
+RUN apk add python3
+
 WORKDIR /app
+
+COPY --from=0 /app /app
 
 RUN mkdir ./shared
 COPY ./main.py ./main.py

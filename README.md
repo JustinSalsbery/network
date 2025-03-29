@@ -67,13 +67,11 @@
             - Proxy (Nginx)
             - Proxy (HAProxy)
     - Network:
-        - Router
-        - NAT Router
+        - Router (SNAT w/ Firewall)
         - ECMP Router
         - BGP Router
         - Switch
     - Security:
-        - Firewall
         - IPS
         - IDS
     - Databases: [How would this interact with the server and traffic generator?]
@@ -95,10 +93,11 @@
 - Randomly restart containers with the select image.
 - Extend `network` to output `.gv` files, also known as Graphviz.
 ## Enhancements:
-- Move away from using `dicts` to using `structs`.
-- Make container (1) naming optional and (2) specifying IP optional.
-    - Randomly generate the above if not provided.
-- Support containers using multiple networks.
-- Explore how network gateways work.
-    - Containers should be able to route between different networks.
-    - This may require specifying routes within the container.
+- Proper DNS Implementation
+- Public and Private IP Addresses
+    - Routers use a Firewall to block all private IP addresses
+    - Routers can advertise many IPs (CIDR) on the public network
+    - Services can use identifical IPs...
+
+# ifconfig eth0 {IP} netmask 255.255.255.0
+# route add default gateway {IP} eth0
