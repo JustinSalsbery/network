@@ -1,6 +1,7 @@
 
 from io import TextIOWrapper
 
+from components import _comps
 from components import *
 
 
@@ -27,6 +28,7 @@ SPACE = "  "
 #         limits:
 #           cpus: 0.1
 #           memory: 64M
+#     memswap_limit: 64M
 #     volumes:
 #       - ./shared:/app/shared
 #     networks:
@@ -34,8 +36,10 @@ SPACE = "  "
 #     cap_add:
 #       - NET_ADMIN
 #     environment:
-#       SOURCE_IP: 169.254.0.3
-#       GATEWAY: 169.254.0.2
+#       IFACES: a b c
+#       SRC_IPS: 169.254.0.3 b c
+#       NET_MASKS: a b c
+#       GATEWAYS: 169.254.0.2 b c
 
 #   locust:
 #     container_name: locust
@@ -55,21 +59,21 @@ SPACE = "  "
 #       - NET_ADMIN
 #     environment:
 #       # Routing configuration:
-#       SOURCE_IP: 169.254.1.2
+#       SRC_IP: 169.254.1.2
 #       GATEWAY: 169.254.1.1
 #       # Locust configuration:
-#       DESTINATION_IP: 169.254.0.2
-#       MAX_CONNECTIONS: 800
-#       PROTOCOL: http
+#       DST_IP: 169.254.0.2
+#       CONN_MAX: 800
+#       CONN_RATE: 5
+#       PROTO: http
 #       PAGES: 40.html
-#       WAIT_BETWEEN_PAGES_MIN: 5
-#       WAIT_BETWEEN_PAGES_MAX: 15
-#       RATE_OF_NEW_CONNECTIONS: 5
+#       WAIT_MIN: 5
+#       WAIT_MAX: 15
 
 
 class Configurator():
     def __init__(self):
-        print(comps)
+        print(_comps)
 
 
 # def __write_service(service: dict, file: TextIOWrapper):

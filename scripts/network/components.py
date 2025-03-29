@@ -3,24 +3,21 @@ from enum import Enum, auto
 from random import choice
 
 
-comps = {} # Created components are registered here. Used for unique naming.
+_comps = {} # Created components are registered here. Used for unique naming.
 
 
 # DOMAIN NAME SYSTEM **********************************************************
 
 
-class Domain():
+class _Domain():
     def __init__(self, name: str):
         """
         @params:
             - name: The domain name.
-        WARNING:
-            - Do not call this function!
-              DNS will call this function on your behalf.
         """
 
-        self.name = name
-        self.ips = {}
+        self._name = name
+        self._ips = {}
 
     def add_ip(self, ip: str) -> None:
         """
@@ -28,22 +25,22 @@ class Domain():
             - ip: The IPv4 address.
         """
 
-        if ip not in self.ips:
-            self.ips[ip] = True
+        if ip not in self._ips:
+            self._ips[ip] = True
 
     def get_ip(self) -> str:
         """
         @returns: Returns a random IP.
         """
 
-        if len(self.ips) == 0:
-            print(f"error: No IP registered for domain {self.name}.")
+        if len(self._ips) == 0:
+            print(f"error: No IP registered for domain {self._name}.")
             exit(1)
 
-        return choice([*self.ips.keys()])
+        return choice([*self._ips.keys()])
 
     def __str__(self) -> str:
-        return f"{"{"} {self.name}, {self.ips} {"}"}"
+        return f"{"{"} {self._name}, {self._ips} {"}"}"
 
 
 class DNS():
@@ -52,7 +49,7 @@ class DNS():
     def __init__(self):
         return
 
-    def register(self, name: str) -> Domain:
+    def register(self, name: str) -> _Domain:
         """
         @params:
             - name: The domain name.
@@ -65,12 +62,12 @@ class DNS():
             print(f"error: Domain {name} registered multiple times.")
             exit(1)
 
-        domain = Domain(name)
+        domain = _Domain(name)
         DNS.__domains[name] = domain
 
         return domain
 
-    def resolve(self, name: str) -> Domain:
+    def resolve(self, name: str) -> _Domain:
         """
         @params:
             - name: The domain name.
@@ -97,19 +94,19 @@ class Iface():
             - subnet: The IP subnet in CIDR notation; ex. "169.254.1.0/24"
         """
 
-        if "Iface" not in comps:
-            comps["Iface"] = 0
+        if "Iface" not in _comps:
+            _comps["Iface"] = 0
         
-        count = comps["Iface"]
-        comps["Iface"] += 1
+        count = _comps["Iface"]
+        _comps["Iface"] += 1
 
-        self.name = f"network-{count}"
-        self.subnet = subnet
+        self._name = f"network-{count}"
+        self._subnet = subnet
 
-        self.ip, self.prefix_len = subnet.split("/")
-        self.net_mask = self.__net_mask(self.prefix_len)
+        self._ip, self._prefix_len = subnet.split("/")
+        self._net_mask = self.__net_mask(self._prefix_len)
 
-        self.gateway = None
+        self._gateway = None
 
     def __net_mask(self, prefix_len: str) -> str:
         """
@@ -137,42 +134,37 @@ class Iface():
 
         return ".".join(octets)
 
-    def add_gateway(self, src_ip: str) -> None:
+    def _add_gateway(self, src_ip: str) -> None:
         """
         @params:
             - gateway: The service to add as the gateway.
-        WARNING:
-            - Do not call this function!
-              IfaceConfig will call this function on your behalf.
         """
         
-        if self.gateway != None:
-            print(f"error: Multiple defined gateways for network {self.name}.")
+        if self._gateway != None:
+            print(f"error: Multiple defined gateways for network {self._name}.")
             exit(1)
 
-        self.gateway = src_ip
+        self._gateway = src_ip
 
     def __str__(self) -> str:
-        return f"{"{"} {self.name}, {self.subnet}, {self.net_mask}, {self.gateway} {"}"}"
+        return f"{"{"} {self._name}, {self._subnet}, {self._net_mask}, {self._gateway} {"}"}"
 
 
-class IfaceConfig():
+class _IfaceConfig():
     def __init__(self, iface: Iface, src_ip: str, is_gateway: bool = False):
         """
         @params:
             - iface: The network interface.
             - src_ip: The IPv4 address.
             - is_gateway: IPs not within the network subnet are routed to the gateway.
-        WARNING:
-            - Each network may only have 1 network gateway!
         """
 
-        self.iface = iface
-        self.src_ip = src_ip
+        self._iface = iface
+        self._src_ip = src_ip
 
-        self.is_gateway = is_gateway
+        self._is_gateway = is_gateway
         if is_gateway:
-            iface.add_gateway(src_ip)
+            iface._add_gateway(src_ip)
 
     def __str__(self) -> str:
         return f"{"{"} {self.iface}, {self.src_ip} {"}"}"
@@ -181,7 +173,7 @@ class IfaceConfig():
 # SERVICE *********************************************************************
 
 
-class ServiceType(Enum):
+class _ServiceType(Enum):
     server = auto()
     traffic_generator = auto()
     load_balancer = auto()
@@ -189,7 +181,7 @@ class ServiceType(Enum):
 
 
 class __Service():
-    def __init__(self, type: ServiceType, image: str, cpu_limit: str, mem_limit: str, 
+    def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
                  disable_swap: bool):
         """
         @params:
@@ -200,33 +192,38 @@ class __Service():
             - disable_swap: Enables/disables swap memory.
         """
 
-        self.type = type
-        self.image = image
-        self.cpu_limit = cpu_limit
-        self.mem_limit = mem_limit
-        self.disable_swap = disable_swap
+        self._type = type
+        self._image = image
+        self._cpu_limit = cpu_limit
+        self._mem_limit = mem_limit
+        self._disable_swap = disable_swap
 
         name = type.name
-        if name not in comps:
-            comps[name] = 0
+        if name not in _comps:
+            _comps[name] = 0
 
-        count = comps[name]
-        comps[name] += 1
+        count = _comps[name]
+        _comps[name] += 1
 
-        self.name = f"{name}-{count}"
-        self.ifaces = []
+        self._name = f"{name}-{count}"
+        self._ifaces = []
 
-    def add_iface(self, iface_config: IfaceConfig) -> None:
+    def add_iface(self, iface: Iface, src_ip: str, is_gateway: bool = False) -> None:
         """
         @params:
-            - iface_config: The configuration for the interface.
+            - iface: The network interface.
+            - src_ip: The IPv4 address.
+            - is_gateway: IPs not within the network subnet are routed to the gateway.
+        WARNING:
+            - Each interface may only have 1 network gateway!
         """
 
-        self.ifaces.append(iface_config)
+        config = _IfaceConfig(iface, src_ip, is_gateway)
+        self._ifaces.append(config)
 
     def __str__(self):
-        return f"{"{"} {self.name}, {self.image}, {self.cpu_limit}, {self.mem_limit}, " \
-               + f"{self.disable_swap}, {self.ifaces} {"}"}"
+        return f"{"{"} {self._name}, {self._image}, {self._cpu_limit}, {self._mem_limit}, " \
+               + f"{self._disable_swap}, {self._ifaces} {"}"}"
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -238,7 +235,7 @@ class Protocol(Enum):
 
 
 class TrafficGenerator(__Service):
-    def __init__(self, target: Domain | str, proto: Protocol = Protocol.http,
+    def __init__(self, target: _Domain | str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.1", 
                  mem_limit: str = "64M", disable_swap: bool = False):
@@ -256,24 +253,24 @@ class TrafficGenerator(__Service):
             - disable_swap: Enables/disables swap memory.
         """
 
-        super().__init__(ServiceType.traffic_generator, "locust", cpu_limit, 
+        super().__init__(_ServiceType.traffic_generator, "locust", cpu_limit, 
                          mem_limit, disable_swap)
         
-        self.dst_ip = target
-        if type(target) == Domain:
-            self.dst_ip = target.get_ip()
+        self._dst_ip = target
+        if type(target) == _Domain:
+            self._dst_ip = target.get_ip()
 
-        self.proto = proto.name
-        self.pages = pages
-        self.conn_max = conn_max
-        self.conn_rate = conn_rate
-        self.wait_min = wait_min
-        self.wait_max = wait_max
+        self._proto = proto.name
+        self._pages = pages
+        self._conn_max = conn_max
+        self._conn_rate = conn_rate
+        self._wait_min = wait_min
+        self._wait_max = wait_max
 
 
     def __str__(self) -> str:
-        return f"{"{"} {super().__str__()}, {self.dst_ip}, {self.proto}, {self.pages}, " \
-               + f"{self.conn_max}, {self.conn_rate}, {self.wait_min}, {self.wait_max} {"}"}"
+        return f"{"{"} {super().__str__()}, {self._dst_ip}, {self._proto}, {self._pages}, " \
+               + f"{self._conn_max}, {self._conn_rate}, {self._wait_min}, {self._wait_max} {"}"}"
 
 
 # SERVER **********************************************************************
@@ -288,7 +285,7 @@ class Server(__Service):
             - disable_swap: Enables/disables swap memory.
         """
 
-        super().__init__(ServiceType.server, "nginx", cpu_limit, mem_limit, disable_swap)
+        super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, disable_swap)
 
 
 # ROUTER **********************************************************************
@@ -305,6 +302,9 @@ class Router(__Service):
             - disable_swap: Enables/disables swap memory.
         """
 
-        super().__init__(ServiceType.router, "nat", cpu_limit, mem_limit, disable_swap)
+        super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit, disable_swap)
 
-        self.is_nat = is_nat
+        self._is_nat = is_nat
+
+    def __str__(self) -> str:
+        return f"{"{"} {super().__str__()}, {self._is_nat} {"}"}"
