@@ -73,7 +73,7 @@ SPACE = "  "
 
 class Configurator():
     def __init__(self):
-        print(_comps)
+        print(_comps["traffic_generator"][0])
 
 
 # def __write_service(service: dict, file: TextIOWrapper):

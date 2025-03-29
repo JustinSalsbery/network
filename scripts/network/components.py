@@ -3,7 +3,7 @@ from enum import Enum, auto
 from random import choice
 
 
-_comps = {} # Created components are registered here. Used for unique naming.
+_comps = {} # Created components are registered here.
 
 
 # DOMAIN NAME SYSTEM **********************************************************
@@ -95,18 +95,17 @@ class Iface():
         """
 
         if "Iface" not in _comps:
-            _comps["Iface"] = 0
+            _comps["Iface"] = []
         
-        count = _comps["Iface"]
-        _comps["Iface"] += 1
+        count = len(_comps["Iface"])
+        _comps["Iface"].append(self)
 
         self._name = f"network-{count}"
         self._subnet = subnet
 
         self._ip, self._prefix_len = subnet.split("/")
         self._net_mask = self.__net_mask(self._prefix_len)
-
-        self._gateway = None
+        self._is_internal = self.__is_internal(self._ip, self._prefix_len)
 
     def __net_mask(self, prefix_len: str) -> str:
         """
@@ -133,41 +132,49 @@ class Iface():
             octets.append("0")
 
         return ".".join(octets)
-
-    def _add_gateway(self, src_ip: str) -> None:
+    
+    def __is_internal(self, ip: str, prefix_len: str) -> bool:
         """
         @params:
-            - gateway: The service to add as the gateway.
+            - ip: The first IPv4 address of the subnet.
+            - prefix_len: The length of the network prefix.
+        WARNING:
+            - This is a simplified function and may be inaccurate.
         """
-        
-        if self._gateway != None:
-            print(f"error: Multiple defined gateways for network {self._name}.")
-            exit(1)
 
-        self._gateway = src_ip
+        octets = ip.split(".")
+        prefix_len = int(prefix_len)
+
+        if octets[0] == "10" and prefix_len >= 8:
+            return True  # 10.*
+        elif octets[0] == "172" and octets[1] == "16" and prefix_len >= 12:
+            return True  # 172.16.* -> 172.31.*
+        elif octets[0] == "192" and octets[1] == "168" and prefix_len >= 16:
+            return True  # 192.168.*
+        elif octets[0] == "169" and octets[1] == "254" and prefix_len >= 16:
+            return True  # 169.254.*
+
+        return False
 
     def __str__(self) -> str:
-        return f"{"{"} {self._name}, {self._subnet}, {self._net_mask}, {self._gateway} {"}"}"
+        return f"{"{"} {self._name}, {self._subnet}, {self._net_mask} {"}"}"
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, src_ip: str, is_gateway: bool = False):
+    def __init__(self, iface: Iface, src_ip: str, gateway: str):
         """
         @params:
             - iface: The network interface.
-            - src_ip: The IPv4 address.
-            - is_gateway: IPs not within the network subnet are routed to the gateway.
+            - src_ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
         """
 
         self._iface = iface
         self._src_ip = src_ip
-
-        self._is_gateway = is_gateway
-        if is_gateway:
-            iface._add_gateway(src_ip)
+        self._gateway = gateway
 
     def __str__(self) -> str:
-        return f"{"{"} {self.iface}, {self.src_ip} {"}"}"
+        return f"{"{"} {self._iface}, {self._src_ip}, {self._gateway} {"}"}"
 
 
 # SERVICE *********************************************************************
@@ -182,7 +189,7 @@ class _ServiceType(Enum):
 
 class __Service():
     def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
-                 disable_swap: bool):
+                 disable_swap: bool, net_forward: bool):
         """
         @params:
             - type: The type of the service.
@@ -190,6 +197,7 @@ class __Service():
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - net_forward: Enable or disable packet forwarding.
         """
 
         self._type = type
@@ -197,28 +205,27 @@ class __Service():
         self._cpu_limit = cpu_limit
         self._mem_limit = mem_limit
         self._disable_swap = disable_swap
+        self._net_forward = net_forward
 
         name = type.name
         if name not in _comps:
-            _comps[name] = 0
+            _comps[name] = []
 
-        count = _comps[name]
-        _comps[name] += 1
+        count = len(_comps[name])
+        _comps[name].append(self)
 
         self._name = f"{name}-{count}"
         self._ifaces = []
 
-    def add_iface(self, iface: Iface, src_ip: str, is_gateway: bool = False) -> None:
+    def add_iface(self, iface: Iface, src_ip: str, gateway: str = None) -> None:
         """
         @params:
             - iface: The network interface.
-            - src_ip: The IPv4 address.
-            - is_gateway: IPs not within the network subnet are routed to the gateway.
-        WARNING:
-            - Each interface may only have 1 network gateway!
+            - src_ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
         """
 
-        config = _IfaceConfig(iface, src_ip, is_gateway)
+        config = _IfaceConfig(iface, src_ip, gateway)
         self._ifaces.append(config)
 
     def __str__(self):
@@ -238,7 +245,8 @@ class TrafficGenerator(__Service):
     def __init__(self, target: _Domain | str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.1", 
-                 mem_limit: str = "64M", disable_swap: bool = False):
+                 mem_limit: str = "64M", disable_swap: bool = False, 
+                 net_forward: bool = False):
         """
         @params:
             - target: The IP address, or the domain, of the target server.
@@ -250,14 +258,16 @@ class TrafficGenerator(__Service):
             - wait_max: The maximum wait between requests.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
-            - disable_swap: Enables/disables swap memory.
+            - net_forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.traffic_generator, "locust", cpu_limit, 
-                         mem_limit, disable_swap)
+                         mem_limit, disable_swap, net_forward)
         
+        self._domain = None
         self._dst_ip = target
         if type(target) == _Domain:
+            self._domain = target
             self._dst_ip = target.get_ip()
 
         self._proto = proto.name
@@ -266,7 +276,6 @@ class TrafficGenerator(__Service):
         self._conn_rate = conn_rate
         self._wait_min = wait_min
         self._wait_max = wait_max
-
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._dst_ip}, {self._proto}, {self._pages}, " \
@@ -277,15 +286,18 @@ class TrafficGenerator(__Service):
 
 
 class Server(__Service):
-    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", disable_swap: bool = False):
+    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+                 disable_swap: bool = False, net_forward: bool = False):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - net_forward: Enable or disable packet forwarding.
         """
 
-        super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, disable_swap)
+        super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, 
+                         disable_swap, net_forward)
 
 
 # ROUTER **********************************************************************
@@ -293,16 +305,18 @@ class Server(__Service):
 
 class Router(__Service):
     def __init__(self, is_nat: bool, cpu_limit: str = "0.1", mem_limit: str = "64M", 
-                 disable_swap: bool = False):
+                 disable_swap: bool = False, net_forward: bool = True):
         """
         @params:
             - is_nat: Enable or disable network address translation.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - net_forward: Enable or disable packet forwarding.
         """
 
-        super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit, disable_swap)
+        super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit,
+                         disable_swap, net_forward)
 
         self._is_nat = is_nat
 
