@@ -185,8 +185,8 @@ class _IfaceConfig():
 
 class _ServiceType(Enum):
     server = auto()
-    traffic_generator = auto()
-    load_balancer = auto()
+    tgen = auto()  # traffic generator
+    lb = auto()  # load balancer
     router = auto()
 
 
@@ -264,7 +264,7 @@ class TrafficGenerator(_Service):
             - do_forward: Enable or disable packet forwarding.
         """
 
-        super().__init__(_ServiceType.traffic_generator, "locust", cpu_limit, 
+        super().__init__(_ServiceType.tgen, "locust", cpu_limit, 
                          mem_limit, disable_swap, do_forward)
         
         self._domain = None

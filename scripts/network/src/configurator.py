@@ -14,6 +14,14 @@ class Configurator():
         MUST be called for the configuration to be created.
         """
 
+        # By default, Docker only supports around 30 network interfaces.
+        # By writing a (temporary) subnet in the Docker Compose file, we can exceed this limitation.
+        
+        self.__ip = 0x0a000000  # 10.0.0.0/8
+        self.__subnet = 22  # 10.0.0.0/22 -> 10.0.1.0/22 ...
+
+        # Enables 2 ** 14 interfaces with 2 ** 10 services per interface.
+
         with open("docker-compose.yml", "w") as file:
             self.__write_services(file)
 
@@ -21,6 +29,11 @@ class Configurator():
             self.__write_inets(file)
 
     def __write_services(self, file: TextIOWrapper):
+        """
+        @params:
+            - file: File to write to.
+        """
+
         file.write("services:\n")
 
         # write servers
@@ -36,8 +49,8 @@ class Configurator():
         # write traffic generators
 
         tgens = []
-        if _ServiceType.traffic_generator.name in _comps:
-            tgens = _comps[_ServiceType.traffic_generator.name]
+        if _ServiceType.tgen.name in _comps:
+            tgens = _comps[_ServiceType.tgen.name]
 
         for tgen in tgens:
             assert(type(tgen) == TrafficGenerator)
@@ -53,6 +66,12 @@ class Configurator():
             file.write(f"{_SPACE * 3}WAIT_MAX: {tgen._wait_max}\n")
 
     def __write_service(self, file: TextIOWrapper, service: _Service):
+        """
+        @params:
+            - file: File to write to.
+            - service: Service configuration to write.
+        """
+
         file.write(f"{_SPACE * 1}{service._name}:\n")
         file.write(f"{_SPACE * 2}container_name: {service._name}\n")
         file.write(f"{_SPACE * 2}image: {service._image}\n")
@@ -98,6 +117,11 @@ class Configurator():
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
 
     def __write_inets(self, file: TextIOWrapper):
+        """
+        @params:
+            - file: File to write to.
+        """
+
         file.write("networks:\n")
 
         ifaces = _comps["Iface"]
@@ -108,5 +132,29 @@ class Configurator():
             file.write(f"{_SPACE * 2}name: {iface._name}\n")
             file.write(f"{_SPACE * 2}driver: bridge\n")
             file.write(f"{_SPACE * 2}internal: true\n")
+            file.write(f"{_SPACE * 2}ipam:\n")
+            file.write(f"{_SPACE * 3}config: # this is a workaround for a docker limitation\n")
+            file.write(f"{_SPACE * 4}- subnet: {self.__get_subnet()} # temporary subnet\n")
             file.write(f"{_SPACE * 2}driver_opts: # os defines a suffix\n")
             file.write(f"{_SPACE * 3}com.docker.network.container_iface_prefix: {iface._name}_\n")
+
+    def __get_subnet(self) -> str:
+        """
+        @returns: A subnet in CIDR notation.
+        """
+
+        suffix = 32 - self.__subnet
+
+        self.__ip += 2 ** suffix
+        if self.__ip >= 0x0b000000:
+            print("error: Alloted subnet (10.0.0.0/8) exceeded.")
+            print("\tConsider changing settings in the Configurator.")
+            exit(1)
+
+        octets = [(0xff000000 & self.__ip) >> 24,
+                  (0x00ff0000 & self.__ip) >> 16,
+                  (0x0000ff00 & self.__ip) >> 8,
+                  0x000000ff & self.__ip]
+
+        octets = [*map(str, octets)]
+        return f"{".".join(octets)}/{self.__subnet}"

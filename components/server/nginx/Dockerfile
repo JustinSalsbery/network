@@ -18,8 +18,8 @@ COPY ./www ./www
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./default.conf /etc/nginx/http.d/default.conf
 
-# typically utilities, such as apk, are removed for security
-# for convenience, I am leaving all such utilities
+# typically utilities, such as apk, are removed and the user is changed from sudo
+# for convenience, I am doing neither
 
 RUN mkdir ./shared
 

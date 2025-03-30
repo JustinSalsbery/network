@@ -21,7 +21,8 @@ server_1 = Server()
 server_1.add_iface(iface_0, "169.254.0.3")
 domain_0.add_ip("169.254.0.3")
 
-tgen_0 = TrafficGenerator(domain_0)
+tgen_0 = TrafficGenerator(domain_0, proto= Protocol.https, pages=["/", "40.html"],
+                          mem_limit="512M")
 tgen_0.add_iface(iface_1, "169.254.1.2", "169.254.1.1")
 
 conf = Configurator()

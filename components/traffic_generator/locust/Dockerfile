@@ -38,8 +38,8 @@ COPY --from=0 /app /app
 
 RUN mkdir ./shared
 
-# typically utilities, such as apk, are removed for security
-# for convenience, I am leaving all such utilities
+# typically utilities, such as apk, are removed and the user is changed from sudo
+# for convenience, I am doing neither
 
 COPY ./startup.sh .
 RUN chmod +x ./startup.sh

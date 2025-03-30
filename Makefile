@@ -3,7 +3,6 @@ SHELL := /bin/bash
 PYTHON ?= python3
 
 NETWORK ?= example-1.py
-NETWORK_DIR := scripts/network
 
 
 .ONESHELL:
@@ -15,9 +14,15 @@ options help:
 	echo -e "\t- build"
 	echo -e "\t- up"
 	echo -e "\t- down"
-	echo -e "\t- stats"
 	echo -e "\t- clean"
 	
+	echo "" # New line
+
+	echo "Helper:"
+	echo -e "\t- config # write docker-compose only"
+	echo -e "\t- networks # list available networks"
+	echo -e "\t- stats"
+
 	echo "" # New line
 
 	echo "Notes:"
@@ -25,7 +30,7 @@ options help:
 
 CERTS_SERVER := components/server/nginx/ssl
 certs:
-	mkdir ${CERTS_SERVER} 2> /dev/null
+	mkdir -p ${CERTS_SERVER}
 	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${CERTS_SERVER}/private.key -out ${CERTS_SERVER}/public.crt \
 		-subj "/C=US/ST=Washington/L=Spokane/O=Eastern Washington University/OU=Department of Computer Science/CN=Nil" 2> /dev/null
 
@@ -36,18 +41,34 @@ build image: certs
 		docker build -t $$NAME $$(dirname $$FILE)
 	done
 
+config:
+	${PYTHON} scripts/network/${NETWORK}
+
 compose up:
 	# may be undesired
 	# remove output from previous runs
-	rm -f ${NETWORK_DIR}/shared/*.csv || true
+	rm -f shared/*.csv || true
 
-	cd ${NETWORK_DIR}
-	
-	${PYTHON} ${NETWORK}
+	mkdir -p shared
+
+	${PYTHON} scripts/network/${NETWORK} || exit 1
 	docker compose up -d
 
+network networks:
+	echo "Networks:"
+
+	NETWORKS="$$(ls scripts/network/*.py)"
+	for NETWORK in $${NETWORKS}; do
+		NAME="$$(basename $${NETWORK})"
+
+		if [[ "$${NAME}" =~ ^test* ]]; then
+			continue
+		fi
+
+		echo -e "\t- $${NAME}"
+	done
+
 decompose down:
-	cd ${NETWORK_DIR}
 	docker compose down
 
 stats monitor:
@@ -55,7 +76,7 @@ stats monitor:
 	${PYTHON} scripts/stats/main.py
 
 clean reset:
-	rm -f ${NETWORK_DIR}/shared/*.csv || true
+	rm -f shared/*.csv || true
 	rm -r ${CERTS_SERVER}
 	
 	docker container stop $$(docker container ls -a -q)
