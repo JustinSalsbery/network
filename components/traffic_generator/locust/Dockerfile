@@ -31,15 +31,12 @@ RUN apk add iptables iputils busybox-extras
 # recreate environment
 
 RUN apk add python3
+ENV PATH="venv/bin:$PATH"
 
 WORKDIR /app
-
 COPY --from=0 /app /app
 
 RUN mkdir ./shared
-COPY ./main.py ./main.py
-
-ENV PATH="venv/bin:$PATH"
 
 # typically utilities, such as apk, are removed for security
 # for convenience, I am leaving all such utilities

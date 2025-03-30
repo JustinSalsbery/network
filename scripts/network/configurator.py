@@ -80,7 +80,7 @@ class Configurator():
             ifaces.append(iface._iface._name)
             src_ips.append(iface._src_ip)
             net_masks.append(iface._iface._net_mask)
-            gateways.append(iface._gateway)
+            gateways.append(str(iface._gateway))  # gateway may be NoneType
 
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}SRC_IPS: {" ".join(src_ips)}\n")

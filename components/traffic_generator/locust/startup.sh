@@ -1,17 +1,42 @@
 #!/bin/sh
 
-interfaces=$(ls /sys/class/net)
+# setup iface
+for IFACE in $IFACES; do
+    SRC_IP="$(echo $SRC_IPS | cut -d' ' -f1)"  # the first index
+    SRC_IPS="$(echo $SRC_IPS | cut -d' ' -f2-)"  # the rest of the list
 
-for interface in $interfaces; do
-    ips=$(ip address show $interface | awk '/inet / {print $2}' | cut -d'/' -f1)
+    NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
+    NET_MASKS="$(echo $NET_MASKS | cut -d' ' -f2-)"
 
-    for ip in $ips; do
-        if [ "$ip" = "$SOURCE_IP" ]; then
-            ip route add default via $GATEWAY dev $interface
-        fi
-    done
+    GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
+    GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
+
+    ifconfig $IFACE $SRC_IP netmask $NET_MASK
+    if [ "$GATEWAY" != "None" ]; then
+        route add default gateway $GATEWAY $IFACE
+    fi
 done
 
-top
+# setup locust
+OUT="shared/locust-$HOSTNAME.csv"
+FILE="locustfile.py"
 
-# CMD ["venv/bin/python3", "main.py"]
+echo "from locust import FastHttpUser, between, task" > $FILE
+echo "class WebsiteUser(FastHttpUser):" >> $FILE
+echo -e "\thost = '$PROTO://$DST_IP'" >> $FILE
+echo -e "\twait_time = between($WAIT_MIN, $WAIT_MAX)" >> $FILE
+
+i=0
+for PAGE in $PAGES; do
+    echo -e "\t@task" >> $FILE
+    echo -e "\tdef page_$i(self):" >> $FILE
+    echo -e "\t\tself.client.get('/$PAGE')" >> $FILE
+
+    i=$((i+1))
+done
+
+trap "pkill locust" SIGTERM
+locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
+    --csv csv/results 1> /dev/null
+
+cp csv/results_stats_history.csv $OUT

@@ -1,15 +1,20 @@
 #!/bin/sh
 
-interfaces=$(ls /sys/class/net)
+# setup iface
+for IFACE in $IFACES; do
+    SRC_IP="$(echo $SRC_IPS | cut -d' ' -f1)"  # the first index
+    SRC_IPS="$(echo $SRC_IPS | cut -d' ' -f2-)"  # the rest of the list
 
-for interface in $interfaces; do
-    ips=$(ip address show $interface | awk '/inet / {print $2}' | cut -d'/' -f1)
+    NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
+    NET_MASKS="$(echo $NET_MASKS | cut -d' ' -f2-)"
 
-    for ip in $ips; do
-        if [ "$ip" = "$SOURCE_IP" ]; then
-            ip route add default via $GATEWAY dev $interface
-        fi
-    done
+    GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
+    GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
+
+    ifconfig $IFACE $SRC_IP netmask $NET_MASK
+    if [ "$GATEWAY" != "None" ]; then
+        route add default gateway $GATEWAY $IFACE
+    fi
 done
 
 # run nginx in the foreground

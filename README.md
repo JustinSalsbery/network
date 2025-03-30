@@ -52,25 +52,21 @@
 - General: (1-step)
     - Server:
         - Nginx
-        - Apache
     - Traffic Generators:
-        - `wrk`
         - Locust
-        - Cricket
     - Load Balancers:
         - L4:
             - LVS IPVS
             - Katran
         - L5:
-            - LVS KTCPVS
-            - GitHub Load Balancer
-            - Proxy (Nginx)
             - Proxy (HAProxy)
     - Network:
-        - Router (SNAT w/ Firewall)
-        - ECMP Router
-        - BGP Router
-        - Switch
+        - Router
+            - SNAT
+            - DNAT
+            - Firewall (Client and Server Configuration Files)
+            - ECMP
+            - BGP
     - Security:
         - IPS
         - IDS
@@ -99,5 +95,29 @@
     - Routers can advertise many IPs (CIDR) on the public network
     - Services can use identifical IPs...
 
-# ifconfig eth0 {IP} netmask 255.255.255.0
-# route add default gateway {IP} eth0
+
+- L5 LB
+- L4 LB
+- ECMP
+- L3 LB (in Network)
+- Advertise Same IP
+- ...
+- Tor!
+- ...
+- Kubernetes
+- ...
+- DNS
+- CA
+- AS
+- IXP
+- ...
+- Enhance Server Pages (GET and POST requests!)
+- Database (for Passwords Storage)
+- Key Value Store (for Active Accounts)
+- API Server
+- CDN
+- ...
+- IDS
+- IPS
+- Vulnerable Systems
+- Scanners
