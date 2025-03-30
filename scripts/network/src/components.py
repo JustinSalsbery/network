@@ -188,6 +188,7 @@ class _ServiceType(Enum):
     tgen = auto()  # traffic generator
     lb = auto()  # load balancer
     router = auto()
+    client = auto()
 
 
 class _Service():
@@ -283,6 +284,24 @@ class TrafficGenerator(_Service):
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._dst_ip}, {self._proto}, {self._pages}, " \
                + f"{self._conn_max}, {self._conn_rate}, {self._wait_min}, {self._wait_max} {"}"}"
+
+
+# CLIENT **********************************************************************
+
+
+class Client(_Service):
+    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+                 disable_swap: bool = False, do_forward: bool = False):
+        """
+        @params:
+            - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
+            - mem_limit: Limit service memory.
+            - disable_swap: Enables/disables swap memory.
+            - do_forward: Enable or disable packet forwarding.
+        """
+
+        super().__init__(_ServiceType.client, "client", cpu_limit, mem_limit, 
+                         disable_swap, do_forward)
 
 
 # SERVER **********************************************************************

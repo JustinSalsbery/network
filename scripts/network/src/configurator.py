@@ -38,13 +38,23 @@ class Configurator():
 
         # write servers
 
-        server = []
+        servers = []
         if _ServiceType.server.name in _comps:
             servers = _comps[_ServiceType.server.name]
 
         for server in servers:
             assert(type(server) == Server)
             self.__write_service(file, server)
+
+        # write clients
+
+        clients = []
+        if _ServiceType.client.name in _comps:
+            clients = _comps[_ServiceType.client.name]
+
+        for client in clients:
+            assert(type(client) == Client)
+            self.__write_service(file, client)
 
         # write traffic generators
 
