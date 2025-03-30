@@ -1,6 +1,7 @@
 
-from components import *
-from configurator import *
+from src.components import *
+from src.configurator import *
+
 
 iface_1 = Iface("169.254.0.0/24")
 iface_2 = Iface("169.254.1.0/24")

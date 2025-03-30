@@ -1,6 +1,6 @@
 
-from components import *
-from configurator import *
+from src.components import *
+from src.configurator import *
 
 
 dns = DNS()
