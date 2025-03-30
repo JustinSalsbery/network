@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# setup iface
+# setup ifaces
 for IFACE in $IFACES; do
     SRC_IP="$(echo $SRC_IPS | cut -d' ' -f1)"  # the first index
     SRC_IPS="$(echo $SRC_IPS | cut -d' ' -f2-)"  # the rest of the list
@@ -19,6 +19,13 @@ for IFACE in $IFACES; do
             (echo "error: Failed to configure the gateway for $IFACE"; exit 1)
     fi
 done
+
+# setup forwarding
+if [ "$FORWARD" = "true" ]; then
+    sysctl -w net.ipv4.ip_forward=1
+else
+    sysctl -w net.ipv4.ip_forward=0
+fi
 
 # setup locust
 OUT="shared/locust-$HOSTNAME.csv"

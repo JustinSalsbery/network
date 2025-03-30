@@ -94,7 +94,8 @@ class Configurator():
             file.write(f"{_SPACE * 3}- {iface._iface._name}\n")
 
         file.write(f"{_SPACE * 2}cap_add:\n")
-        file.write(f"{_SPACE * 3}- NET_ADMIN\n")
+        file.write(f"{_SPACE * 3}- NET_ADMIN # enables ifconfig, route\n")
+        file.write(f"{_SPACE * 2}privileged: true # enables sysctl\n")
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
 
@@ -115,6 +116,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}SRC_IPS: {" ".join(src_ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
+        file.write(f"{_SPACE * 3}FORWARD: {service._do_forward}\n")
 
     def __write_inets(self, file: TextIOWrapper):
         """
