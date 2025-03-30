@@ -11,11 +11,17 @@ for IFACE in $IFACES; do
     GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
-    ifconfig $IFACE $SRC_IP netmask $NET_MASK
+    # network suffix should be _0
+    ifconfig ${IFACE}_0 $SRC_IP netmask $NET_MASK || \
+        (echo "error: Failed to configure $IFACE"; exit 1)
     if [ "$GATEWAY" != "None" ]; then
-        route add default gateway $GATEWAY $IFACE
+        route add default gateway $GATEWAY ${IFACE}_0 || \
+            (echo "error: Failed to configure the gateway for $IFACE"; exit 1)
     fi
 done
 
-# run nginx in the foreground
-nginx -g "daemon off;"
+# run nginx
+trap "exit 0" SIGTERM
+nginx -g "daemon off;" &
+
+wait $!  # $! is the PID of nginx

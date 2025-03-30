@@ -11,9 +11,12 @@ for IFACE in $IFACES; do
     GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
-    ifconfig $IFACE $SRC_IP netmask $NET_MASK
+    # network suffix should be _0 
+    ifconfig ${IFACE}_0 $SRC_IP netmask $NET_MASK || \
+        (echo "error: Failed to configure $IFACE"; exit 1)
     if [ "$GATEWAY" != "None" ]; then
-        route add default gateway $GATEWAY $IFACE
+        route add default gateway $GATEWAY ${IFACE}_0 || \
+            (echo "error: Failed to configure the gateway for $IFACE"; exit 1)
     fi
 done
 
@@ -35,8 +38,10 @@ for PAGE in $PAGES; do
     i=$((i+1))
 done
 
+# run locust
 trap "pkill locust" SIGTERM
 locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-    --csv csv/results 1> /dev/null
+    --csv csv/results 1> /dev/null &
 
+wait $!  # $! is the PID of locust
 cp csv/results_stats_history.csv $OUT

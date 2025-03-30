@@ -14,7 +14,7 @@ router.add_iface(iface_1, "169.254.0.1")
 router.add_iface(iface_2, "169.254.1.1")
 
 server_1 = Server()
-server_1.add_iface(iface_1, "169.254.0.2", "169.254.0.1")
+server_1.add_iface(iface_1, "169.254.0.2")
 domain.add_ip("169.254.0.2")
 
 server_2 = Server()

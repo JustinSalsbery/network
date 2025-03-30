@@ -1,8 +1,8 @@
 
 from io import TextIOWrapper
 
-from components import _comps, _ServiceType, _Service, _IfaceConfig
-from components import *
+from src.components import _comps, _ServiceType, _Service, _IfaceConfig
+from src.components import *
 
 
 _SPACE = "  "
@@ -23,12 +23,22 @@ class Configurator():
     def __write_services(self, file: TextIOWrapper):
         file.write("services:\n")
 
-        servers = _comps[_ServiceType.server.name]
+        # write servers
+
+        server = []
+        if _ServiceType.server.name in _comps:
+            servers = _comps[_ServiceType.server.name]
+
         for server in servers:
             assert(type(server) == Server)
             self.__write_service(file, server)
 
-        tgens = _comps[_ServiceType.traffic_generator.name]
+        # write traffic generators
+
+        tgens = []
+        if _ServiceType.traffic_generator.name in _comps:
+            tgens = _comps[_ServiceType.traffic_generator.name]
+
         for tgen in tgens:
             assert(type(tgen) == TrafficGenerator)
             self.__write_service(file, tgen)
@@ -98,5 +108,5 @@ class Configurator():
             file.write(f"{_SPACE * 2}name: {iface._name}\n")
             file.write(f"{_SPACE * 2}driver: bridge\n")
             file.write(f"{_SPACE * 2}internal: true\n")
-            file.write(f"{_SPACE * 2}driver_opts:\n")
-            file.write(f"{_SPACE * 3}com.docker.network.container_iface_prefix: {iface._name}\n")
+            file.write(f"{_SPACE * 2}driver_opts: # os defines a suffix\n")
+            file.write(f"{_SPACE * 3}com.docker.network.container_iface_prefix: {iface._name}_\n")
