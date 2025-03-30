@@ -44,10 +44,11 @@ class _Domain():
 
 
 class DNS():
-    __domains = {}
+    _domains = {}
 
     def __init__(self):
-        return
+        if "DNS" not in _comps:
+            _comps["DNS"] = self
 
     def register(self, name: str) -> _Domain:
         """
@@ -58,12 +59,12 @@ class DNS():
             - You can only register a domain name once!
         """
 
-        if name in DNS.__domains:
+        if name in DNS._domains:
             print(f"error: Domain {name} registered multiple times.")
             exit(1)
 
         domain = _Domain(name)
-        DNS.__domains[name] = domain
+        DNS._domains[name] = domain
 
         return domain
 
@@ -74,14 +75,14 @@ class DNS():
         @return: The resolved domain.
         """
         
-        if name not in DNS.__domains:
+        if name not in DNS._domains:
             print(f"error: Domain {name} not registered.")
             exit(1)
 
-        return DNS.__domains[name]
+        return DNS._domains[name]
     
     def __str__(self) -> str:
-        return f"{"{"} {self.__domains} {"}"}"
+        return f"{"{"} {self._domains} {"}"}"
 
 
 # INTERFACE *******************************************************************
@@ -145,13 +146,15 @@ class Iface():
         octets = ip.split(".")
         prefix_len = int(prefix_len)
 
-        if octets[0] == "10" and prefix_len >= 8:
+        octets = [*map(int, octets)]
+        if octets[0] == 10 and prefix_len >= 8:
             return True  # 10.*
-        elif octets[0] == "172" and octets[1] == "16" and prefix_len >= 12:
+        elif octets[0] == 172 and octets[1] >= 16 and octets[1] <= 31 \
+             and prefix_len >= 12:
             return True  # 172.16.* -> 172.31.*
-        elif octets[0] == "192" and octets[1] == "168" and prefix_len >= 16:
+        elif octets[0] == 192 and octets[1] == 168 and prefix_len >= 16:
             return True  # 192.168.*
-        elif octets[0] == "169" and octets[1] == "254" and prefix_len >= 16:
+        elif octets[0] == 169 and octets[1] == 254 and prefix_len >= 16:
             return True  # 169.254.*
 
         return False
@@ -187,9 +190,9 @@ class _ServiceType(Enum):
     router = auto()
 
 
-class __Service():
+class _Service():
     def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
-                 disable_swap: bool, net_forward: bool):
+                 disable_swap: bool, do_forward: bool):
         """
         @params:
             - type: The type of the service.
@@ -197,7 +200,7 @@ class __Service():
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - net_forward: Enable or disable packet forwarding.
+            - do_forward: Enable or disable packet forwarding.
         """
 
         self._type = type
@@ -205,7 +208,7 @@ class __Service():
         self._cpu_limit = cpu_limit
         self._mem_limit = mem_limit
         self._disable_swap = disable_swap
-        self._net_forward = net_forward
+        self._do_forward = do_forward
 
         name = type.name
         if name not in _comps:
@@ -230,7 +233,7 @@ class __Service():
 
     def __str__(self):
         return f"{"{"} {self._name}, {self._image}, {self._cpu_limit}, {self._mem_limit}, " \
-               + f"{self._disable_swap}, {self._ifaces} {"}"}"
+               + f"{self._disable_swap}, {self._do_forward}, {self._ifaces} {"}"}"
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -241,12 +244,12 @@ class Protocol(Enum):
     https = auto()
 
 
-class TrafficGenerator(__Service):
+class TrafficGenerator(_Service):
     def __init__(self, target: _Domain | str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.1", 
                  mem_limit: str = "64M", disable_swap: bool = False, 
-                 net_forward: bool = False):
+                 do_forward: bool = False):
         """
         @params:
             - target: The IP address, or the domain, of the target server.
@@ -258,11 +261,11 @@ class TrafficGenerator(__Service):
             - wait_max: The maximum wait between requests.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
-            - net_forward: Enable or disable packet forwarding.
+            - do_forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.traffic_generator, "locust", cpu_limit, 
-                         mem_limit, disable_swap, net_forward)
+                         mem_limit, disable_swap, do_forward)
         
         self._domain = None
         self._dst_ip = target
@@ -285,40 +288,40 @@ class TrafficGenerator(__Service):
 # SERVER **********************************************************************
 
 
-class Server(__Service):
+class Server(_Service):
     def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
-                 disable_swap: bool = False, net_forward: bool = False):
+                 disable_swap: bool = False, do_forward: bool = False):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - net_forward: Enable or disable packet forwarding.
+            - do_forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, 
-                         disable_swap, net_forward)
+                         disable_swap, do_forward)
 
 
 # ROUTER **********************************************************************
 
 
-class Router(__Service):
-    def __init__(self, is_nat: bool, cpu_limit: str = "0.1", mem_limit: str = "64M", 
-                 disable_swap: bool = False, net_forward: bool = True):
+class Router(_Service):
+    def __init__(self, do_nat: bool, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+                 disable_swap: bool = False, do_forward: bool = True):
         """
         @params:
-            - is_nat: Enable or disable network address translation.
+            - do_nat: Enable or disable network address translation.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - net_forward: Enable or disable packet forwarding.
+            - do_forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit,
-                         disable_swap, net_forward)
+                         disable_swap, do_forward)
 
-        self._is_nat = is_nat
+        self._do_nat = do_nat
 
     def __str__(self) -> str:
-        return f"{"{"} {super().__str__()}, {self._is_nat} {"}"}"
+        return f"{"{"} {super().__str__()}, {self._do_nat} {"}"}"
