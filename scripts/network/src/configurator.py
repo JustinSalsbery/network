@@ -75,6 +75,16 @@ class Configurator():
             file.write(f"{_SPACE * 3}WAIT_MIN: {tgen._wait_min}\n")
             file.write(f"{_SPACE * 3}WAIT_MAX: {tgen._wait_max}\n")
 
+        # write routers
+
+        routers = []
+        if _ServiceType.router.name in _comps:
+            routers = _comps[_ServiceType.router.name]
+
+        for router in routers:
+            assert(type(router) == Router)
+            self.__write_service(file, router)
+
     def __write_service(self, file: TextIOWrapper, service: _Service):
         """
         @params:

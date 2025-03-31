@@ -6,20 +6,14 @@ RUN apk upgrade --no-cache
 RUN apk add curl tcpdump net-tools bind-tools
 RUN apk add iptables iputils busybox-extras
 
-# setup nginx
+# setup bird
 
-RUN apk add nginx
-
-WORKDIR /app
-
-COPY ./ssl ./ssl
-COPY ./www ./www
-
-COPY ./nginx.conf /etc/nginx/nginx.conf
-COPY ./default.conf /etc/nginx/http.d/default.conf
+RUN apk add bird
 
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
+
+WORKDIR /app
 
 RUN mkdir ./shared
 

@@ -1,0 +1,96 @@
+#!/bin/sh
+
+# setup ifaces
+for IFACE in $IFACES; do
+    SRC_IP="$(echo $SRC_IPS | cut -d' ' -f1)"  # the first index
+    SRC_IPS="$(echo $SRC_IPS | cut -d' ' -f2-)"  # the rest of the list
+
+    NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
+    NET_MASKS="$(echo $NET_MASKS | cut -d' ' -f2-)"
+
+    GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
+    GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
+
+    # network suffix should be _0
+    ifconfig ${IFACE}_0 $SRC_IP netmask $NET_MASK || \
+        (echo "error: Failed to configure $IFACE"; exit 1)
+    if [ "$GATEWAY" != "None" ]; then
+        route add default gateway $GATEWAY ${IFACE}_0 || \
+            (echo "error: Failed to configure the gateway for $IFACE"; exit 1)
+    fi
+done
+
+# setup forwarding
+if [ "$FORWARD" = "true" ]; then
+    sysctl -w net.ipv4.ip_forward=1
+else
+    sysctl -w net.ipv4.ip_forward=0
+fi
+
+# setup bird
+OUT="/etc/bird.conf"
+
+echo "log syslog all;" > $OUT
+echo "" >> $OUT # new line
+echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $OUT
+echo "# routes and it only serves as a module for getting information about network" >> $OUT
+echo "# interfaces from the kernel. It is necessary in almost any configuration." >> $OUT
+echo "protocol device {}" >> $OUT
+echo "" >> $OUT # new line
+echo "# The Kernel protocol is not a real routing protocol. Instead of communicating" >> $OUT
+echo "# with other routers in the network, it performs synchronization of BIRD" >> $OUT
+echo "# routing tables with the OS kernel. One instance per table." >> $OUT
+echo "ipv4 table t_master;" >> $OUT
+echo "protocol kernel {" >> $OUT
+echo -e "\tipv4 {" >> $OUT
+echo -e "\t\ttable t_master;" >> $OUT
+echo -e "\t\timport all;" >> $OUT
+echo -e "\t\texport all;" >> $OUT
+echo -e "\t};" >> $OUT
+echo "" >> $OUT # new line
+echo -e "\tlearn;" >> $OUT
+echo "}" >> $OUT
+echo "" >> $OUT # new line
+echo "ipv4 table t_ospf;" >> $OUT
+echo "protocol ospf v2 {" >> $OUT
+echo -e "\tipv4 {" >> $OUT
+echo -e "\t\ttable t_ospf;" >> $OUT
+echo -e "\t\timport all;" >> $OUT
+echo -e "\t\texport all;" >> $OUT
+echo -e "\t};" >> $OUT
+echo "" >> $OUT # new line
+echo -e "\tarea 0.0.0.0 {" >> $OUT
+
+for IFACE in $IFACES; do
+    echo -e "\t\tinterface \"${IFACE}_0\" { type broadcast; };" >> $OUT
+done
+
+echo -e "\t};" >> $OUT
+echo "}" >> $OUT
+echo "" >> $OUT # new line
+echo "# The Pipe protocol is not a real routing protocol. It does not generate any" >> $OUT
+echo "# routes but synchronizes routes between tables. It is necessary in almost" >> $OUT
+echo "# any configuration." >> $OUT
+echo "protocol pipe {" >> $OUT
+echo -e "\ttable t_ospf;" >> $OUT
+echo -e "\tpeer table t_master;" >> $OUT
+echo -e "\timport none;" >> $OUT
+echo -e "\texport all;" >> $OUT
+echo "}" >> $OUT
+
+# run bird
+bird
+birdc configure
+
+# Useful birdc commands:
+#   show protocols
+#   show ospf neighbors
+#   show route table t_ospf
+# Useful ip command:
+#   ip route
+
+# sleep
+trap "exit 0" SIGTERM
+sleep infinity &
+
+wait $!  # $! is the PID of sleep

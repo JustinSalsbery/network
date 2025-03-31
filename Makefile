@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 PYTHON ?= python3
 
-NETWORK ?= example-1.py
+NETWORK ?= example-3.py
 
 
 .ONESHELL:
