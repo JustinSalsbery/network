@@ -102,6 +102,7 @@
 - L3 LB (in Network)
 - Advertise Same IP
 - ...
+- ntp
 - Tor!
 - ...
 - Kubernetes
@@ -110,6 +111,7 @@
 - CA
 - AS
 - IXP
+- DHCP
 - ...
 - Enhance Server Pages (GET and POST requests!)
 - Database (for Passwords Storage)
