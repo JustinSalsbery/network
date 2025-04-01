@@ -1,7 +1,7 @@
 
 from io import TextIOWrapper
 
-from src.components import _comps, _ServiceType, _Service, _IfaceConfig
+from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4
 from src.components import *
 
 
@@ -18,7 +18,7 @@ class Configurator():
         # By writing a (temporary) subnet in the Docker Compose file, we can exceed this limitation.
         
         self.__ip = 0x0a000000  # 10.0.0.0/8
-        self.__subnet = 22  # 10.0.0.0/22 -> 10.0.1.0/22 ...
+        self.__prefix_len = 22  # 10.0.0.0/22 -> 10.0.1.0/22 ...
 
         # Enables 2 ** 14 interfaces with 2 ** 10 services per interface.
 
@@ -156,16 +156,16 @@ class Configurator():
             file.write(f"{_SPACE * 2}internal: true\n")
             file.write(f"{_SPACE * 2}ipam:\n")
             file.write(f"{_SPACE * 3}config: # this is a workaround for a docker limitation\n")
-            file.write(f"{_SPACE * 4}- subnet: {self.__get_subnet()} # temporary subnet\n")
+            file.write(f"{_SPACE * 4}- subnet: {self.__get_cidr()} # temporary subnet\n")
             file.write(f"{_SPACE * 2}driver_opts: # os defines a suffix\n")
             file.write(f"{_SPACE * 3}com.docker.network.container_iface_prefix: {iface._name}_\n")
 
-    def __get_subnet(self) -> str:
+    def __get_cidr(self) -> str:
         """
         @returns: A subnet in CIDR notation.
         """
 
-        suffix = 32 - self.__subnet
+        suffix = 32 - self.__prefix_len
 
         self.__ip += 2 ** suffix
         if self.__ip >= 0x0b000000:
@@ -179,4 +179,4 @@ class Configurator():
                   0x000000ff & self.__ip]
 
         octets = [*map(str, octets)]
-        return f"{".".join(octets)}/{self.__subnet}"
+        return f"{".".join(octets)}/{self.__prefix_len}"

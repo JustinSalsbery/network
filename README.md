@@ -13,6 +13,7 @@
 
 ## Notes:
 - If the Makefile fails, update `make`. [Mac]
+    - I no longer support Mac. The networking is not working correctly!
 - Add the user to the `docker` group. [Linux]
 
 ## Useful `docker` commands:
@@ -88,6 +89,8 @@
 ## Scripts:
 - Randomly restart containers with the select image.
 - Extend `network` to output `.gv` files, also known as Graphviz.
+    - Alternatively, `.pcap` to `.gv`... Allows directionality and minimizes noise.
+    - How do I connect devices on an interface? Connecting all the devices may be overwhelming.
 ## Enhancements:
 - Proper DNS Implementation
 - Public and Private IP Addresses
