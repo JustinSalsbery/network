@@ -68,9 +68,9 @@ class _IPv4():
         octets = ip.split(".")
         octets = [*map(int, octets)]
 
-        ip = octets[0] << 24 \
-             + octets[1] << 16 \
-             + octets[2] << 8 \
+        ip = (octets[0] << 24) \
+             + (octets[1] << 16) \
+             + (octets[2] << 8) \
              + octets[3]
         
         return ip
@@ -113,7 +113,7 @@ class _CIDR():
         self._prefix_len_int = int(prefix_len)
 
         self._netmask = self.__netmask(self._prefix_len_int)
-        self._is_private = self.__is_private(self._ip, self._prefix_len_int)
+        self._is_private = self.__is_private(self._ip, self._prefix_len_int, cidr)
 
     def __is_legal(self, cidr: str) -> bool:
         """
@@ -142,24 +142,9 @@ class _CIDR():
         @return: The netmask as an _IPv4 object.
         """
 
-        octets = []
-
-        while prefix_len > 0:
-            bits = prefix_len
-
-            if bits > 8:
-                bits = 8
-
-            prefix_len -= bits
-            
-            octet = 2 ** bits - 1
-            octets.append(f"{octet}")
-
-        while len(octets) < 4:
-            octets.append("0")
-
-        ip = ".".join(octets)
-        return _IPv4(ip)
+        suffix_len = 32 - prefix_len
+        netmask = 0xffffffff ^ (2 ** suffix_len - 1)
+        return _IPv4(netmask)
     
     def __is_private(self, ip: _IPv4, prefix_len: int, cidr: str) -> bool:
         """
@@ -213,8 +198,8 @@ class _CIDR():
         @return: Whether the CIDR address is private or public.
         """
 
-        netmask_min = min(prefix_len, prefix_len_private)
-        netmask_min = self.__netmask(netmask)
+        prefix_len_min = min(prefix_len, prefix_len_private)
+        netmask_min = self.__netmask(prefix_len_min)
 
         if ip._ip_int & netmask_min._ip_int == ip_private & netmask_min._ip_int:
             if prefix_len < prefix_len_private:
@@ -315,7 +300,7 @@ class Iface():
     def __init__(self, cidr: str):
         """
         @params:
-            - subnet: The IPv4 address in CIDR notation, ex. "169.254.1.0/24"
+            - cidr: The IPv4 address in CIDR notation, ex. "169.254.1.0/24"
         """
 
         if "Iface" not in _comps:
