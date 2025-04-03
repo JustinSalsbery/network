@@ -60,6 +60,12 @@ echo -e "\t\timport all;" >> $OUT
 echo -e "\t\texport all;" >> $OUT
 echo -e "\t};" >> $OUT
 echo "" >> $OUT # new line
+
+# configure ecmp
+if [ "$ECMP" = "true" ]; then
+    echo -e "\tmerge paths on;" >> $OUT
+fi
+
 echo -e "\tlearn;" >> $OUT
 echo "}" >> $OUT
 echo "" >> $OUT # new line
