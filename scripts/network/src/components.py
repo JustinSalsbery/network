@@ -9,6 +9,11 @@ _comps = {} # Created components are registered here.
 # IPv4 ************************************************************************
 
 
+class _SubnetType(Enum):
+    public = auto()
+    private = auto()
+
+
 class _IPv4():
     def __init__(self, ip: str | int):
         """
@@ -32,9 +37,9 @@ class _IPv4():
             self._ip_int = ip
             self._ip_str = self.__ip_to_str(ip)
 
-        else:
-            print(f"error: Illegal IPv4 address {ip}")
-            exit(1)
+        else:  # Gateway defaults to NoneType
+            self._ip_str = "none"
+            self._ip_int = 0
 
     def __is_legal(self, ip: str) -> bool:
         """
@@ -113,7 +118,7 @@ class _CIDR():
         self._prefix_len_int = int(prefix_len)
 
         self._netmask = self.__netmask(self._prefix_len_int)
-        self._is_private = self.__is_private(self._ip, self._prefix_len_int, cidr)
+        self._subnet_type = self.__subnet_type(self._ip, self._prefix_len_int)
 
     def __is_legal(self, cidr: str) -> bool:
         """
@@ -146,55 +151,46 @@ class _CIDR():
         netmask = 0xffffffff ^ (2 ** suffix_len - 1)
         return _IPv4(netmask)
     
-    def __is_private(self, ip: _IPv4, prefix_len: int, cidr: str) -> bool:
+    def __subnet_type(self, ip: _IPv4, prefix_len: int) -> _SubnetType:
         """
         @params:
             - ip: The IPv4 object.
             - prefix_len: The prefix length.
-            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
         @returns: Whether the CIDR address is private or public.
         WARNING:
             - Subnets that straddle both public and private IP ranges are disallowed.
         """
         
-        netmask = self.__netmask(prefix_len)
-
         # 10 /8
-        is_private = self.__is_private_internal(prefix_len, 8, ip, 0x0a000000, 
-                                                netmask, cidr)
-        if is_private:
-            return True
+        subnet_type = self.__subnet_type_internal(prefix_len, 8, ip, 0x0a000000)
+        if subnet_type == _SubnetType.private:
+            return subnet_type
 
         # 169.254 /16
-        is_private = self.__is_private_internal(prefix_len, 16, ip, 0xa9fe0000, 
-                                                netmask, cidr)
-        if is_private:
-            return True
+        subnet_type = self.__subnet_type_internal(prefix_len, 16, ip, 0xa9fe0000)
+        if subnet_type == _SubnetType.private:
+            return subnet_type
 
         # 172.16 /12
-        is_private = self.__is_private_internal(prefix_len, 12, ip, 0xac100000, 
-                                                netmask, cidr)
-        if is_private:
-            return True
+        subnet_type = self.__subnet_type_internal(prefix_len, 12, ip, 0xac100000)
+        if subnet_type == _SubnetType.private:
+            return subnet_type
         
         # 192.168 /16
-        is_private = self.__is_private_internal(prefix_len, 16, ip, 0xc0a80000,
-                                                netmask, cidr)
-        if is_private:
-            return True
+        subnet_type = self.__subnet_type_internal(prefix_len, 16, ip, 0xc0a80000)
+        if subnet_type == _SubnetType.private:
+            return subnet_type
 
-        return False
+        return _SubnetType.public
     
-    def __is_private_internal(self, prefix_len: int, prefix_len_private: int, ip: _IPv4,
-                              ip_private: int, netmask: _IPv4, cidr: str) -> bool:
+    def __subnet_type_internal(self, prefix_len: int, prefix_len_private: int, ip: _IPv4,
+                              ip_private: int) -> _SubnetType:
         """
         @params:
             - prefix_len: The prefix length.
             - prefix_len_private: The prefix length of the private network.
             - ip: The IPv4 object.
             - ip_private: The IPv4 address of the private network
-            - netmask: The netmask.
-            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
         @return: Whether the CIDR address is private or public.
         """
 
@@ -206,8 +202,8 @@ class _CIDR():
                 print("error: Illegal CIDR {cidr}")
                 exit(1)
 
-            return True
-        return False
+            return _SubnetType.private
+        return _SubnetType.public
     
     def __str__(self) -> str:
         return f"{"{"} {self._cidr}, {self._ip}, {self._netmask}, {self._is_private} {"}"}"
@@ -296,6 +292,17 @@ class DNS():
 # INTERFACE *******************************************************************
 
 
+class FirewallType(Enum):
+    none = auto()
+    inbound = auto()
+    outbound = auto()
+
+
+class NatType(Enum):
+    none = auto()
+    snat = auto()
+    
+
 class Iface():
     def __init__(self, cidr: str):
         """
@@ -317,22 +324,24 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, src_ip: str, gateway: str, is_snat: bool):
+    def __init__(self, iface: Iface, src_ip: str, gateway: str, firewall: FirewallType, nat: NatType):
         """
         @params:
             - iface: The network interface.
             - src_ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - is_snat: Enable or disable SNAT. Only implemented on routers.
+            - firewall: Configure basic firewall.
+            - nat: Configure NAT. Only implemented on routers.
         """
 
         self._iface = iface
         self._src = _IPv4(src_ip)
         self._gateway = _IPv4(gateway)
-        self._is_snat = is_snat
+        self._firewall = firewall
+        self._nat = nat
 
     def __str__(self) -> str:
-        return f"{"{"} {self._iface}, {self._src}, {self._gateway}, {self._is_snat} {"}"}"
+        return f"{"{"} {self._iface}, {self._src}, {self._gateway}, {self._firewall.name}, {self._nat.name} {"}"}"
 
 
 # SERVICE *********************************************************************
@@ -348,7 +357,7 @@ class _ServiceType(Enum):
 
 class _Service():
     def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
-                 disable_swap: bool, do_forward: bool):
+                 disable_swap: bool, forward: bool):
         """
         @params:
             - type: The type of the service.
@@ -356,7 +365,7 @@ class _Service():
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - do_forward: Enable or disable packet forwarding.
+            - forward: Enable or disable packet forwarding.
         """
 
         self._type = type
@@ -364,7 +373,7 @@ class _Service():
         self._cpu_limit = cpu_limit
         self._mem_limit = mem_limit
         self._disable_swap = disable_swap
-        self._do_forward = do_forward
+        self._forward = forward
 
         name = type.name
         if name not in _comps:
@@ -376,21 +385,23 @@ class _Service():
         self._name = f"{name}-{count}"
         self._ifaces = []
 
-    def add_iface(self, iface: Iface, src_ip: str, gateway: str = None, is_snat: bool = False) -> None:
+    def add_iface(self, iface: Iface, src_ip: str, gateway: str = None, firewall: FirewallType = FirewallType.none, 
+                  nat: NatType = NatType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - src_ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - is_snat: Enable or disable SNAT. Only implemented on routers.
+            - firewall: Configure basic firewall.
+            - nat: Configure NAT. Only implemented on routers.
         """
 
-        config = _IfaceConfig(iface, src_ip, gateway, is_snat)
+        config = _IfaceConfig(iface, src_ip, gateway, firewall, nat)
         self._ifaces.append(config)
 
     def __str__(self):
         return f"{"{"} {self._name}, {self._image}, {self._cpu_limit}, {self._mem_limit}, " \
-               + f"{self._disable_swap}, {self._do_forward}, {self._ifaces} {"}"}"
+               + f"{self._disable_swap}, {self._forward}, {self._ifaces} {"}"}"
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -406,7 +417,7 @@ class TrafficGenerator(_Service):
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.1", 
                  mem_limit: str = "64M", disable_swap: bool = False, 
-                 do_forward: bool = False):
+                 forward: bool = False):
         """
         @params:
             - target: The IP address, or the domain, of the target server.
@@ -418,11 +429,11 @@ class TrafficGenerator(_Service):
             - wait_max: The maximum wait between requests.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
-            - do_forward: Enable or disable packet forwarding.
+            - forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.tgen, "locust", cpu_limit, mem_limit, 
-                         disable_swap, do_forward)
+                         disable_swap, forward)
         
         self._domain = None
         if type(target) == _Domain:
@@ -448,17 +459,17 @@ class TrafficGenerator(_Service):
 
 class Client(_Service):
     def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
-                 disable_swap: bool = False, do_forward: bool = False):
+                 disable_swap: bool = False, forward: bool = False):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - do_forward: Enable or disable packet forwarding.
+            - forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.client, "client", cpu_limit, mem_limit, 
-                         disable_swap, do_forward)
+                         disable_swap, forward)
 
 
 # SERVER **********************************************************************
@@ -466,36 +477,38 @@ class Client(_Service):
 
 class Server(_Service):
     def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
-                 disable_swap: bool = False, do_forward: bool = False):
+                 disable_swap: bool = False, forward: bool = False):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - do_forward: Enable or disable packet forwarding.
+            - forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, 
-                         disable_swap, do_forward)
+                         disable_swap, forward)
 
 
 # ROUTER **********************************************************************
 
 
 class Router(_Service):
-    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", disable_swap: bool = False, 
-                 do_forward: bool = True):
+    def __init__(self, ecmp: bool = False, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+                 disable_swap: bool = False, forward: bool = True):
         """
         @params:
-            - do_nat: Enable or disable network address translation.
+            - ecmp: Enable or disable ECMP.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - do_forward: Enable or disable packet forwarding.
+            - forward: Enable or disable packet forwarding.
         """
 
         super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit,
-                         disable_swap, do_forward)
+                         disable_swap, forward)
+        
+        self._ecmp = ecmp
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._do_nat} {"}"}"

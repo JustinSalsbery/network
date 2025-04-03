@@ -67,7 +67,7 @@ class Configurator():
             self.__write_service(file, tgen)
 
             file.write(f"{_SPACE * 3}# Locust configuration:\n")
-            file.write(f"{_SPACE * 3}DST_IP: {tgen._dst_ip}\n")
+            file.write(f"{_SPACE * 3}DST_IP: {tgen._dst_ip._ip_str}\n")
             file.write(f"{_SPACE * 3}CONN_MAX: {tgen._conn_max}\n")
             file.write(f"{_SPACE * 3}CONN_RATE: {tgen._conn_rate}\n")
             file.write(f"{_SPACE * 3}PROTO: {tgen._proto}\n")
@@ -84,6 +84,21 @@ class Configurator():
         for router in routers:
             assert(type(router) == Router)
             self.__write_service(file, router)
+
+            file.write(f"{_SPACE * 3}# Router configuration:\n")
+            file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
+
+            visibility = []
+            nat = []
+
+            for iface in router._ifaces:
+                assert(type(iface) == _IfaceConfig)
+
+                visibility.append(iface._iface._cidr._subnet_type.name)
+                nat.append(iface._nat.name)
+
+            file.write(f"{_SPACE * 3}VISIBILITY: {" ".join(visibility)}\n")
+            file.write(f"{_SPACE * 3}NAT: {" ".join(nat)}\n")
 
     def __write_service(self, file: TextIOWrapper, service: _Service):
         """
@@ -118,25 +133,28 @@ class Configurator():
         file.write(f"{_SPACE * 2}privileged: true # enables sysctl\n")
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
+        file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
 
         ifaces = []
         src_ips = []
         net_masks = []
         gateways = []
+        firewalls = []
 
         for iface in service._ifaces:
             assert(type(iface) == _IfaceConfig)
 
             ifaces.append(iface._iface._name)
-            src_ips.append(iface._src_ip)
-            net_masks.append(iface._iface._net_mask)
-            gateways.append(str(iface._gateway))  # gateway may be NoneType
+            src_ips.append(iface._src._ip_str)
+            net_masks.append(iface._iface._cidr._netmask._ip_str)
+            gateways.append(iface._gateway._ip_str)
+            firewalls.append(iface._firewall.name)
 
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}SRC_IPS: {" ".join(src_ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
-        file.write(f"{_SPACE * 3}FORWARD: {service._do_forward}\n")
+        file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
 
     def __write_inets(self, file: TextIOWrapper):
         """
@@ -162,21 +180,16 @@ class Configurator():
 
     def __get_cidr(self) -> str:
         """
-        @returns: A subnet in CIDR notation.
+        @returns: An IPv4 address in CIDR notation.
         """
 
         suffix = 32 - self.__prefix_len
 
         self.__ip += 2 ** suffix
-        if self.__ip >= 0x0b000000:
+        if self.__ip >= 0x0b000000: # 11.0.0.0
             print("error: Alloted subnet (10.0.0.0/8) exceeded.")
             print("\tConsider changing settings in the Configurator.")
             exit(1)
 
-        octets = [(0xff000000 & self.__ip) >> 24,
-                  (0x00ff0000 & self.__ip) >> 16,
-                  (0x0000ff00 & self.__ip) >> 8,
-                  0x000000ff & self.__ip]
-
-        octets = [*map(str, octets)]
-        return f"{".".join(octets)}/{self.__prefix_len}"
+        ip = _IPv4(self.__ip)
+        return f"{ip._ip_str}/{self.__prefix_len}"

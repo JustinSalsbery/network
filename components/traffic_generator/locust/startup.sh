@@ -15,7 +15,7 @@ for IFACE in $IFACES; do
     ifconfig ${IFACE}_0 $SRC_IP netmask $NET_MASK || \
         echo "error: Failed to configure ${IFACE}_0
     
-    if [ "$GATEWAY" != "None" ]; then
+    if [ "$GATEWAY" != "none" ]; then
         route add default gateway $GATEWAY ${IFACE}_0 || \
             echo "error: Failed to configure the gateway for ${IFACE}_0"
     fi
