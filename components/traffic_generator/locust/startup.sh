@@ -13,7 +13,7 @@ for IFACE in $IFACES; do
 
     # network suffix should be _0 
     ifconfig ${IFACE}_0 $SRC_IP netmask $NET_MASK || \
-        echo "error: Failed to configure ${IFACE}_0
+        echo "error: Failed to configure ${IFACE}_0"
     
     if [ "$GATEWAY" != "none" ]; then
         route add default gateway $GATEWAY ${IFACE}_0 || \
@@ -33,12 +33,14 @@ OUT="shared/locust-$HOSTNAME.csv"
 FILE="locustfile.py"
 
 echo "from locust import FastHttpUser, between, task" > $FILE
+echo "" >> $FILE  # new line
 echo "class WebsiteUser(FastHttpUser):" >> $FILE
 echo -e "\thost = '$PROTO://$DST_IP'" >> $FILE
 echo -e "\twait_time = between($WAIT_MIN, $WAIT_MAX)" >> $FILE
 
 i=0
 for PAGE in $PAGES; do
+    echo "" >> $FILE  # new line
     echo -e "\t@task" >> $FILE
     echo -e "\tdef page_$i(self):" >> $FILE
     echo -e "\t\tself.client.get('/$PAGE')" >> $FILE
