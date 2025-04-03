@@ -206,7 +206,7 @@ class _CIDR():
         return _SubnetType.public
     
     def __str__(self) -> str:
-        return f"{"{"} {self._cidr}, {self._ip}, {self._netmask}, {self._is_private} {"}"}"
+        return f"{"{"} {self._cidr}, {self._netmask}, {self._subnet_type} {"}"}"
 
 
 # DOMAIN NAME SYSTEM **********************************************************
@@ -341,7 +341,7 @@ class _IfaceConfig():
         self._nat = nat
 
     def __str__(self) -> str:
-        return f"{"{"} {self._iface}, {self._src}, {self._gateway}, {self._firewall.name}, {self._nat.name} {"}"}"
+        return f"{"{"} {self._iface}, {self._src}, {self._gateway} {"}"}"
 
 
 # SERVICE *********************************************************************
@@ -400,8 +400,7 @@ class _Service():
         self._ifaces.append(config)
 
     def __str__(self):
-        return f"{"{"} {self._name}, {self._image}, {self._cpu_limit}, {self._mem_limit}, " \
-               + f"{self._disable_swap}, {self._forward}, {self._ifaces} {"}"}"
+        return f"{"{"} {self._name}, {self._image}, {self._ifaces} {"}"}"
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -450,8 +449,8 @@ class TrafficGenerator(_Service):
         self._wait_max = wait_max
 
     def __str__(self) -> str:
-        return f"{"{"} {super().__str__()}, {self._dst_ip}, {self._proto}, {self._pages}, " \
-               + f"{self._conn_max}, {self._conn_rate}, {self._wait_min}, {self._wait_max} {"}"}"
+        return f"{"{"} {super().__str__()}, {self._dst_ip}, {self._proto}, " \
+               + f"{self._pages}, {self._conn_max} {"}"}"
 
 
 # CLIENT **********************************************************************
@@ -511,4 +510,4 @@ class Router(_Service):
         self._ecmp = ecmp
 
     def __str__(self) -> str:
-        return f"{"{"} {super().__str__()}, {self._do_nat} {"}"}"
+        return f"{"{"} {super().__str__()}, {self._ecmp} {"}"}"
