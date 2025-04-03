@@ -28,6 +28,17 @@ else
     sysctl -w net.ipv4.ip_forward=0
 fi
 
+# setup nat
+for IFACE in $IFACES; do
+    NAT="$(echo $NATS | cut -d' ' -f1)"
+    NATS="$(echo $NATS | cut -d' ' -f2-)"
+
+    if [ "$NAT" = "snat" ]; then
+        iptables -t nat -A POSTROUTING -o ${IFACE}_0 -j MASQUERADE --random
+    fi
+done
+
+
 # setup bird
 OUT="/etc/bird.conf"
 
