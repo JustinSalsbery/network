@@ -88,16 +88,16 @@ class Configurator():
             file.write(f"{_SPACE * 3}# Router configuration:\n")
             file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
 
-            visibility = []
+            visibilities = []
             nat = []
 
             for iface in router._ifaces:
                 assert(type(iface) == _IfaceConfig)
 
-                visibility.append(iface._iface._cidr._subnet_type.name)
+                visibilities.append(iface._iface._cidr._subnet_type.name)
                 nat.append(iface._nat.name)
 
-            file.write(f"{_SPACE * 3}VISIBILITY: {" ".join(visibility)}\n")
+            file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
             file.write(f"{_SPACE * 3}NAT: {" ".join(nat)}\n")
 
     def __write_service(self, file: TextIOWrapper, service: _Service):

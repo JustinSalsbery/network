@@ -27,7 +27,7 @@ router_2.add_iface(iface_3, "169.254.0.1")
 
 router_3 = Router()
 router_3.add_iface(iface_4, "170.0.3.2", nat=NatType.snat)
-router_3.add_iface(iface_5, "169.254.5.1")
+router_3.add_iface(iface_5, "169.254.1.1")
 router_3.add_iface(iface_6, "170.0.4.1", nat=NatType.snat)
 
 router_4 = Router()

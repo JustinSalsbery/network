@@ -62,7 +62,16 @@ echo -e "\t};" >> $OUT
 echo "" >> $OUT # new line
 echo -e "\tarea 0.0.0.0 {" >> $OUT
 
+# advertise public interfaces
 for IFACE in $IFACES; do
+    VISIBILITY="$(echo $VISIBILITIES | cut -d' ' -f1)"
+    VISIBILITIES="$(echo $VISIBILITIES | cut -d' ' -f2-)"
+
+    if [ "$VISIBILITY" = "private" ]; then
+        continue
+    fi
+
+    # must be double quote
     echo -e "\t\tinterface \"${IFACE}_0\" { type broadcast; };" >> $OUT
 done
 
