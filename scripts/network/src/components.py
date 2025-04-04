@@ -383,7 +383,7 @@ class _Service():
         _comps[name].append(self)
 
         self._name = f"{name}-{count}"
-        self._ifaces = []
+        self._iface_configs = []
 
     def add_iface(self, iface: Iface, src_ip: str, gateway: str = None, firewall: FirewallType = FirewallType.none, 
                   nat: NatType = NatType.none) -> None:
@@ -397,10 +397,10 @@ class _Service():
         """
 
         config = _IfaceConfig(iface, src_ip, gateway, firewall, nat)
-        self._ifaces.append(config)
+        self._iface_configs.append(config)
 
     def __str__(self):
-        return f"{"{"} {self._name}, {self._image}, {self._ifaces} {"}"}"
+        return f"{"{"} {self._name}, {self._image}, {self._iface_configs} {"}"}"
 
 
 # TRAFFIC GENERATOR ***********************************************************

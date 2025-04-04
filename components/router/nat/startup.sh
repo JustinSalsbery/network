@@ -33,10 +33,39 @@ for IFACE in $IFACES; do
     NAT="$(echo $NATS | cut -d' ' -f1)"
     NATS="$(echo $NATS | cut -d' ' -f2-)"
 
+    CIDR="$(echo $CIDRS | cut -d' ' -f1)"
+    CIDRS="$(echo $CIDRS | cut -d' ' -f2-)"
+
     if [ "$NAT" = "snat" ]; then
-        iptables -t nat -A POSTROUTING -o ${IFACE}_0 -j MASQUERADE --random
+        iptables -t nat -A POSTROUTING -s $CIDR -j MASQUERADE --random
     fi
 done
+
+# for routers, add rules to forwarding table
+# for endpoints, add rules to output/input table
+
+# only allow traffic from existing connections
+
+# # ???
+# iptables -A FORWARD -o eth0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+# iptables -A FORWARD -o eth0 -j DROP
+
+# # ???
+# iptables -A FORWARD -i eth0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+# iptables -A FORWARD -i eth0 -j DROP
+
+# # ???
+# iptables -A FORWARD -i eth0 -p tcp --tcp-flags ALL RST -j DROP
+
+# # ???
+# iptables -A FORWARD -o eth0 -p tcp --tcp-flags ALL RST -j DROP
+
+# Useful iptables commands:
+#   iptables --list --verbose
+#   iptables --table nat --list --verbose
+#   iptables --flush
+
+# iptables -A OUTGOING -o eth0 -p tcp --tcp-flags ALL RST -j DROP
 
 
 # setup bird

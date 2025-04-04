@@ -88,15 +88,18 @@ class Configurator():
             file.write(f"{_SPACE * 3}# Router configuration:\n")
             file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
 
+            cidrs = []
             visibilities = []
             nats = []
 
-            for iface in router._ifaces:
-                assert(type(iface) == _IfaceConfig)
+            for config in router._iface_configs:
+                assert(type(config) == _IfaceConfig)
 
-                visibilities.append(iface._iface._cidr._subnet_type.name)
-                nats.append(iface._nat.name)
+                cidrs.append(config._iface._cidr._cidr)
+                visibilities.append(config._iface._cidr._subnet_type.name)
+                nats.append(config._nat.name)
 
+            file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
             file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
 
@@ -124,9 +127,9 @@ class Configurator():
         file.write(f"{_SPACE * 3}- ./shared:/app/shared\n")
         file.write(f"{_SPACE * 2}networks:\n")
 
-        for iface in service._ifaces:
-            assert(type(iface) == _IfaceConfig)
-            file.write(f"{_SPACE * 3}- {iface._iface._name}\n")
+        for config in service._iface_configs:
+            assert(type(config) == _IfaceConfig)
+            file.write(f"{_SPACE * 3}- {config._iface._name}\n")
 
         file.write(f"{_SPACE * 2}cap_add:\n")
         file.write(f"{_SPACE * 3}- NET_ADMIN # enables ifconfig, route\n")
@@ -141,14 +144,14 @@ class Configurator():
         gateways = []
         firewalls = []
 
-        for iface in service._ifaces:
-            assert(type(iface) == _IfaceConfig)
+        for config in service._iface_configs:
+            assert(type(config) == _IfaceConfig)
 
-            ifaces.append(iface._iface._name)
-            src_ips.append(iface._src._ip_str)
-            net_masks.append(iface._iface._cidr._netmask._ip_str)
-            gateways.append(iface._gateway._ip_str)
-            firewalls.append(iface._firewall.name)
+            ifaces.append(config._iface._name)
+            src_ips.append(config._src._ip_str)
+            net_masks.append(config._iface._cidr._netmask._ip_str)
+            gateways.append(config._gateway._ip_str)
+            firewalls.append(config._firewall.name)
 
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}SRC_IPS: {" ".join(src_ips)}\n")
