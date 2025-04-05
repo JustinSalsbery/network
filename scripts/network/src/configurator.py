@@ -96,7 +96,7 @@ class Configurator():
                 assert(type(config) == _IfaceConfig)
 
                 cidrs.append(config._iface._cidr._cidr)
-                visibilities.append(config._iface._cidr._subnet_type.name)
+                visibilities.append(config._iface._cidr._visibility.name)
                 nats.append(config._nat.name)
 
             file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")

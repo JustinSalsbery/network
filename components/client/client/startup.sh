@@ -28,6 +28,54 @@ else
     sysctl -w net.ipv4.ip_forward=0
 fi
 
+# setup firewall
+for IFACE in $IFACES; do
+    FIREWALL="$(echo $FIREWALLS | cut -d' ' -f1)"
+    FIREWALLS="$(echo $FIREWALLS | cut -d' ' -f2-)"
+
+    # for endpoints, add rules to output/input table
+
+    # routing protocols, vpns, k8s, databases, etc are unaccounted for
+    # limit ports:
+    #   - tcp: 22 (ssh), 80 (http), 443 (https), 5000 (tor node), 7000 (tor directory), 9050 (tor socks)
+    #   - udp: 53 (dns), 67 (dhcp), 123 (ntp), 443 (quic)
+
+    # block new incoming connections; internal endpoints must initiate all connections
+    if [ "$FIREWALL" = "block_new_conn_input" ]; then
+        iptables -A INPUT -i ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A INPUT -i ${IFACE}_0 -j DROP
+
+    # block new incoming connections and limit ports
+    elif [ "$FIREWALL" = "block_new_conn_input_strict" ]; then
+        iptables -A OUTPUT -o ${IFACE}_0 -p tcp -m multiport --dports 22,80,443,5000,7000,9050 -j ACCEPT
+        iptables -A OUTPUT -o ${IFACE}_0 -p udp -m multiport --dports 53,67,123,443 -j ACCEPT
+
+        iptables -A INPUT -i ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A INPUT -i ${IFACE}_0 -j DROP
+
+    # block new outgoing connections; external endpoints must initiate all connections
+    elif [ "$FIREWALL" = "block_new_conn_output" ]; then
+        iptables -A OUTPUT -o ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A OUTPUT -o ${IFACE}_0 -j DROP
+
+    # block new outgoing connection and limit ports
+    elif [ "$FIREWALL" = "block_new_conn_output_strict" ]; then
+        iptables -A INPUT -i ${IFACE}_0 -p tcp -m multiport --dports 22,80,443,5000,7000,9050 -j ACCEPT
+        iptables -A INPUT -i ${IFACE}_0 -p udp -m multiport --dports 53,67,123,443 -j ACCEPT
+
+        iptables -A OUTPUT -o ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A OUTPUT -o ${IFACE}_0 -j DROP
+
+    elif [ "$FIREWALL" = "block_rsts_output" ]; then
+        iptables -A OUTPUT -o ${IFACE}_0 -p tcp --tcp-flags ALL RST -j DROP
+    fi
+done
+
+# Useful iptables commands:
+#   iptables --list --verbose
+#   iptables --table nat --list --verbose
+#   iptables --flush
+
 # sleep
 trap "exit 0" SIGTERM
 sleep infinity &

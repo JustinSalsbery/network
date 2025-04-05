@@ -15,7 +15,7 @@ iface_8 = Iface("170.0.6.0/24")
 iface_9 = Iface("170.0.7.0/24")
 
 router_0 = Router()
-router_0.add_iface(iface_0, "170.0.0.1")
+router_0.add_iface(iface_0, "170.0.0.1", nat=NatType.snat_output)
 router_0.add_iface(iface_1, "170.0.1.1")
 router_0.add_iface(iface_8, "170.0.6.1")
 
@@ -26,12 +26,12 @@ router_1.add_iface(iface_4, "170.0.3.1")
 
 router_2 = Router(ecmp=True)
 router_2.add_iface(iface_2, "170.0.2.2")
-router_2.add_iface(iface_3, "169.254.0.1", nat=NatType.snat)
+router_2.add_iface(iface_3, "169.254.0.1", nat=NatType.snat_input)
 router_2.add_iface(iface_9, "170.0.7.1")
 
 router_3 = Router()
 router_3.add_iface(iface_4, "170.0.3.2")
-router_3.add_iface(iface_5, "169.254.1.1", nat=NatType.snat)
+router_3.add_iface(iface_5, "169.254.1.1", nat=NatType.snat_input)
 router_3.add_iface(iface_6, "170.0.4.1")
 router_3.add_iface(iface_8, "170.0.6.2")
 router_3.add_iface(iface_9, "170.0.7.2")

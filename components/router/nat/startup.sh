@@ -28,6 +28,54 @@ else
     sysctl -w net.ipv4.ip_forward=0
 fi
 
+# setup firewall
+for IFACE in $IFACES; do
+    FIREWALL="$(echo $FIREWALLS | cut -d' ' -f1)"
+    FIREWALLS="$(echo $FIREWALLS | cut -d' ' -f2-)"
+
+    # for routers, add rules to forwarding table
+
+    # routing protocols, vpns, k8s, databases, etc are unaccounted for
+    # limit ports:
+    #   - tcp: 22 (ssh), 80 (http), 443 (https), 5000 (tor node), 7000 (tor directory), 9050 (tor socks)
+    #   - udp: 53 (dns), 67 (dhcp), 123 (ntp), 443 (quic)
+
+    # block new incoming connections; internal endpoints must initiate all connections
+    if [ "$FIREWALL" = "block_new_conn_input" ]; then
+        iptables -A FORWARD -o ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A FORWARD -o ${IFACE}_0 -j DROP
+
+    # block new incoming connections and limit ports
+    elif [ "$FIREWALL" = "block_new_conn_input_strict" ]; then
+        iptables -A FORWARD -i ${IFACE}_0 -p tcp -m multiport --dports 22,80,443,5000,7000,9050 -j ACCEPT
+        iptables -A FORWARD -i ${IFACE}_0 -p udp -m multiport --dports 53,123,443 -j ACCEPT
+
+        iptables -A FORWARD -o ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A FORWARD -o ${IFACE}_0 -j DROP
+
+    # block new outgoing connections; external endpoints must initiate all connections
+    elif [ "$FIREWALL" = "block_new_conn_output" ]; then
+        iptables -A FORWARD -i ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A FORWARD -i ${IFACE}_0 -j DROP
+
+    # block new outgoing connection and limit ports
+    elif [ "$FIREWALL" = "block_new_conn_output_strict" ]; then
+        iptables -A FORWARD -o ${IFACE}_0 -p tcp -m multiport --dports 22,80,443,5000,7000,9050 -j ACCEPT
+        iptables -A FORWARD -o ${IFACE}_0 -p udp -m multiport --dports 53,123,443 -j ACCEPT
+
+        iptables -A FORWARD -i ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+        iptables -A FORWARD -i ${IFACE}_0 -j DROP
+
+    elif [ "$FIREWALL" = "block_rsts_output" ]; then
+        iptables -A FORWARD -i ${IFACE}_0 -p tcp --tcp-flags ALL RST -j DROP
+    fi
+done
+
+# Useful iptables commands:
+#   iptables --list --verbose
+#   iptables --table nat --list --verbose
+#   iptables --flush
+
 # setup nat
 for IFACE in $IFACES; do
     NAT="$(echo $NATS | cut -d' ' -f1)"
@@ -36,37 +84,12 @@ for IFACE in $IFACES; do
     CIDR="$(echo $CIDRS | cut -d' ' -f1)"
     CIDRS="$(echo $CIDRS | cut -d' ' -f2-)"
 
-    if [ "$NAT" = "snat" ]; then
+    if [ "$NAT" = "snat_input" ]; then  # using the input flag is illegal with POSTROUTING
         iptables -t nat -A POSTROUTING -s $CIDR -j MASQUERADE --random
+    elif [ "$NAT" = "snat_output" ]; then
+        iptables -t nat -A POSTROUTING -o ${IFACE}_0 -j MASQUERADE --random
     fi
 done
-
-# for routers, add rules to forwarding table
-# for endpoints, add rules to output/input table
-
-# only allow traffic from existing connections
-
-# # ???
-# iptables -A FORWARD -o eth0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-# iptables -A FORWARD -o eth0 -j DROP
-
-# # ???
-# iptables -A FORWARD -i eth0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-# iptables -A FORWARD -i eth0 -j DROP
-
-# # ???
-# iptables -A FORWARD -i eth0 -p tcp --tcp-flags ALL RST -j DROP
-
-# # ???
-# iptables -A FORWARD -o eth0 -p tcp --tcp-flags ALL RST -j DROP
-
-# Useful iptables commands:
-#   iptables --list --verbose
-#   iptables --table nat --list --verbose
-#   iptables --flush
-
-# iptables -A OUTGOING -o eth0 -p tcp --tcp-flags ALL RST -j DROP
-
 
 # setup bird
 OUT="/etc/bird.conf"

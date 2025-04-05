@@ -9,7 +9,7 @@ _comps = {} # Created components are registered here.
 # IPv4 ************************************************************************
 
 
-class _SubnetType(Enum):
+class _Visibility(Enum):
     public = auto()
     private = auto()
 
@@ -118,7 +118,7 @@ class _CIDR():
         self._prefix_len_int = int(prefix_len)
 
         self._netmask = self.__netmask(self._prefix_len_int)
-        self._subnet_type = self.__subnet_type(self._ip, self._prefix_len_int)
+        self._visibility = self.__visibility(self._ip, self._prefix_len_int)
 
     def __is_legal(self, cidr: str) -> bool:
         """
@@ -151,7 +151,7 @@ class _CIDR():
         netmask = 0xffffffff ^ (2 ** suffix_len - 1)
         return _IPv4(netmask)
     
-    def __subnet_type(self, ip: _IPv4, prefix_len: int) -> _SubnetType:
+    def __visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
         """
         @params:
             - ip: The IPv4 object.
@@ -162,29 +162,29 @@ class _CIDR():
         """
         
         # 10 /8
-        subnet_type = self.__subnet_type_internal(prefix_len, 8, ip, 0x0a000000)
-        if subnet_type == _SubnetType.private:
-            return subnet_type
+        visibility = self.__visibility_internal(prefix_len, 8, ip, 0x0a000000)
+        if visibility == _Visibility.private:
+            return visibility
 
         # 169.254 /16
-        subnet_type = self.__subnet_type_internal(prefix_len, 16, ip, 0xa9fe0000)
-        if subnet_type == _SubnetType.private:
-            return subnet_type
+        visibility = self.__visibility_internal(prefix_len, 16, ip, 0xa9fe0000)
+        if visibility == _Visibility.private:
+            return visibility
 
         # 172.16 /12
-        subnet_type = self.__subnet_type_internal(prefix_len, 12, ip, 0xac100000)
-        if subnet_type == _SubnetType.private:
-            return subnet_type
+        visibility = self.__visibility_internal(prefix_len, 12, ip, 0xac100000)
+        if visibility == _Visibility.private:
+            return visibility
         
         # 192.168 /16
-        subnet_type = self.__subnet_type_internal(prefix_len, 16, ip, 0xc0a80000)
-        if subnet_type == _SubnetType.private:
-            return subnet_type
+        visibility = self.__visibility_internal(prefix_len, 16, ip, 0xc0a80000)
+        if visibility == _Visibility.private:
+            return visibility
 
-        return _SubnetType.public
+        return _Visibility.public
     
-    def __subnet_type_internal(self, prefix_len: int, prefix_len_private: int, ip: _IPv4,
-                              ip_private: int) -> _SubnetType:
+    def __visibility_internal(self, prefix_len: int, prefix_len_private: int, ip: _IPv4,
+                              ip_private: int) -> _Visibility:
         """
         @params:
             - prefix_len: The prefix length.
@@ -202,11 +202,11 @@ class _CIDR():
                 print("error: Illegal CIDR {cidr}")
                 exit(1)
 
-            return _SubnetType.private
-        return _SubnetType.public
+            return _Visibility.private
+        return _Visibility.public
     
     def __str__(self) -> str:
-        return f"{"{"} {self._cidr}, {self._netmask}, {self._subnet_type} {"}"}"
+        return f"{"{"} {self._cidr}, {self._netmask}, {self._visibility.name} {"}"}"
 
 
 # DOMAIN NAME SYSTEM **********************************************************
@@ -294,13 +294,17 @@ class DNS():
 
 class FirewallType(Enum):
     none = auto()
-    inbound = auto()
-    outbound = auto()
+    block_new_conn_input = auto()  # for clients and the attached router
+    block_new_conn_input_strict = auto()  # limit tcp and udp ports
+    block_new_conn_output = auto()  # for servers and the attached router
+    block_new_conn_output_strict = auto()
+    block_rsts_output = auto()  # drop RSTs
 
 
 class NatType(Enum):
     none = auto()
-    snat = auto()
+    snat_input = auto()  # snats packets with a source IP within CIDR.
+    snat_output = auto()  # snats packets output on iface.
     
 
 class Iface():
@@ -332,6 +336,9 @@ class _IfaceConfig():
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure basic firewall.
             - nat: Configure NAT. Only implemented on routers.
+        WARNING:
+            - Rules (NAT and firewall) are best configured on the internal interface such that
+              external traffic is not affected.
         """
 
         self._iface = iface
@@ -394,6 +401,9 @@ class _Service():
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure basic firewall.
             - nat: Configure NAT. Only implemented on routers.
+        WARNING:
+            - Rules (NAT and firewall) are best configured on the internal interface such that
+              external traffic is not affected.
         """
 
         config = _IfaceConfig(iface, src_ip, gateway, firewall, nat)
