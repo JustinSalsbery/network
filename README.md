@@ -92,13 +92,6 @@
     - Alternatively, `.pcap` to `.gv`... Allows directionality and minimizes noise.
     - How do I connect devices on an interface? Connecting all the devices may be overwhelming.
 ## Enhancements:
-- Proper DNS Implementation
-- Public and Private IP Addresses
-    - Routers use a Firewall to block all private IP addresses
-    - Routers can advertise many IPs (CIDR) on the public network
-    - Services can use identifical IPs...
-
-
 - L5 LB
 - L4 LB
 - ECMP
@@ -127,6 +120,3 @@
 - Vulnerable Systems
 - Scanners
 - VPN
-
-
-https://stackoverflow.com/questions/22005955/enabling-newreno-in-linux-kernel#33075156

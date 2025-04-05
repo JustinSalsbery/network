@@ -112,14 +112,14 @@ done
 # setup congestion control
 # for a list of methods, see: sysctl net.ipv4.tcp_allowed_congestion_control
 if [ "$CONGESTION_CONTROL" = "reno" ]; then
-    sysctl net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
+    sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
 fi
 
 # setup syn cookies
 if [ "$SYN_COOKIE" = "disable" ]; then
-    sysctl net.ipv4.tcp_syncookies=0
+    sysctl -w net.ipv4.tcp_syncookies=0
 elif [ "$SYN_COOKIE" = "force" ]; then
-    sysctl net.ipv4.tcp_syncookies=2
+    sysctl -w net.ipv4.tcp_syncookies=2
 fi
 
 # run nginx
