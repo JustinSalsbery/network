@@ -341,7 +341,7 @@ class NatType(Enum):
     none = auto()
     snat_input = auto()
     snat_output = auto()
-    
+
 
 class Iface():
     def __init__(self, cidr: str):
@@ -364,7 +364,8 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, src_ip: str, gateway: str, firewall: FirewallType, nat: NatType):
+    def __init__(self, iface: Iface, src_ip: str, gateway: str, firewall: FirewallType, 
+                 nat: NatType, drop_percent: int, delay: int):
         """
         @params:
             - iface: The network interface.
@@ -372,6 +373,8 @@ class _IfaceConfig():
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
             - nat: Configure NAT. Only implemented on routers.
+            - drop_percent: Drop a percent of random traffic. From 0 to 100.
+            - delay: Set a delay on traffic. In units of milliseconds.
         """
 
         self._iface = iface
@@ -379,6 +382,12 @@ class _IfaceConfig():
         self._gateway = _IPv4(gateway)
         self._firewall = firewall
         self._nat = nat
+
+        assert(0 <= drop_percent <= 100)
+        self._drop_percent = drop_percent
+
+        assert(0 <= delay)
+        self._delay = delay
 
     def __str__(self) -> str:
         return f"{"{"} {self._iface}, {self._src}, {self._gateway} {"}"}"
@@ -395,9 +404,21 @@ class _ServiceType(Enum):
     client = auto()
 
 
+class CongestionControlType(Enum):
+    cubic = auto()  # alpine default
+    reno = auto()
+
+
+class SynCookieType(Enum):
+    disable = auto()
+    enable = auto()
+    force = auto()
+
+
 class _Service():
     def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
-                 disable_swap: bool, forward: bool):
+                 disable_swap: bool, forward: bool, syn_cookie: SynCookieType, 
+                 congestion_control: CongestionControlType):
         """
         @params:
             - type: The type of the service.
@@ -406,6 +427,8 @@ class _Service():
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
             - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
         """
 
         self._type = type
@@ -414,6 +437,8 @@ class _Service():
         self._mem_limit = mem_limit
         self._disable_swap = disable_swap
         self._forward = forward
+        self._syn_cookie = syn_cookie
+        self._congestion_control = congestion_control
 
         name = type.name
         if name not in _comps:
@@ -426,7 +451,7 @@ class _Service():
         self._iface_configs = []
 
     def add_iface(self, iface: Iface, src_ip: str, gateway: str = None, firewall: FirewallType = FirewallType.none, 
-                  nat: NatType = NatType.none) -> None:
+                  nat: NatType = NatType.none, drop_percent: int = 0, delay: int = 0) -> None:
         """
         @params:
             - iface: The network interface.
@@ -434,9 +459,11 @@ class _Service():
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
             - nat: Configure NAT. Only implemented on routers.
+            - drop_percent: Drop a percent of random traffic. From 0 to 100.
+            - delay: Set a delay on traffic. In units of milliseconds.
         """
 
-        config = _IfaceConfig(iface, src_ip, gateway, firewall, nat)
+        config = _IfaceConfig(iface, src_ip, gateway, firewall, nat, drop_percent, delay)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -456,7 +483,8 @@ class TrafficGenerator(_Service):
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.5", 
                  mem_limit: str = "256M", disable_swap: bool = False, 
-                 forward: bool = False):
+                 forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - target: The IP address, or the domain, of the target server.
@@ -469,10 +497,12 @@ class TrafficGenerator(_Service):
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.tgen, "locust", cpu_limit, mem_limit, 
-                         disable_swap, forward)
+                         disable_swap, forward, syn_cookie, congestion_control)
         
         self._domain = None
         if type(target) == _Domain:
@@ -498,17 +528,21 @@ class TrafficGenerator(_Service):
 
 class Client(_Service):
     def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, forward: bool = False):
+                 disable_swap: bool = False, forward: bool = False,
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
             - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.client, "client", cpu_limit, mem_limit, 
-                         disable_swap, forward)
+                         disable_swap, forward, syn_cookie, congestion_control)
 
 
 # SERVER **********************************************************************
@@ -516,17 +550,21 @@ class Client(_Service):
 
 class Server(_Service):
     def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, forward: bool = False):
+                 disable_swap: bool = False, forward: bool = False,
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
             - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, 
-                         disable_swap, forward)
+                         disable_swap, forward, syn_cookie, congestion_control)
 
 
 # ROUTER **********************************************************************
@@ -534,7 +572,8 @@ class Server(_Service):
 
 class Router(_Service):
     def __init__(self, ecmp: bool = False, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, forward: bool = True):
+                 disable_swap: bool = False, forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - ecmp: Enable or disable ECMP.
@@ -542,10 +581,12 @@ class Router(_Service):
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
             - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit,
-                         disable_swap, forward)
+                         disable_swap, forward, syn_cookie, congestion_control)
         
         self._ecmp = ecmp
 

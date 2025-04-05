@@ -89,6 +89,39 @@ done
 #   iptables --table nat --list --verbose
 #   iptables --flush
 
+for IFACE in $IFACES; do
+    DROP_PERCENT="$(echo $DROP_PERCENTS | cut -d' ' -f1)"
+    DROP_PERCENTS="$(echo $DROP_PERCENTS | cut -d' ' -f2-)"
+
+    DELAY="$(echo $DELAYS | cut -d' ' -f1)"
+    DELAYS="$(echo $DELAYS | cut -d' ' -f2-)"
+
+    if [ "$DROP_PERCENT" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem loss ${DROP_PERCENT}%
+    fi
+
+    if [ "$DELAY" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem delay ${DELAY}ms
+    fi
+done
+
+# Useful tc commands:
+#   tc qdisc show dev $IFACE
+#   tc qdisc del dev $IFACE
+
+# setup congestion control
+# for a list of methods, see: sysctl net.ipv4.tcp_allowed_congestion_control
+if [ "$CONGESTION_CONTROL" = "reno" ]; then
+    sysctl net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
+fi
+
+# setup syn cookies
+if [ "$SYN_COOKIE" = "disable" ]; then
+    sysctl net.ipv4.tcp_syncookies=0
+elif [ "$SYN_COOKIE" = "force" ]; then
+    sysctl net.ipv4.tcp_syncookies=2
+fi
+
 # sleep
 trap "exit 0" SIGTERM
 sleep infinity &

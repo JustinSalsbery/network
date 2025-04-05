@@ -137,12 +137,16 @@ class Configurator():
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
+        file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
+        file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
 
         ifaces = []
         src_ips = []
         net_masks = []
         gateways = []
         firewalls = []
+        drop_percents = []
+        delays = []
 
         for config in service._iface_configs:
             assert(type(config) == _IfaceConfig)
@@ -152,12 +156,16 @@ class Configurator():
             net_masks.append(config._iface._cidr._netmask._ip_str)
             gateways.append(config._gateway._ip_str)
             firewalls.append(config._firewall.name)
+            drop_percents.append(f"{config._drop_percent}")
+            delays.append(f"{config._delay}")
 
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}SRC_IPS: {" ".join(src_ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
+        file.write(f"{_SPACE * 3}DROP_PERCENTS: {" ".join(drop_percents)}\n")
+        file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}\n")
 
     def __write_inets(self, file: TextIOWrapper):
         """
