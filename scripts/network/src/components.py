@@ -454,8 +454,8 @@ class Protocol(Enum):
 class TrafficGenerator(_Service):
     def __init__(self, target: _Domain | str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
-                 wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.1", 
-                 mem_limit: str = "64M", disable_swap: bool = False, 
+                 wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.5", 
+                 mem_limit: str = "256M", disable_swap: bool = False, 
                  forward: bool = False):
         """
         @params:
@@ -497,7 +497,7 @@ class TrafficGenerator(_Service):
 
 
 class Client(_Service):
-    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+    def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
                  disable_swap: bool = False, forward: bool = False):
         """
         @params:
@@ -515,7 +515,7 @@ class Client(_Service):
 
 
 class Server(_Service):
-    def __init__(self, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+    def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
                  disable_swap: bool = False, forward: bool = False):
         """
         @params:
@@ -533,7 +533,7 @@ class Server(_Service):
 
 
 class Router(_Service):
-    def __init__(self, ecmp: bool = False, cpu_limit: str = "0.1", mem_limit: str = "64M", 
+    def __init__(self, ecmp: bool = False, cpu_limit: str = "0.5", mem_limit: str = "256M", 
                  disable_swap: bool = False, forward: bool = True):
         """
         @params:
