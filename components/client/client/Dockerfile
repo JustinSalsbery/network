@@ -25,7 +25,7 @@ RUN apk upgrade --no-cache
 # additional tools
 
 RUN apk add curl tcpdump net-tools bind-tools
-RUN apk add nmap iptables iputils busybox-extras
+RUN apk add nmap iptables iproute2 iputils busybox-extras
 
 # recreate environment
 
