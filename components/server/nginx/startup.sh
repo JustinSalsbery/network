@@ -18,6 +18,12 @@ for IFACE in $IFACES; do
     if [ "$GATEWAY" != "none" ]; then
         route add default gateway $GATEWAY ${IFACE}_0 || \
             echo "error: Failed to configure the gateway for ${IFACE}_0"
+            
+    elif [ "$FIREWALL" = "block_l4" ]; then
+        iptables -A INPUT -i ${IFACE}_0 -p tcp -j DROP
+        iptables -A INPUT -i ${IFACE}_0 -p udp -j DROP
+        iptables -A OUTPUT -o ${IFACE}_0 -p tcp -j DROP
+        iptables -A OUTPUT -o ${IFACE}_0 -p udp -j DROP
     fi
 done
 

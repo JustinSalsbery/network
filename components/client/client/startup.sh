@@ -68,6 +68,12 @@ for IFACE in $IFACES; do
 
     elif [ "$FIREWALL" = "block_rsts_output" ]; then
         iptables -A OUTPUT -o ${IFACE}_0 -p tcp --tcp-flags ALL RST -j DROP
+
+    elif [ "$FIREWALL" = "block_l4" ]; then
+        iptables -A INPUT -i ${IFACE}_0 -p tcp -j DROP
+        iptables -A INPUT -i ${IFACE}_0 -p udp -j DROP
+        iptables -A OUTPUT -o ${IFACE}_0 -p tcp -j DROP
+        iptables -A OUTPUT -o ${IFACE}_0 -p udp -j DROP
     fi
 done
 

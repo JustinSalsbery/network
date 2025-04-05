@@ -104,6 +104,8 @@ class _CIDR():
         """
         @params:
             - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
+        WARNING:
+            - Subnets that straddle both public and private IP ranges are disallowed.
         """
 
         if not self.__is_legal(cidr):
@@ -157,8 +159,6 @@ class _CIDR():
             - ip: The IPv4 object.
             - prefix_len: The prefix length.
         @returns: Whether the CIDR address is private or public.
-        WARNING:
-            - Subnets that straddle both public and private IP ranges are disallowed.
         """
         
         # 10 /8
@@ -293,18 +293,54 @@ class DNS():
 
 
 class FirewallType(Enum):
+    """
+    block_new_conn_input: For customer devices. Connections must be initiated.
+        - endpoints: Blocks unknown connections on INPUT received from the interface. 
+        - routers:   Blocks unknown connections on FORWARD sent to the interface. 
+                     Use on the internal interface of the router.
+    block_new_conn_input_strict: Extends block_new_conn_input.
+        - endpoints: Blocks OUTPUT sent on the interface to TCP ports: 22, 80, 443, 
+                     5000, 7000, 9050; and UDP ports: 53, 67, 123, 443.
+        - routers:   Blocks FORWARD received from the interface to TCP ports: 22, 80,
+                     443, 5000, 7000, 9050; and UDP ports: 53, 123, 443.
+    block_new_conn_output: For datacenter devices. Connections cannot be initiated.
+        - endpoints: Blocks unknown connections on OUTPUT sent on the interface. 
+        - routers:   Blocks unknown connections on FORWARD received on the interface. 
+                     Use on the internal interface of the router.
+    block_new_conn_output_strict: Extends block_new_conn_output.
+        - endpoints: Blocks INPUT received on the interface to TCP ports: 22, 80, 443, 
+                     5000, 7000, 9050; and UDP ports: 53, 67, 123, 443.
+        - routers:   Blocks FORWARD sent on the interface to TCP ports: 22, 80,
+                     443, 5000, 7000, 9050; and UDP ports: 53, 123, 443.
+    block_rsts_output:
+        - endpoints: Block TCP RSTs on OUTPUT sent on the interface. Useful for scapy scripts.
+        - routers:   Blocks TCP RSTs on FORWARD received from the interface.
+                     Use on the internal interface of routers.
+    block_l4:
+        - endpoints and routers: Block TCP and UDP on INPUT and OUTPUT. 
+                                 Use on the external interface of routers.
+    """
+
     none = auto()
-    block_new_conn_input = auto()  # for customers; connections must be initiated by customer
-    block_new_conn_input_strict = auto()  # limit tcp and udp ports
-    block_new_conn_output = auto()  # for datacenters; connections cannot be initiated by datacenter
+    block_new_conn_input = auto()
+    block_new_conn_input_strict = auto()
+    block_new_conn_output = auto()
     block_new_conn_output_strict = auto()
-    block_rsts_output = auto()  # drop RSTs; useful for scapy scripts
+    block_rsts_output = auto()
+    block_l4 = auto()
 
 
 class NatType(Enum):
+    """
+    snat_input:  For the internal router interface of a customer network. SNATS packets sent
+                 from an IP within the CIDR range of the corresponding interface.
+    snat_output: For the internal router interface of a datacenter network. SNATS packets
+                 output on the corresponding interface.
+    """
+
     none = auto()
-    snat_input = auto()  # for customers; snats packets with a source IP within CIDR
-    snat_output = auto()  # for datacenters; snats packets output on iface.
+    snat_input = auto()
+    snat_output = auto()
     
 
 class Iface():
@@ -334,11 +370,8 @@ class _IfaceConfig():
             - iface: The network interface.
             - src_ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - firewall: Configure basic firewall.
+            - firewall: Configure firewall.
             - nat: Configure NAT. Only implemented on routers.
-        WARNING:
-            - Rules (NAT and firewall) are best configured on the internal interface such that
-              external traffic is not affected.
         """
 
         self._iface = iface
@@ -399,11 +432,8 @@ class _Service():
             - iface: The network interface.
             - src_ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - firewall: Configure basic firewall.
+            - firewall: Configure firewall.
             - nat: Configure NAT. Only implemented on routers.
-        WARNING:
-            - Rules (NAT and firewall) are best configured on the internal interface such that
-              external traffic is not affected.
         """
 
         config = _IfaceConfig(iface, src_ip, gateway, firewall, nat)
