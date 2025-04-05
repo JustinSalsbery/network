@@ -114,6 +114,9 @@ echo -e "\t};" >> $OUT
 echo "" >> $OUT # new line
 
 # configure ecmp
+# may require CONFIG_IP_ROUTE_MULTIPATH on host machine
+#   see: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
+
 if [ "$ECMP" = "true" ]; then
     sysctl net.ipv4.fib_multipath_use_neigh=1
     sysctl net.ipv4.fib_multipath_hash_policy=1
