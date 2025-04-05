@@ -48,7 +48,10 @@ for IFACE in $IFACES; do
     # block new incoming connections and limit ports
     elif [ "$FIREWALL" = "block_new_conn_input_strict" ]; then
         iptables -A FORWARD -i ${IFACE}_0 -p tcp -m multiport --dports 22,80,443,5000,7000,9050 -j ACCEPT
+        iptables -A FORWARD -i ${IFACE}_0 -p tcp -j DROP
+
         iptables -A FORWARD -i ${IFACE}_0 -p udp -m multiport --dports 53,123,443 -j ACCEPT
+        iptables -A FORWARD -i ${IFACE}_0 -p udp -j DROP
 
         iptables -A FORWARD -o ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
         iptables -A FORWARD -o ${IFACE}_0 -j DROP
@@ -61,7 +64,10 @@ for IFACE in $IFACES; do
     # block new outgoing connection and limit ports
     elif [ "$FIREWALL" = "block_new_conn_output_strict" ]; then
         iptables -A FORWARD -o ${IFACE}_0 -p tcp -m multiport --dports 22,80,443,5000,7000,9050 -j ACCEPT
+        iptables -A FORWARD -o ${IFACE}_0 -p tcp -j DROP
+
         iptables -A FORWARD -o ${IFACE}_0 -p udp -m multiport --dports 53,123,443 -j ACCEPT
+        iptables -A FORWARD -o ${IFACE}_0 -p udp -j DROP
 
         iptables -A FORWARD -i ${IFACE}_0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
         iptables -A FORWARD -i ${IFACE}_0 -j DROP
@@ -72,6 +78,7 @@ for IFACE in $IFACES; do
     elif [ "$FIREWALL" = "block_l4" ]; then
         iptables -A INPUT -i ${IFACE}_0 -p tcp -j DROP
         iptables -A INPUT -i ${IFACE}_0 -p udp -j DROP
+        
         iptables -A OUTPUT -o ${IFACE}_0 -p tcp -j DROP
         iptables -A OUTPUT -o ${IFACE}_0 -p udp -j DROP
     fi
