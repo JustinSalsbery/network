@@ -294,17 +294,17 @@ class DNS():
 
 class FirewallType(Enum):
     none = auto()
-    block_new_conn_input = auto()  # for clients and the attached router
+    block_new_conn_input = auto()  # for customers; connections must be initiated by customer
     block_new_conn_input_strict = auto()  # limit tcp and udp ports
-    block_new_conn_output = auto()  # for servers and the attached router
+    block_new_conn_output = auto()  # for datacenters; connections cannot be initiated by datacenter
     block_new_conn_output_strict = auto()
-    block_rsts_output = auto()  # drop RSTs
+    block_rsts_output = auto()  # drop RSTs; useful for scapy scripts
 
 
 class NatType(Enum):
     none = auto()
-    snat_input = auto()  # snats packets with a source IP within CIDR.
-    snat_output = auto()  # snats packets output on iface.
+    snat_input = auto()  # for customers; snats packets with a source IP within CIDR
+    snat_output = auto()  # for datacenters; snats packets output on iface.
     
 
 class Iface():

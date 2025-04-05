@@ -115,6 +115,9 @@ echo "" >> $OUT # new line
 
 # configure ecmp
 if [ "$ECMP" = "true" ]; then
+    sysctl net.ipv4.fib_multipath_use_neigh=1
+    sysctl net.ipv4.fib_multipath_hash_policy=1
+    
     echo -e "\tmerge paths on;" >> $OUT
 fi
 
