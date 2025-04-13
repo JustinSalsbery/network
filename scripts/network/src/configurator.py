@@ -1,31 +1,40 @@
 
 from io import TextIOWrapper
 
-from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4
+from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR
 from src.components import *
 
 
 _SPACE = "  "
 
 class Configurator():
-    def __init__(self):
+    def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22):
         """
         Write out the configuration as `docker-compose.yml`.
-        MUST be called for the configuration to be created.
+        @params:
+            - available_range: The available IP range in CIDR notation for creating Docker subnets.
+            - prefix_len: The size of each subnet.
+        WARNING:
+            - The configurator MUST be called for the configuration to be created.
+            - By default, Docker only supports around 30 network interfaces.
+              By writing subnets in the Docker Compose file we can exceed this limitation.
+              The containers do not use the subnet.
+            - Docker will create an externally accessable gateway at the .1 of each subnet; 
+              ex. 10.0.0.1 and 10.0.4.1. These gateways may interfere with the host's networking.
+              Other containers (.2, .3, etc) will not be externally accessible.
         """
-
-        # By default, Docker only supports around 30 network interfaces.
-        # By writing a (temporary) subnet in the Docker Compose file, we can exceed this limitation.
         
-        self.__ip = 0x0a000000  # 10.0.0.0/8
-        self.__prefix_len = 22  # 10.0.0.0/22 -> 10.0.1.0/22 ...
+        self.__cidr = _CIDR(available_range)
+        suffix = 32 - self.__cidr._prefix_len_int
 
-        # Enables 2 ** 14 interfaces with 2 ** 10 services per interface.
+        self.__ip = self.__cidr._ip._ip_int
+        self.__ip_max = self.__ip + 2 ** suffix
+        self.__prefix_len = prefix_len
 
         with open("docker-compose.yml", "w") as file:
-            self.__write_services(file)
 
-            # docker compose will fail unless networks follow after services
+            # docker compose down will fail unless networks follow after services
+            self.__write_services(file)
             self.__write_inets(file)
 
     def __write_services(self, file: TextIOWrapper):
@@ -194,13 +203,15 @@ class Configurator():
         @returns: An IPv4 address in CIDR notation.
         """
 
-        suffix = 32 - self.__prefix_len
-
-        self.__ip += 2 ** suffix
-        if self.__ip >= 0x0b000000: # 11.0.0.0
-            print("error: Alloted subnet (10.0.0.0/8) exceeded.")
-            print("\tConsider changing settings in the Configurator.")
+        if self.__ip >= self.__ip_max:
+            print(f"error: Allocated subnet {self.__cidr._cidr} exceeded.")
+            print("\tConsider changing settings for the Configurator.")
             exit(1)
 
         ip = _IPv4(self.__ip)
-        return f"{ip._ip_str}/{self.__prefix_len}"
+        cidr = f"{ip._ip_str}/{self.__prefix_len}"
+
+        suffix = 32 - self.__prefix_len
+        self.__ip += 2 ** suffix  # iterate
+
+        return cidr

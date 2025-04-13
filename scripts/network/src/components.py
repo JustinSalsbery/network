@@ -120,7 +120,7 @@ class _CIDR():
         self._prefix_len_int = int(prefix_len)
 
         self._netmask = self.__netmask(self._prefix_len_int)
-        self._visibility = self.__visibility(self._ip, self._prefix_len_int)
+        self._visibility = self.__visibility(cidr, self._ip, self._prefix_len_int)
 
     def __is_legal(self, cidr: str) -> bool:
         """
@@ -153,40 +153,42 @@ class _CIDR():
         netmask = 0xffffffff ^ (2 ** suffix_len - 1)
         return _IPv4(netmask)
     
-    def __visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
+    def __visibility(self, cidr: str, ip: _IPv4, prefix_len: int) -> _Visibility:
         """
         @params:
+            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
             - ip: The IPv4 object.
             - prefix_len: The prefix length.
         @returns: Whether the CIDR address is private or public.
         """
         
         # 10 /8
-        visibility = self.__visibility_internal(prefix_len, 8, ip, 0x0a000000)
+        visibility = self.__visibility_internal(cidr, prefix_len, 8, ip, 0x0a000000)
         if visibility == _Visibility.private:
             return visibility
 
         # 169.254 /16
-        visibility = self.__visibility_internal(prefix_len, 16, ip, 0xa9fe0000)
+        visibility = self.__visibility_internal(cidr, prefix_len, 16, ip, 0xa9fe0000)
         if visibility == _Visibility.private:
             return visibility
 
         # 172.16 /12
-        visibility = self.__visibility_internal(prefix_len, 12, ip, 0xac100000)
+        visibility = self.__visibility_internal(cidr, prefix_len, 12, ip, 0xac100000)
         if visibility == _Visibility.private:
             return visibility
         
         # 192.168 /16
-        visibility = self.__visibility_internal(prefix_len, 16, ip, 0xc0a80000)
+        visibility = self.__visibility_internal(cidr, prefix_len, 16, ip, 0xc0a80000)
         if visibility == _Visibility.private:
             return visibility
 
         return _Visibility.public
     
-    def __visibility_internal(self, prefix_len: int, prefix_len_private: int, ip: _IPv4,
-                              ip_private: int) -> _Visibility:
+    def __visibility_internal(self, cidr: str, prefix_len: int, prefix_len_private: int, 
+                              ip: _IPv4, ip_private: int) -> _Visibility:
         """
         @params:
+            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
             - prefix_len: The prefix length.
             - prefix_len_private: The prefix length of the private network.
             - ip: The IPv4 object.
@@ -199,7 +201,7 @@ class _CIDR():
 
         if ip._ip_int & netmask_min._ip_int == ip_private & netmask_min._ip_int:
             if prefix_len < prefix_len_private:
-                print("error: Illegal CIDR {cidr}")
+                print(f"error: CIDR {cidr} straddles public and private IPs.")
                 exit(1)
 
             return _Visibility.private

@@ -43,80 +43,36 @@
 ---
 
 # Todo:
-## Containers: [Brainstorming]
-- TOR: (1-step)
-    - Client
-    - Bridge
-    - Node (Guard, Middle, Exit)
-    - Directory Authority
-    - Hidden Service
-- General: (1-step)
-    - Server:
-        - Nginx
-    - Traffic Generators:
-        - Locust
-    - Load Balancers:
-        - L4:
-            - LVS IPVS
-            - Katran
-        - L5:
-            - Proxy (HAProxy)
-    - Network:
-        - Router
-            - SNAT
-            - DNAT
-            - Firewall (Client and Server Configuration Files)
-            - ECMP
-            - BGP
-    - Security:
-        - IPS
-        - IDS
-    - Databases: [How would this interact with the server and traffic generator?]
-        - Postgres
-        - Redis
-    - Miscellaneous:
-        - Identifier: Utilizing ISN and Timestamp to fingerprint servers and identify the quantity of servers behind a load balancer.
-        - Port scan (`nmap`)
-        - IP scan (`nmap`)
-        - Metasploitable2
-- Kubernetes: (2-step)
-    - Node            (1. Physical Setup)
-    - Configurations: (2. YAML/Configurations)
-        - Server
-        - Load Balancers
-        - Ingress
-        - etc.
-## Scripts:
-- Randomly restart containers with the select image.
-- Extend `network` to output `.gv` files, also known as Graphviz.
-    - Alternatively, `.pcap` to `.gv`... Allows directionality and minimizes noise.
-    - How do I connect devices on an interface? Connecting all the devices may be overwhelming.
-## Enhancements:
-- L5 LB
-- L4 LB
-- ECMP
-- L3 LB (in Network)
-- Advertise Same IP
-- ...
-- ntp
-- Tor!
-- ...
-- Kubernetes
-- ...
-- DNS
-- CA
-- AS
-- IXP
-- DHCP
-- ...
-- Enhance Server Pages (GET and POST requests!)
-- Database (for Passwords Storage)
-- Key Value Store (for Active Accounts)
-- API Server
-- CDN
-- ...
-- IDS
-- IPS
-- Vulnerable Systems
-- Scanners
+Needed for work:
+1. HAproxy
+2. Katran
+3. Tor
+4. CDN
+5. K8s
+
+Needed foundation:
+1. NTP
+2. DNS
+3. DHCP
+
+Neat additions:
+- Metasploitable 2
+- nmap (Port and IP scanners)
 - VPN
+    - Local only firewall rule.
+    - IP destination censorship on routers
+
+Eventual:
+- Server:
+    - Redis for authentication.
+    - Postgres for storage.
+    - API access
+- Script: `pcap` to `dot` graph
+- Script: Randomly restart containers with image name.
+
+Avoid for simplicity:
+- CA
+    - Copy certificates into containers so `--insecure` flag isn’t required?
+- Autonomous zones.
+- IPS
+    - Difficult to input rules.
