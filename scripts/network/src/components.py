@@ -26,20 +26,20 @@ class _IPv4():
                 print(f"error: Illegal IPv4 address {ip}")
                 exit(1)
         
-            self._ip_str = ip
-            self._ip_int = self.__ip_to_int(ip)
+            self._str = ip
+            self._int = self.__str_to_int(ip)
 
         elif type(ip) == int:
             if ip < 0 or ip > 0xffffffff:
                 print(f"error: Illegal IPv4 address {ip}")
                 exit(1)
 
-            self._ip_int = ip
-            self._ip_str = self.__ip_to_str(ip)
+            self._int = ip
+            self._str = self.__int_to_str(ip)
 
         else:  # Gateway defaults to NoneType
-            self._ip_str = "none"
-            self._ip_int = 0
+            self._str = "none"
+            self._int = 0
 
     def __is_legal(self, ip: str) -> bool:
         """
@@ -63,7 +63,7 @@ class _IPv4():
 
         return True
 
-    def __ip_to_int(self, ip: str) -> int:
+    def __str_to_int(self, ip: str) -> int:
         """
         @params:
             - ip: The IPv4 address as a string, ex. "169.254.0.0"
@@ -80,7 +80,7 @@ class _IPv4():
         
         return ip
     
-    def __ip_to_str(self, ip: int) -> str:
+    def __int_to_str(self, ip: int) -> str:
         """
         @params:
             - ip: The IPv4 as an integer, ex. 0x0a000001
@@ -96,48 +96,52 @@ class _IPv4():
         return ".".join(octets)
     
     def __str__(self) -> str:
-        return f"{"{"} {self._ip_str} {"}"}"
+        return f"{"{"} {self._str} {"}"}"
 
 
 class _CIDR():
     def __init__(self, cidr: str):
         """
         @params:
-            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
         WARNING:
-            - Subnets that straddle both public and private IP ranges are disallowed.
+            - Subnets that overlap public and private IP ranges are disallowed.
         """
 
         if not self.__is_legal(cidr):
             print(f"error: Illegal CIDR {cidr}")
             exit(1)
 
-        self._cidr = cidr
+        self._str = cidr
         ip, prefix_len = cidr.split("/")
 
         self._ip = _IPv4(ip)
-        self._prefix_len_str = prefix_len
-        self._prefix_len_int = int(prefix_len)
 
-        self._netmask = self.__netmask(self._prefix_len_int)
-        self._visibility = self.__visibility(cidr, self._ip, self._prefix_len_int)
+        try:
+            self._prefix_len = int(prefix_len)
+        except:
+            print(f"error: Invalid prefix length for subnet {cidr}.")
+            exit(1)
+
+        self._netmask = self.__netmask(self._prefix_len)
+        self._visibility = self.__visibility(cidr, self._ip, self._prefix_len)
 
     def __is_legal(self, cidr: str) -> bool:
         """
         @params:
-            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
         @return: Whether the IPv4 address is legal CIDR notation.
         """
 
         try:
             ip, prefix_len = cidr.split("/")
-
             ip = _IPv4(ip)
-            prefix_len = int(prefix_len)
-        except Exception:
-            return False
 
-        if prefix_len < 0 or prefix_len > 32:
+            prefix_len = int(prefix_len)
+            if not 0 <= prefix_len <= 32:
+                return False
+            
+        except Exception:
             return False
         
         return True
@@ -156,59 +160,60 @@ class _CIDR():
     def __visibility(self, cidr: str, ip: _IPv4, prefix_len: int) -> _Visibility:
         """
         @params:
-            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - ip: The IPv4 object.
             - prefix_len: The prefix length.
         @returns: Whether the CIDR address is private or public.
         """
         
-        # 10 /8
-        visibility = self.__visibility_internal(cidr, prefix_len, 8, ip, 0x0a000000)
+        ip_private = _IPv4("10.0.0.0")
+        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 8)
         if visibility == _Visibility.private:
             return visibility
 
-        # 169.254 /16
-        visibility = self.__visibility_internal(cidr, prefix_len, 16, ip, 0xa9fe0000)
+        ip_private = _IPv4("169.254.0.0")
+        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
-        # 172.16 /12
-        visibility = self.__visibility_internal(cidr, prefix_len, 12, ip, 0xac100000)
+        ip_private = _IPv4("172.16.0.0")
+        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 12)
         if visibility == _Visibility.private:
             return visibility
         
-        # 192.168 /16
-        visibility = self.__visibility_internal(cidr, prefix_len, 16, ip, 0xc0a80000)
+        ip_private = _IPv4("192.168.0.0")
+        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         return _Visibility.public
     
-    def __visibility_internal(self, cidr: str, prefix_len: int, prefix_len_private: int, 
-                              ip: _IPv4, ip_private: int) -> _Visibility:
+    def __visibility_internal(self, cidr: str, ip: _IPv4, prefix_len: int, ip_private: _IPv4,
+                              prefix_len_private: int) -> _Visibility:    
         """
         @params:
-            - cidr: The IPv4 as a string in CIDR notation, ex. "169.254.0.0/16"
-            - prefix_len: The prefix length.
-            - prefix_len_private: The prefix length of the private network.
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - ip: The IPv4 object.
-            - ip_private: The IPv4 address of the private network
+            - prefix_len: The prefix length.
+            - ip_private: The private IPv4 address.
+            - prefix_len_private: The private prefix length.
         @return: Whether the CIDR address is private or public.
         """
 
         prefix_len_min = min(prefix_len, prefix_len_private)
         netmask_min = self.__netmask(prefix_len_min)
 
-        if ip._ip_int & netmask_min._ip_int == ip_private & netmask_min._ip_int:
+        if ip._int & netmask_min._int == ip_private._int & netmask_min._int:
             if prefix_len < prefix_len_private:
-                print(f"error: CIDR {cidr} straddles public and private IPs.")
+                cidr_private = f"{ip_private._str}/{prefix_len_private}"
+                print(f"error: Public subnet {cidr} overlaps private subnet {cidr_private}.")
                 exit(1)
 
             return _Visibility.private
         return _Visibility.public
     
     def __str__(self) -> str:
-        return f"{"{"} {self._cidr}, {self._netmask}, {self._visibility.name} {"}"}"
+        return f"{"{"} {self._str}, {self._netmask}, {self._visibility.name} {"}"}"
 
 
 # DOMAIN NAME SYSTEM **********************************************************
@@ -349,7 +354,7 @@ class Iface():
     def __init__(self, cidr: str):
         """
         @params:
-            - cidr: The IPv4 address in CIDR notation, ex. "169.254.1.0/24"
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
         """
 
         if "Iface" not in _comps:

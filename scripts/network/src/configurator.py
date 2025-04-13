@@ -25,10 +25,11 @@ class Configurator():
         """
         
         self.__cidr = _CIDR(available_range)
-        suffix = 32 - self.__cidr._prefix_len_int
+        self.__ip = self.__cidr._ip._int
 
-        self.__ip = self.__cidr._ip._ip_int
+        suffix = 32 - self.__cidr._prefix_len
         self.__ip_max = self.__ip + 2 ** suffix
+
         self.__prefix_len = prefix_len
 
         with open("docker-compose.yml", "w") as file:
@@ -76,7 +77,7 @@ class Configurator():
             self.__write_service(file, tgen)
 
             file.write(f"{_SPACE * 3}# Locust configuration:\n")
-            file.write(f"{_SPACE * 3}DST_IP: {tgen._dst_ip._ip_str}\n")
+            file.write(f"{_SPACE * 3}DST_IP: {tgen._dst_ip._str}\n")
             file.write(f"{_SPACE * 3}CONN_MAX: {tgen._conn_max}\n")
             file.write(f"{_SPACE * 3}CONN_RATE: {tgen._conn_rate}\n")
             file.write(f"{_SPACE * 3}PROTO: {tgen._proto}\n")
@@ -104,7 +105,7 @@ class Configurator():
             for config in router._iface_configs:
                 assert(type(config) == _IfaceConfig)
 
-                cidrs.append(config._iface._cidr._cidr)
+                cidrs.append(config._iface._cidr._str)
                 visibilities.append(config._iface._cidr._visibility.name)
                 nats.append(config._nat.name)
 
@@ -161,9 +162,9 @@ class Configurator():
             assert(type(config) == _IfaceConfig)
 
             ifaces.append(config._iface._name)
-            src_ips.append(config._src._ip_str)
-            net_masks.append(config._iface._cidr._netmask._ip_str)
-            gateways.append(config._gateway._ip_str)
+            src_ips.append(config._src._str)
+            net_masks.append(config._iface._cidr._netmask._str)
+            gateways.append(config._gateway._str)
             firewalls.append(config._firewall.name)
             drop_percents.append(f"{config._drop_percent}")
             delays.append(f"{config._delay}")
@@ -204,12 +205,12 @@ class Configurator():
         """
 
         if self.__ip >= self.__ip_max:
-            print(f"error: Allocated subnet {self.__cidr._cidr} exceeded.")
+            print(f"error: Allocated subnet {self.__cidr._str} exceeded.")
             print("\tConsider changing settings for the Configurator.")
             exit(1)
 
         ip = _IPv4(self.__ip)
-        cidr = f"{ip._ip_str}/{self.__prefix_len}"
+        cidr = f"{ip._str}/{self.__prefix_len}"
 
         suffix = 32 - self.__prefix_len
         self.__ip += 2 ** suffix  # iterate
