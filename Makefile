@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 PYTHON ?= python3
 
-NETWORK ?= example-4.py
+CONFIG ?= example-4.py
 
 
 .ONESHELL:
@@ -19,22 +19,22 @@ options help:
 	echo "" # New line
 
 	echo "Helper:"
-	echo -e "\t- config # write docker-compose only"
-	echo -e "\t- networks # list available networks"
+	echo -e "\t- config  # write docker-compose only"
+	echo -e "\t- configs  # list available configurations"
 	echo -e "\t- stats"
 
 	echo "" # New line
 
 	echo "Notes:"
-	echo -e "\t- Compose specific network: 'make up NETWORK=NAME'"
+	echo -e "\t- Compose specific config: 'make up CONFIG=NAME'"
 
-CERTS_SERVER := components/server/nginx/ssl
+CERTS_SERVER := components/nginx/ssl
 certs:
 	mkdir -p ${CERTS_SERVER}
 	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${CERTS_SERVER}/private.key -out ${CERTS_SERVER}/public.crt \
 		-subj "/C=US/ST=Washington/L=Spokane/O=Eastern Washington University/OU=Department of Computer Science/CN=Nil" 2> /dev/null
 
-build image: certs
+build: certs
 	FILES=$$(find components -name "Dockerfile")
 	for FILE in $$FILES; do
 		NAME=$$(basename $$(dirname $$FILE))
@@ -42,24 +42,14 @@ build image: certs
 	done
 
 config:
-	${PYTHON} scripts/network/${NETWORK}
+	${PYTHON} scripts/config/${CONFIG}
 
-compose up:
-	# may be undesired
-	# remove output from previous runs
-	rm -f shared/*.csv || true
+configs:
+	echo "Configurations:"
 
-	mkdir -p shared
-
-	${PYTHON} scripts/network/${NETWORK} || exit 1
-	docker compose up -d
-
-network networks:
-	echo "Networks:"
-
-	NETWORKS="$$(ls scripts/network/*.py)"
-	for NETWORK in $${NETWORKS}; do
-		NAME="$$(basename $${NETWORK})"
+	CONFIGS="$$(ls scripts/config/*.py)"
+	for CONFIG in $${CONFIGS}; do
+		NAME="$$(basename $${CONFIG})"
 
 		if [[ "$${NAME}" =~ ^test* ]]; then
 			continue
@@ -68,14 +58,22 @@ network networks:
 		echo -e "\t- $${NAME}"
 	done
 
-decompose down:
+up: config
+	# may be undesired
+	# remove output from previous runs
+	rm -f shared/*.csv || true
+	mkdir -p shared
+
+	docker compose up -d
+
+down:
 	docker compose down
 
-stats monitor:
+stats:
 	echo "Exit with ctrl + c ..."
 	${PYTHON} scripts/stats/main.py
 
-clean reset:
+clean:
 	rm -f shared/*.csv || true
 	rm -r ${CERTS_SERVER}
 	
