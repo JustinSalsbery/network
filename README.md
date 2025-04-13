@@ -51,28 +51,34 @@ Needed for work:
 5. K8s
 
 Needed foundation:
-1. NTP
+1. NTP: Add WARNING to Tor.
+    - Docker uses the host clock so NTP is unnecessary for clock synchronization.
+    - Many encrypted protocols require clock synchronization, such as HTTPS and Tor,
+      so NTP may be necessary in a real-world environment.
 2. DNS
 3. DHCP
+4. Server: Static & Dynamic
 
 Neat additions:
-- Metasploitable 2
-- nmap (Port and IP scanners)
+- Damn Vulnerable Web App
+- nmap: Port and IP scanners
 - VPN
     - Local only firewall rule.
-    - IP destination censorship on routers
+    - IP destination censorship on Routers.
+- IDS: Router option to duplicate traffic to IDS.
 
 Eventual:
 - Server:
     - Redis for authentication.
     - Postgres for storage.
-    - API access
+    - API interface.
+    - Requires authentication support on the traffic generator.
 - Script: `pcap` to `dot` graph
 - Script: Randomly restart containers with image name.
 
 Avoid for simplicity:
 - CA
     - Copy certificates into containers so `--insecure` flag isn’t required?
-- Autonomous zones.
+- Autonomous zones and IXP.
 - IPS
     - Difficult to input rules.
