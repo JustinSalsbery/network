@@ -1,6 +1,7 @@
 
 from enum import Enum, auto
 from random import choice
+from math import nan
 
 
 _comps = {} # Created components are registered here.
@@ -21,6 +22,11 @@ class _IPv4():
             - ip: The IPv4 address.
         """
 
+        if ip == "":  # special case
+            self._str = "none"
+            self._int = nan
+            return
+
         if type(ip) == str:
             if not self.__is_legal(ip):
                 print(f"error: Illegal IPv4 address {ip}")
@@ -36,10 +42,6 @@ class _IPv4():
 
             self._int = ip
             self._str = self.__int_to_str(ip)
-
-        else:  # Gateway defaults to NoneType
-            self._str = "none"
-            self._int = 0
 
     def __is_legal(self, ip: str) -> bool:
         """
@@ -73,10 +75,10 @@ class _IPv4():
         octets = ip.split(".")
         octets = [*map(int, octets)]
 
-        ip = (octets[0] << 24) \
+        ip =   (octets[0] << 24) \
              + (octets[1] << 16) \
              + (octets[2] << 8) \
-             + octets[3]
+             +  octets[3]
         
         return ip
     
@@ -90,7 +92,7 @@ class _IPv4():
         octets = [(0xff000000 & ip) >> 24,
                   (0x00ff0000 & ip) >> 16,
                   (0x0000ff00 & ip) >> 8,
-                  0x000000ff & ip]
+                   0x000000ff & ip]
         
         octets = [*map(str, octets)]
         return ".".join(octets)
@@ -106,6 +108,7 @@ class _CIDR():
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
         WARNING:
             - Subnets that overlap public and private IP ranges are disallowed.
+            - The maximum allowed prefix length is 28.
         """
 
         if not self.__is_legal(cidr):
@@ -113,15 +116,10 @@ class _CIDR():
             exit(1)
 
         self._str = cidr
+
         ip, prefix_len = cidr.split("/")
-
         self._ip = _IPv4(ip)
-
-        try:
-            self._prefix_len = int(prefix_len)
-        except:
-            print(f"error: Invalid prefix length for subnet {cidr}.")
-            exit(1)
+        self._prefix_len = int(prefix_len)
 
         self._netmask = self.__netmask(self._prefix_len)
         self._visibility = self.__visibility(cidr, self._ip, self._prefix_len)
@@ -135,12 +133,15 @@ class _CIDR():
 
         try:
             ip, prefix_len = cidr.split("/")
+
             ip = _IPv4(ip)
+            if ip._str == "none":
+                return False
 
             prefix_len = int(prefix_len)
-            if not 0 <= prefix_len <= 32:
+            if not 0 <= prefix_len <= 28:
                 return False
-            
+        
         except Exception:
             return False
         
@@ -371,12 +372,12 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, src_ip: str, gateway: str, firewall: FirewallType, 
+    def __init__(self, iface: Iface, ip: str, gateway: str, firewall: FirewallType, 
                  nat: NatType, drop_percent: int, delay: int):
         """
         @params:
             - iface: The network interface.
-            - src_ip: The IPv4 address of the service.
+            - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
             - nat: Configure NAT. Only implemented on routers.
@@ -385,7 +386,7 @@ class _IfaceConfig():
         """
 
         self._iface = iface
-        self._src = _IPv4(src_ip)
+        self._ip = _IPv4(ip)
         self._gateway = _IPv4(gateway)
         self._firewall = firewall
         self._nat = nat
@@ -457,20 +458,19 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, src_ip: str, gateway: str = None, firewall: FirewallType = FirewallType.none, 
-                  nat: NatType = NatType.none, drop_percent: int = 0, delay: int = 0) -> None:
+    def add_iface(self, iface: Iface, ip: str, gateway: str = "", firewall: FirewallType = FirewallType.none, 
+                  drop_percent: int = 0, delay: int = 0) -> None:
         """
         @params:
             - iface: The network interface.
-            - src_ip: The IPv4 address of the service.
+            - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
-            - nat: Configure NAT. Only implemented on routers.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
         """
 
-        config = _IfaceConfig(iface, src_ip, gateway, firewall, nat, drop_percent, delay)
+        config = _IfaceConfig(iface, ip, gateway, firewall, NatType.none, drop_percent, delay)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -596,6 +596,22 @@ class Router(_Service):
                          disable_swap, forward, syn_cookie, congestion_control)
         
         self._ecmp = ecmp
+
+    def add_iface(self, iface: Iface, ip: str, gateway: str = "", firewall: FirewallType = FirewallType.none, 
+                  drop_percent: int = 0, delay: int = 0, nat: NatType = NatType.none) -> None:
+        """
+        @params:
+            - iface: The network interface.
+            - ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
+            - firewall: Configure firewall.
+            - drop_percent: Drop a percent of random traffic. From 0 to 100.
+            - delay: Set a delay on traffic. In units of milliseconds.
+            - nat: Configure NAT.
+        """
+
+        config = _IfaceConfig(iface, ip, gateway, firewall, nat, drop_percent, delay)
+        self._iface_configs.append(config)
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._ecmp} {"}"}"

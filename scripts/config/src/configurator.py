@@ -151,7 +151,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
 
         ifaces = []
-        src_ips = []
+        ips = []
         net_masks = []
         gateways = []
         firewalls = []
@@ -162,7 +162,7 @@ class Configurator():
             assert(type(config) == _IfaceConfig)
 
             ifaces.append(config._iface._name)
-            src_ips.append(config._src._str)
+            ips.append(config._ip._str)
             net_masks.append(config._iface._cidr._netmask._str)
             gateways.append(config._gateway._str)
             firewalls.append(config._firewall.name)
@@ -170,7 +170,7 @@ class Configurator():
             delays.append(f"{config._delay}")
 
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
-        file.write(f"{_SPACE * 3}SRC_IPS: {" ".join(src_ips)}\n")
+        file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
