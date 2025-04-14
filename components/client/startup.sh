@@ -11,13 +11,22 @@ for IFACE in $IFACES; do
     GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
-    # network suffix should be _0 
-    ifconfig ${IFACE}_0 $IP netmask $NET_MASK || \
-        echo "error: Failed to configure ${IFACE}_0"
-    
-    if [ "$GATEWAY" != "none" ]; then
-        route add default gateway $GATEWAY ${IFACE}_0 || \
-            echo "error: Failed to configure the gateway for ${IFACE}_0"
+    # network suffix should be _0
+    if [ "$IP" = "none" ]; then
+        # dhcp
+        FILE="/etc/udhcpc/udhcpc.conf"
+        echo "# Do not overwrite /etc/resolv.conf" > $FILE
+        echo 'RESOLV_CONF="no"' >> $FILE
+        udhcpc -i ${IFACE}_0
+    else
+        # manual
+        ifconfig ${IFACE}_0 $IP netmask $NET_MASK || \
+            echo "error: Failed to configure ${IFACE}_0"
+        
+        if [ "$GATEWAY" != "none" ]; then
+            route add default gateway $GATEWAY ${IFACE}_0 || \
+                echo "error: Failed to configure the gateway for ${IFACE}_0"
+        fi
     fi
 done
 

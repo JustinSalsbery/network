@@ -27,8 +27,8 @@ class Configurator():
         self.__cidr = _CIDR(available_range)
         self.__ip = self.__cidr._ip._int
 
-        suffix = 32 - self.__cidr._prefix_len
-        self.__ip_max = self.__ip + 2 ** suffix
+        suffix_len = 32 - self.__cidr._prefix_len
+        self.__ip_max = self.__ip + 2 ** suffix_len
 
         self.__prefix_len = prefix_len
 
@@ -55,6 +55,31 @@ class Configurator():
         for server in servers:
             assert(type(server) == Server)
             self.__write_service(file, server)
+
+        # write dhcp
+
+        dhcps = []
+        if _ServiceType.dhcp.name in _comps:
+            dhcps = _comps[_ServiceType.dhcp.name]
+
+        for dhcp in dhcps:
+            assert(type(dhcp) == DHCP)
+            self.__write_service(file, dhcp)
+
+            file.write(f"{_SPACE * 3}# DHCP configuration:\n")
+            file.write(f"{_SPACE * 3}LEASE_TIME: {dhcp._lease_time}\n")
+
+            lease_starts = []
+            lease_ends = []
+
+            for config in dhcp._iface_configs:
+                assert(type(config) == _IfaceConfig)
+
+                lease_starts.append(config._lease_start._str)
+                lease_ends.append(config._lease_end._str)
+
+            file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
+            file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
 
         # write clients
 
@@ -212,7 +237,7 @@ class Configurator():
         ip = _IPv4(self.__ip)
         cidr = f"{ip._str}/{self.__prefix_len}"
 
-        suffix = 32 - self.__prefix_len
-        self.__ip += 2 ** suffix  # iterate
+        suffix_len = 32 - self.__prefix_len
+        self.__ip += 2 ** suffix_len  # iterate
 
         return cidr

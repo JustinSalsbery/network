@@ -373,29 +373,35 @@ class Iface():
 
 class _IfaceConfig():
     def __init__(self, iface: Iface, ip: str, gateway: str, firewall: FirewallType, 
-                 nat: NatType, drop_percent: int, delay: int):
+                 drop_percent: int, delay: int, lease_start: str, lease_end: str, 
+                 nat: NatType):
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
-            - nat: Configure NAT. Only implemented on routers.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
+            - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
+            - nat: Configure NAT. Only implemented on routers.
         """
 
         self._iface = iface
         self._ip = _IPv4(ip)
         self._gateway = _IPv4(gateway)
         self._firewall = firewall
-        self._nat = nat
 
         assert(0 <= drop_percent <= 100)
         self._drop_percent = drop_percent
 
         assert(0 <= delay)
         self._delay = delay
+
+        self._lease_start = _IPv4(lease_start)
+        self._lease_end = _IPv4(lease_end)
+        self._nat = nat
 
     def __str__(self) -> str:
         return f"{"{"} {self._iface}, {self._src}, {self._gateway} {"}"}"
@@ -410,6 +416,7 @@ class _ServiceType(Enum):
     lb = auto()  # load balancer
     router = auto()
     client = auto()
+    dhcp = auto()
 
 
 class CongestionControlType(Enum):
@@ -458,7 +465,7 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str, gateway: str = "", firewall: FirewallType = FirewallType.none, 
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", firewall: FirewallType = FirewallType.none, 
                   drop_percent: int = 0, delay: int = 0) -> None:
         """
         @params:
@@ -468,9 +475,12 @@ class _Service():
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
+        WARNING:
+            - If the IP is empty, then the service will attempt to use DHCP for
+              an IP and Gateway.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, firewall, NatType.none, drop_percent, delay)
+        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, "", "", NatType.none)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -574,6 +584,65 @@ class Server(_Service):
                          disable_swap, forward, syn_cookie, congestion_control)
 
 
+# DHCP ************************************************************************
+
+
+class DHCP(_Service):
+    def __init__(self, lease_time: int = 600, cpu_limit: str = "0.5", mem_limit: str = "256M",
+                 disable_swap: bool = False, forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable,
+                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+        """
+        @params:
+            - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
+            - mem_limit: Limit service memory.
+            - disable_swap: Enables/disables swap memory.
+            - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
+        WARNING:
+            - The DHCP server is only configured for a single interface.
+              Do not add multiple interfaces!
+        """
+
+        super().__init__(_ServiceType.dhcp, "dhcp", cpu_limit, mem_limit, 
+                         disable_swap, forward, syn_cookie, congestion_control)
+        
+        assert(0 < lease_time)
+        self._lease_time = lease_time
+
+    def add_iface(self, iface: Iface, ip: str, gateway: str = "", firewall: FirewallType = FirewallType.none, 
+                  drop_percent: int = 0, delay: int = 0, lease_start: str = "",
+                  lease_end: str = "") -> None:
+        """
+        @params:
+            - iface: The network interface.
+            - ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
+            - firewall: Configure firewall.
+            - drop_percent: Drop a percent of random traffic. From 0 to 100.
+            - delay: Set a delay on traffic. In units of milliseconds.
+            - lease_start: The IPv4 address at the start of the lease block.
+            - lease_end: The IPv4 address at the end of the lease block.
+        WARNING:
+            - The default lease_start is .10; the default lease_end is .254
+        """
+
+        # config default lease_start
+        if lease_start == "":
+            lease_start = _IPv4(iface._cidr._ip._int + 10)
+            lease_start = lease_start._str
+
+        # config default lease_end
+        if lease_end == "":
+            suffix_len = 32 - iface._cidr._prefix_len
+            lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
+            lease_end = lease_end._str
+        
+        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay,
+                              lease_start, lease_end, NatType.none)
+        self._iface_configs.append(config)
+
+
 # ROUTER **********************************************************************
 
 
@@ -597,7 +666,7 @@ class Router(_Service):
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str, gateway: str = "", firewall: FirewallType = FirewallType.none, 
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", firewall: FirewallType = FirewallType.none,
                   drop_percent: int = 0, delay: int = 0, nat: NatType = NatType.none) -> None:
         """
         @params:
@@ -608,9 +677,12 @@ class Router(_Service):
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
             - nat: Configure NAT.
+        WARNING:
+            - If the IP is empty, then the service will attempt to use DHCP for
+              an IP and Gateway.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, firewall, nat, drop_percent, delay)
+        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, "", "", nat)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:

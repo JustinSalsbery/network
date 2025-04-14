@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # setup ifaces
+
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"  # the first index
     IPS="$(echo $IPS | cut -d' ' -f2-)"  # the rest of the list
@@ -83,7 +84,7 @@ for IFACE in $IFACES; do
 
     elif [ "$FIREWALL" = "block_rsts_output" ]; then
         iptables -A OUTPUT -o ${IFACE}_0 -p tcp --tcp-flags ALL RST -j DROP
-    
+
     elif [ "$FIREWALL" = "block_l4" ]; then
         iptables -A INPUT -i ${IFACE}_0 -p tcp -j DROP
         iptables -A INPUT -i ${IFACE}_0 -p udp -j DROP
@@ -131,8 +132,44 @@ elif [ "$SYN_COOKIE" = "force" ]; then
     sysctl -w net.ipv4.tcp_syncookies=2
 fi
 
-# run nginx
-trap "exit 0" SIGTERM
-nginx -g "daemon off;" &
+# setup dhcp
+for IFACE in $IFACES; do
+    NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
+    NET_MASKS="$(echo $NET_MASKS | cut -d' ' -f2-)"
 
-wait $!  # $! is the PID of nginx
+    GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
+    GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
+
+    LEASE_START="$(echo $LEASE_STARTS | cut -d' ' -f1)"
+    LEASE_STARTS="$(echo $LEASE_STARTS | cut -d' ' -f2-)"
+
+    LEASE_END="$(echo $LEASE_ENDS | cut -d' ' -f1)"
+    LEASE_ENDS="$(echo $LEASE_ENDS | cut -d' ' -f2-)"
+
+    FILE="/etc/udhcpd.conf"
+
+    echo "interface ${IFACE}_0" > $FILE
+    echo "opt subnet $NET_MASK" >> $FILE
+    echo "" >> $FILE  # new line
+
+    if [ "$GATEWAY" != "none" ]; then
+        echo "opt route $GATEWAY" >> $FILE
+    fi
+
+    # opt dns IP
+
+    echo "" >> $FILE  # new line
+    echo "# IP lease block" >> $FILE
+    echo "start  $LEASE_START" >> $FILE
+    echo "end    $LEASE_END" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "offer_time $LEASE_TIME  # seconds" >> $FILE
+done
+
+udhcpd  # run
+
+# sleep
+trap "exit 0" SIGTERM
+sleep infinity &
+
+wait $!  # $! is the PID of sleep
