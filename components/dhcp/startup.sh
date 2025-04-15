@@ -153,7 +153,7 @@ for IFACE in $IFACES; do
     echo "" >> $FILE  # new line
 
     if [ "$GATEWAY" != "none" ]; then
-        echo "opt route $GATEWAY" >> $FILE
+        echo "opt router $GATEWAY" >> $FILE
     fi
 
     # opt dns IP

@@ -34,7 +34,6 @@ class _IPv4():
         
             self._str = ip
             self._int = self.__str_to_int(ip)
-
         elif type(ip) == int:
             if ip < 0 or ip > 0xffffffff:
                 print(f"error: Illegal IPv4 address {ip}")
@@ -42,6 +41,9 @@ class _IPv4():
 
             self._int = ip
             self._str = self.__int_to_str(ip)
+        else:  # unknown type
+            print(f"error: Illegal IPv4 of type {type(ip)}")
+            exit(1)
 
     def __is_legal(self, ip: str) -> bool:
         """
