@@ -30,6 +30,12 @@ for IFACE in $IFACES; do
     fi
 done
 
+# setup dns
+echo "localhost 127.0.0.1" > /etc/hosts
+if [ "$NAMESERVER" != "none" ]; then
+  echo "nameserver $NAMESERVER" > /etc/resolv.conf
+fi
+
 # setup forwarding
 if [ "$FORWARD" = "true" ]; then
     sysctl -w net.ipv4.ip_forward=1

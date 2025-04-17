@@ -30,6 +30,12 @@ for IFACE in $IFACES; do
     fi
 done
 
+# setup dns
+echo "localhost 127.0.0.1" > /etc/hosts
+if [ "$NAMESERVER" != "none" ]; then
+  echo "nameserver $NAMESERVER" > /etc/resolv.conf
+fi
+
 # setup forwarding
 if [ "$FORWARD" = "true" ]; then
     sysctl -w net.ipv4.ip_forward=1
@@ -138,7 +144,7 @@ FILE="locustfile.py"
 echo "from locust import FastHttpUser, between, task" > $FILE
 echo "" >> $FILE  # new line
 echo "class WebsiteUser(FastHttpUser):" >> $FILE
-echo -e "\thost = '$PROTO://$DST_IP'" >> $FILE
+echo -e "\thost = '$PROTO://$TARGET'" >> $FILE
 echo -e "\twait_time = between($WAIT_MIN, $WAIT_MAX)" >> $FILE
 
 i=0

@@ -219,86 +219,6 @@ class _CIDR():
         return f"{"{"} {self._str}, {self._netmask}, {self._visibility.name} {"}"}"
 
 
-# DOMAIN NAME SYSTEM **********************************************************
-
-
-class _Domain():
-    def __init__(self, name: str):
-        """
-        @params:
-            - name: The domain name.
-        """
-
-        self._name = name
-        self._ips = {}
-
-    def add_ip(self, ip: str) -> None:
-        """
-        @params:
-            - ip: The IPv4 address.
-        """
-
-        _IPv4(ip)  # check legality
-        if ip not in self._ips:
-            self._ips[ip] = True
-
-    def get_ip(self) -> str:
-        """
-        @returns: Returns a random IP.
-        """
-
-        if len(self._ips) == 0:
-            print(f"error: No IP registered for domain {self._name}.")
-            exit(1)
-
-        return choice([*self._ips.keys()])
-
-    def __str__(self) -> str:
-        return f"{"{"} {self._name}, {self._ips} {"}"}"
-
-
-class DNS():
-    _domains = {}
-
-    def __init__(self):
-        if "DNS" not in _comps:
-            _comps["DNS"] = self
-
-    def register(self, name: str) -> _Domain:
-        """
-        @params:
-            - name: The domain name.
-        @return: The registered domain.
-        WARNING:
-            - You can only register a domain name once!
-        """
-
-        if name in DNS._domains:
-            print(f"error: Domain {name} registered multiple times.")
-            exit(1)
-
-        domain = _Domain(name)
-        DNS._domains[name] = domain
-
-        return domain
-
-    def resolve(self, name: str) -> _Domain:
-        """
-        @params:
-            - name: The domain name.
-        @return: The resolved domain.
-        """
-        
-        if name not in DNS._domains:
-            print(f"error: Domain {name} not registered.")
-            exit(1)
-
-        return DNS._domains[name]
-    
-    def __str__(self) -> str:
-        return f"{"{"} {self._domains} {"}"}"
-
-
 # INTERFACE *******************************************************************
 
 
@@ -419,6 +339,7 @@ class _ServiceType(Enum):
     router = auto()
     client = auto()
     dhcp = auto()
+    dns = auto()  # nameserver
 
 
 class CongestionControlType(Enum):
@@ -434,7 +355,7 @@ class SynCookieType(Enum):
 
 class _Service():
     def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
-                 disable_swap: bool, forward: bool, syn_cookie: SynCookieType, 
+                 disable_swap: bool, nameserver: str, forward: bool, syn_cookie: SynCookieType, 
                  congestion_control: CongestionControlType):
         """
         @params:
@@ -443,6 +364,7 @@ class _Service():
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
@@ -453,6 +375,7 @@ class _Service():
         self._cpu_limit = cpu_limit
         self._mem_limit = mem_limit
         self._disable_swap = disable_swap
+        self._nameserver = _IPv4(nameserver)
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
@@ -498,10 +421,10 @@ class Protocol(Enum):
 
 
 class TrafficGenerator(_Service):
-    def __init__(self, target: _Domain | str, proto: Protocol = Protocol.http,
+    def __init__(self, target: str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
                  wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.5", 
-                 mem_limit: str = "256M", disable_swap: bool = False, 
+                 mem_limit: str = "256M", disable_swap: bool = False, nameserver: str = "",
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
@@ -515,21 +438,16 @@ class TrafficGenerator(_Service):
             - wait_max: The maximum wait between requests.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
+            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.tgen, "locust", cpu_limit, mem_limit, 
-                         disable_swap, forward, syn_cookie, congestion_control)
+                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
         
-        self._domain = None
-        if type(target) == _Domain:
-            self._domain = target
-            target = target.get_ip()
-
-        self._dst_ip = _IPv4(target)
-
+        self._target = target
         self._proto = proto.name
         self._pages = pages
         self._conn_max = conn_max
@@ -538,7 +456,7 @@ class TrafficGenerator(_Service):
         self._wait_max = wait_max
 
     def __str__(self) -> str:
-        return f"{"{"} {super().__str__()}, {self._dst_ip}, {self._proto}, " \
+        return f"{"{"} {super().__str__()}, {self._proto}, {self._target}, " \
                + f"{self._pages}, {self._conn_max} {"}"}"
 
 
@@ -547,7 +465,7 @@ class TrafficGenerator(_Service):
 
 class Client(_Service):
     def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, forward: bool = False,
+                 disable_swap: bool = False, nameserver: str = "", forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
@@ -555,13 +473,14 @@ class Client(_Service):
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.client, "client", cpu_limit, mem_limit, 
-                         disable_swap, forward, syn_cookie, congestion_control)
+                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
 
 
 # SERVER **********************************************************************
@@ -569,7 +488,7 @@ class Client(_Service):
 
 class Server(_Service):
     def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, forward: bool = False,
+                 disable_swap: bool = False, nameserver: str = "", forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
@@ -577,13 +496,14 @@ class Server(_Service):
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, 
-                         disable_swap, forward, syn_cookie, congestion_control)
+                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
 
 
 # DHCP ************************************************************************
@@ -591,13 +511,15 @@ class Server(_Service):
 
 class DHCP(_Service):
     def __init__(self, lease_time: int = 600, cpu_limit: str = "0.5", mem_limit: str = "256M",
-                 disable_swap: bool = False, forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable,
+                 disable_swap: bool = False, nameserver: str = "", forward: bool = False, 
+                 syn_cookie: SynCookieType = SynCookieType.enable,
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
@@ -607,7 +529,7 @@ class DHCP(_Service):
         """
 
         super().__init__(_ServiceType.dhcp, "dhcp", cpu_limit, mem_limit, 
-                         disable_swap, forward, syn_cookie, congestion_control)
+                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
         
         assert(0 < lease_time)
         self._lease_time = lease_time
@@ -650,7 +572,8 @@ class DHCP(_Service):
 
 class Router(_Service):
     def __init__(self, ecmp: bool = False, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
+                 disable_swap: bool = False, nameserver: str = "", forward: bool = True, 
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
@@ -658,13 +581,14 @@ class Router(_Service):
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
+            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
         super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit,
-                         disable_swap, forward, syn_cookie, congestion_control)
+                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
         
         self._ecmp = ecmp
 
@@ -689,3 +613,65 @@ class Router(_Service):
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._ecmp} {"}"}"
+
+
+# DNS *************************************************************************
+
+
+class _Domain():
+    def __init__(self, name: str, ip: str):
+        """
+        @params:
+            - name: The domain name.
+            - ip: The IPv4 address of the service.
+        """
+
+        assert(name != "")
+        self._name = name
+
+        assert(ip != "")
+        self._ip = _IPv4(ip)
+
+    def __str__(self) -> str:
+        return f"{"{"} {self._name}, {self._ip._str} {"}"}"
+    
+
+class Nameserver(_Service):
+    def __init__(self, ttl: int = 600, log: bool = False, cpu_limit: str = "0.5", 
+                 mem_limit: str = "256M", disable_swap: bool = False, forward: bool = False, 
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+        """
+        @params:
+            - ttl: The time-to-live for the resolved record in seconds.
+            - log: Enable or disable logging of queries.
+            - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
+            - mem_limit: Limit service memory.
+            - disable_swap: Enables/disables swap memory.
+            - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
+        """
+
+        super().__init__(_ServiceType.dns, "dns", cpu_limit, mem_limit, disable_swap,
+                         "", forward, syn_cookie, congestion_control)
+        
+        assert(ttl > 0)
+        self._ttl = ttl
+
+        self._log = log
+        self._domains = []
+
+    def register(self, name: str, ip: str) -> None:
+        """
+        @params:
+            - name: The domain name.
+            - ip: The IPv4 address of the service.
+        """
+
+        domain = _Domain(name, ip)
+        self._domains.append(domain)
+
+    def __str__(self) -> str:
+        return f"{"{"} {super().__str__()}, {self._ttl}, {self._domains} {"}"}"
+    

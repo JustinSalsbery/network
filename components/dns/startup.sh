@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # setup ifaces
+
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"  # the first index
     IPS="$(echo $IPS | cut -d' ' -f2-)"  # the rest of the list
@@ -89,7 +90,7 @@ for IFACE in $IFACES; do
 
     elif [ "$FIREWALL" = "block_rsts_output" ]; then
         iptables -A OUTPUT -o ${IFACE}_0 -p tcp --tcp-flags ALL RST -j DROP
-    
+
     elif [ "$FIREWALL" = "block_l4" ]; then
         iptables -A INPUT -i ${IFACE}_0 -p tcp -j DROP
         iptables -A INPUT -i ${IFACE}_0 -p udp -j DROP
@@ -137,8 +138,33 @@ elif [ "$SYN_COOKIE" = "force" ]; then
     sysctl -w net.ipv4.tcp_syncookies=2
 fi
 
-# run nginx
-trap "exit 0" SIGTERM
-nginx -g "daemon off;" &
+# setup hosts
+FILE="/etc/dnsmasq.hosts"
+echo "" > $FILE  # new line
 
-wait $!  # $! is the PID of nginx
+for HOST in $HOSTS; do
+    HOST_IP="$(echo $HOST_IPS | cut -d' ' -f1)"
+    HOST_IPS="$(echo $HOST_IPS | cut -d' ' -f2-)"
+
+    echo "$HOST_IP $HOST" >> $FILE
+done
+
+# setup dns
+FILE="/etc/dnsmasq.conf"
+
+echo "no-hosts  # do not use /etc/hosts" > $FILE
+echo "addn-hosts=/etc/dnsmasq.hosts" >> $FILE
+echo "no-resolv  # do not use /etc/resolv.conf" >> $FILE
+echo "auth-ttl=$TTL  # seconds" >> $FILE
+
+if [ "$LOG" = "true" ]; then
+    echo "log-queries" >> $FILE
+fi
+
+dnsmasq  # run
+
+# sleep
+trap "exit 0" SIGTERM
+sleep infinity &
+
+wait $!  # $! is the PID of sleep

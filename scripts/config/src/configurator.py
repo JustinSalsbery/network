@@ -1,7 +1,7 @@
 
 from io import TextIOWrapper
 
-from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR
+from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
 from src.components import *
 
 
@@ -102,7 +102,7 @@ class Configurator():
             self.__write_service(file, tgen)
 
             file.write(f"{_SPACE * 3}# Locust configuration:\n")
-            file.write(f"{_SPACE * 3}DST_IP: {tgen._dst_ip._str}\n")
+            file.write(f"{_SPACE * 3}DST_IP: {tgen._target}\n")
             file.write(f"{_SPACE * 3}CONN_MAX: {tgen._conn_max}\n")
             file.write(f"{_SPACE * 3}CONN_RATE: {tgen._conn_rate}\n")
             file.write(f"{_SPACE * 3}PROTO: {tgen._proto}\n")
@@ -138,6 +138,32 @@ class Configurator():
             file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
 
+        # write nameservers
+
+        nameservers = []
+        if _ServiceType.dns.name in _comps:
+            nameservers = _comps[_ServiceType.dns.name]
+
+        for nameserver in nameservers:
+            assert(type(nameserver) == Nameserver)
+            self.__write_service(file, nameserver)
+
+            file.write(f"{_SPACE * 3}# Nameserver configuration:\n")
+            file.write(f"{_SPACE * 3}TTL: {nameserver._ttl}\n")
+            file.write(f"{_SPACE * 3}LOG: {str(nameserver._log).islower()}\n")
+
+            names = []
+            ips = []
+
+            for domain in nameserver._domains:
+                assert(type(domain) == _Domain)
+
+                names.append(domain._name)
+                ips.append(domain._ip._str)
+
+            file.write(f"{_SPACE * 3}HOSTS: {" ".join(names)}\n")
+            file.write(f"{_SPACE * 3}HOST_IPS: {" ".join(ips)}\n")
+
     def __write_service(self, file: TextIOWrapper, service: _Service):
         """
         @params:
@@ -171,6 +197,7 @@ class Configurator():
         file.write(f"{_SPACE * 2}privileged: true # enables sysctl\n")
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
+        file.write(f"{_SPACE * 3}NAMESERVER: {service._nameserver._str}\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")

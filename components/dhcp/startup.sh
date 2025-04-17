@@ -31,6 +31,12 @@ for IFACE in $IFACES; do
     fi
 done
 
+# setup dns
+echo "localhost 127.0.0.1" > /etc/hosts
+if [ "$NAMESERVER" != "none" ]; then
+  echo "nameserver $NAMESERVER" > /etc/resolv.conf
+fi
+
 # setup forwarding
 if [ "$FORWARD" = "true" ]; then
     sysctl -w net.ipv4.ip_forward=1
@@ -156,7 +162,9 @@ for IFACE in $IFACES; do
         echo "opt router $GATEWAY" >> $FILE
     fi
 
-    # opt dns IP
+    if [ "$NAMESERVER" != "none" ]; then
+        echo "opt dns $NAMESERVER" >> $FILE
+    fi
 
     echo "" >> $FILE  # new line
     echo "# IP lease block" >> $FILE
@@ -164,6 +172,7 @@ for IFACE in $IFACES; do
     echo "end    $LEASE_END" >> $FILE
     echo "" >> $FILE  # new line
     echo "offer_time $LEASE_TIME  # seconds" >> $FILE
+    echo "lease_file /app/udhcpd.leases" >> $FILE
 done
 
 udhcpd  # run
