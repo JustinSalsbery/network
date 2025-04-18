@@ -354,17 +354,17 @@ class SynCookieType(Enum):
 
 
 class _Service():
-    def __init__(self, type: _ServiceType, image: str, cpu_limit: str, mem_limit: str, 
-                 disable_swap: bool, nameserver: str, forward: bool, syn_cookie: SynCookieType, 
+    def __init__(self, type: _ServiceType, image: str, nameserver: str, cpu_limit: str,
+                 mem_limit: str, disable_swap: bool, forward: bool, syn_cookie: SynCookieType,
                  congestion_control: CongestionControlType):
         """
         @params:
             - type: The type of the service.
             - image: The name of the Docker image.
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
@@ -423,29 +423,29 @@ class Protocol(Enum):
 class TrafficGenerator(_Service):
     def __init__(self, target: str, proto: Protocol = Protocol.http,
                  pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
-                 wait_min: float = 5, wait_max: float = 15, cpu_limit: str = "0.5", 
-                 mem_limit: str = "256M", disable_swap: bool = False, nameserver: str = "",
+                 wait_min: float = 5, wait_max: float = 15, nameserver: str = "", 
+                 cpu_limit: str = "0.5", mem_limit: str = "256M", disable_swap: bool = False,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
-            - target: The IP address, or the domain, of the target server.
+            - target: The IP address, or the domain name, of the target server.
             - proto: The protocol used for the requests.
             - pages: The pages to request.
             - conn_max: The maximum number of simultaneous connections.
             - conn_rate: The rate of establishing new connections.
             - wait_min: The minimum wait between requests.
             - wait_max: The maximum wait between requests.
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
-            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
-        super().__init__(_ServiceType.tgen, "locust", cpu_limit, mem_limit, 
-                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.tgen, "locust", nameserver, cpu_limit, mem_limit, 
+                         disable_swap, forward, syn_cookie, congestion_control)
         
         self._target = target
         self._proto = proto.name
@@ -464,62 +464,66 @@ class TrafficGenerator(_Service):
 
 
 class Client(_Service):
-    def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, nameserver: str = "", forward: bool = False,
+    def __init__(self, nameserver: str = "", cpu_limit: str = "0.5", mem_limit: str = "256M", 
+                 disable_swap: bool = False, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
-        super().__init__(_ServiceType.client, "client", cpu_limit, mem_limit, 
-                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
+                         disable_swap, forward, syn_cookie, congestion_control)
 
 
 # SERVER **********************************************************************
 
 
 class Server(_Service):
-    def __init__(self, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, nameserver: str = "", forward: bool = False,
+    def __init__(self, nameserver: str = "", cpu_limit: str = "0.5", mem_limit: str = "256M", 
+                 disable_swap: bool = False, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+        Note:
+            - Both HTTP (80) and HTTPS (443) are enabled.
+            - In the real world, HTTPS requires a certificate signed by a trusted
+              Certificate Authority (CA).
         """
 
-        super().__init__(_ServiceType.server, "nginx", cpu_limit, mem_limit, 
-                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.server, "nginx", nameserver, cpu_limit, mem_limit, 
+                         disable_swap, forward, syn_cookie, congestion_control)
 
 
 # DHCP ************************************************************************
 
 
 class DHCP(_Service):
-    def __init__(self, lease_time: int = 600, cpu_limit: str = "0.5", mem_limit: str = "256M",
-                 disable_swap: bool = False, nameserver: str = "", forward: bool = False, 
+    def __init__(self, lease_time: int = 600, nameserver: str = "", cpu_limit: str = "0.5", 
+                 mem_limit: str = "256M", disable_swap: bool = False, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable,
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
@@ -529,8 +533,8 @@ class DHCP(_Service):
             - The DHCP server will advertise the nameserver.
         """
 
-        super().__init__(_ServiceType.dhcp, "dhcp", cpu_limit, mem_limit, 
-                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.dhcp, "dhcp", nameserver, cpu_limit, mem_limit, 
+                         disable_swap, forward, syn_cookie, congestion_control)
         
         assert(0 < lease_time)
         self._lease_time = lease_time
@@ -575,24 +579,24 @@ class DHCP(_Service):
 
 
 class Router(_Service):
-    def __init__(self, ecmp: bool = False, cpu_limit: str = "0.5", mem_limit: str = "256M", 
-                 disable_swap: bool = False, nameserver: str = "", forward: bool = True, 
+    def __init__(self, ecmp: bool = False, nameserver: str = "", cpu_limit: str = "0.5", 
+                 mem_limit: str = "256M", disable_swap: bool = False, forward: bool = True, 
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - ecmp: Enable or disable ECMP.
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
-            - nameserver: The IPv4 address.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
         """
 
-        super().__init__(_ServiceType.router, "nat", cpu_limit, mem_limit,
-                         disable_swap, nameserver, forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.router, "nat", nameserver, cpu_limit, mem_limit,
+                         disable_swap, forward, syn_cookie, congestion_control)
         
         self._ecmp = ecmp
 
@@ -642,14 +646,15 @@ class _Domain():
     
 
 class Nameserver(_Service):
-    def __init__(self, ttl: int = 600, log: bool = False, cpu_limit: str = "0.5", 
-                 mem_limit: str = "256M", disable_swap: bool = False, forward: bool = False, 
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
+    def __init__(self, ttl: int = 600, log: bool = False, nameserver: str = "", 
+                 cpu_limit: str = "0.5", mem_limit: str = "256M", disable_swap: bool = False, 
+                 forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic):
         """
         @params:
             - ttl: The time-to-live for the resolved record in seconds.
             - log: Enable or disable logging of queries.
+            - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time; "0.1" is 10% of a logical core.
             - mem_limit: Limit service memory.
             - disable_swap: Enables/disables swap memory.
@@ -658,8 +663,8 @@ class Nameserver(_Service):
             - congestion_control: Configure congestion control.
         """
 
-        super().__init__(_ServiceType.dns, "dns", cpu_limit, mem_limit, disable_swap,
-                         "", forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.dns, "dns", nameserver, cpu_limit, mem_limit, 
+                         disable_swap, forward, syn_cookie, congestion_control)
         
         assert(ttl > 0)
         self._ttl = ttl

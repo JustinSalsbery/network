@@ -55,15 +55,13 @@ Needed foundation:
     - Docker uses the host clock so NTP is unnecessary for clock synchronization.
     - Many encrypted protocols require clock synchronization, such as HTTPS and Tor,
       so NTP may be necessary in a real-world environment.
-2. DNS
-3. DHCP
-4. Server: Static & Dynamic
+2. Server: Static & Dynamic Pages
 
 Neat additions:
 - Damn Vulnerable Web App
 - nmap: Port and IP scanners
 - VPN
-    - Local only firewall rule.
+    - Local only firewall rule -> no gateway.
     - IP destination censorship on Routers.
 - IDS: Router option to duplicate traffic to IDS.
 
@@ -77,8 +75,4 @@ Eventual:
 - Script: Randomly restart containers with image name.
 
 Avoid for simplicity:
-- CA
-    - Copy certificates into containers so `--insecure` flag isn’t required?
 - Autonomous zones and IXP.
-- IPS
-    - Difficult to input rules.

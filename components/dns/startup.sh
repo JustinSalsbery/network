@@ -154,11 +154,12 @@ FILE="/etc/dnsmasq.conf"
 
 echo "no-hosts  # do not use /etc/hosts" > $FILE
 echo "addn-hosts=/etc/dnsmasq.hosts" >> $FILE
-echo "no-resolv  # do not use /etc/resolv.conf" >> $FILE
 echo "local-ttl=$TTL  # seconds" >> $FILE
+echo "" >> $FILE  # new line
 
 if [ "$LOG" = "true" ]; then
     echo "log-queries" >> $FILE
+    echo "log-facility=/app/dns.log" >> $FILE
 fi
 
 dnsmasq  # run
