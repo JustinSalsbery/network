@@ -135,8 +135,10 @@ elif [ "$SYN_COOKIE" = "force" ]; then
     sysctl -w net.ipv4.tcp_syncookies=2
 fi
 
-# run nginx
-trap "exit 0" SIGTERM
-nginx -g "daemon off;" &
+nginx  # run
 
-wait $!  # $! is the PID of nginx
+# sleep
+trap "exit 0" SIGTERM
+sleep infinity &
+
+wait $!  # $! is the PID of sleep
