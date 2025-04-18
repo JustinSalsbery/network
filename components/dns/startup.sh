@@ -1,17 +1,12 @@
 #!/bin/sh
 
-# setup dns
 # delete docker configurations
 echo "localhost 127.0.0.1" > /etc/hosts
-
 echo "" > /etc/resolv.conf
-if [ "$NAMESERVER" != "none" ]; then
-    echo "nameserver $NAMESERVER" > /etc/resolv.conf
-fi
 
 # setup ifaces
 for IFACE in $IFACES; do
-    IP="$(echo $IPS | cut -d' ' -f1)"  # the first index
+    IP="$(echo $IPS | cut -d' ' -f1)"    # the first index
     IPS="$(echo $IPS | cut -d' ' -f2-)"  # the rest of the list
 
     NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
@@ -27,12 +22,14 @@ for IFACE in $IFACES; do
         udhcpc -i ${IFACE}_0     # unmounting allows dhcp to write resolv.conf
     else
         # manual
-        ifconfig ${IFACE}_0 $IP netmask $NET_MASK || \
-            echo "error: Failed to configure ${IFACE}_0"
-        
+        ifconfig ${IFACE}_0 $IP netmask $NET_MASK
+
         if [ "$GATEWAY" != "none" ]; then
-            route add default gateway $GATEWAY ${IFACE}_0 || \
-                echo "error: Failed to configure the gateway for ${IFACE}_0"
+            route add default gateway $GATEWAY ${IFACE}_0
+        fi
+
+        if [ "$NAMESERVER" != "none" ]; then
+            echo "nameserver $NAMESERVER" > /etc/resolv.conf
         fi
     fi
 done

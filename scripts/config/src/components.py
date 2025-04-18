@@ -401,8 +401,8 @@ class _Service():
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
         WARNING:
-            - If the IP is empty, then the service will attempt to use DHCP for
-              an IP and Gateway.
+            - If the IP is empty, then the service will attempt to use DHCP
+              for the IP, gateway, and nameserver.
         """
 
         config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, "", "", NatType.none)
@@ -526,6 +526,7 @@ class DHCP(_Service):
         WARNING:
             - The DHCP server is only configured for a single interface.
               Do not add multiple interfaces!
+            - The DHCP server will advertise the nameserver.
         """
 
         super().__init__(_ServiceType.dhcp, "dhcp", cpu_limit, mem_limit, 
@@ -534,21 +535,24 @@ class DHCP(_Service):
         assert(0 < lease_time)
         self._lease_time = lease_time
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", firewall: FirewallType = FirewallType.none, 
-                  drop_percent: int = 0, delay: int = 0, lease_start: str = "",
-                  lease_end: str = "") -> None:
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
+                  lease_end: str = "", firewall: FirewallType = FirewallType.none, 
+                  drop_percent: int = 0, delay: int = 0) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
+            - lease_start: The IPv4 address at the start of the lease block.
+            - lease_end: The IPv4 address at the end of the lease block.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - lease_start: The IPv4 address at the start of the lease block.
-            - lease_end: The IPv4 address at the end of the lease block.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
+            - The DHCP server will advertise the gateway.
+            - If the IP is empty, then the service will attempt to use DHCP
+              for the IP, gateway, and nameserver.
         """
 
         # config default lease_start
@@ -592,20 +596,21 @@ class Router(_Service):
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", firewall: FirewallType = FirewallType.none,
-                  drop_percent: int = 0, delay: int = 0, nat: NatType = NatType.none) -> None:
+    def add_iface(self, iface: Iface, ip: str = "", nat: NatType = NatType.none, 
+                  gateway: str = "", firewall: FirewallType = FirewallType.none,
+                  drop_percent: int = 0, delay: int = 0) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
+            - nat: Configure NAT.
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - nat: Configure NAT.
         WARNING:
-            - If the IP is empty, then the service will attempt to use DHCP for
-              an IP and Gateway.
+            - If the IP is empty, then the service will attempt to use DHCP
+              for the IP, gateway, and nameserver.
         """
 
         config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, "", "", nat)

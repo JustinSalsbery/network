@@ -12,11 +12,11 @@ dhcp_0.add_iface(iface_0, "169.254.0.2", "169.254.0.1")
 dns_0 = Nameserver()
 dns_0.add_iface(iface_0, ip="169.254.0.9")
 
-client_0 = Client()
+client_0 = Client(nameserver="169.254.0.8")
 client_0.add_iface(iface_0)
 
 client_1 = Client()
-client_1.add_iface(iface_0)
+client_1.add_iface(iface_0, gateway="169.254.0.8")
 
 client_2 = Client()
 client_2.add_iface(iface_0, "169.254.0.3")
