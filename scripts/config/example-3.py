@@ -14,6 +14,9 @@ iface_7 = Iface("170.0.5.0/24")
 iface_8 = Iface("170.0.6.0/24")
 iface_9 = Iface("170.0.7.0/24")
 
+dns_0 = Nameserver()
+dns_0.add_iface(iface_8, "170.0.6.3")
+
 router_0 = Router()
 router_0.add_iface(iface_0, "170.0.0.1", firewall=FirewallType.block_new_conn_output_strict)
 router_0.add_iface(iface_1, "170.0.1.1")
@@ -40,7 +43,7 @@ router_4 = Router()
 router_4.add_iface(iface_6, "170.0.4.2")
 router_4.add_iface(iface_7, "170.0.5.1", firewall=FirewallType.block_new_conn_output_strict)
 
-client_0 = Client()
+client_0 = Client(nameserver="170.0.6.3")
 client_0.add_iface(iface_5, "169.254.0.2", "169.254.0.1")
 
 client_1 = Client()
@@ -54,9 +57,10 @@ client_3.add_iface(iface_3, "169.254.0.3", "169.254.0.1")
 
 server_0 = Server()
 server_0.add_iface(iface_0, "170.0.0.2", "170.0.0.1")
+dns_0.register("server-0", "170.0.0.2")
 
 server_1 = Server()
 server_1.add_iface(iface_7, "170.0.5.2", "170.0.5.1")
-
+dns_0.register("server-1", "170.0.5.2")
 
 conf = Configurator()

@@ -135,6 +135,9 @@ elif [ "$SYN_COOKIE" = "force" ]; then
     sysctl -w net.ipv4.tcp_syncookies=2
 fi
 
+# setup curl
+echo "--insecure" > $HOME/.curlrc
+
 # setup nat
 for IFACE in $IFACES; do
     NAT="$(echo $NATS | cut -d' ' -f1)"
