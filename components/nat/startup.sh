@@ -1,5 +1,14 @@
 #!/bin/sh
 
+# setup dns
+# delete docker configurations
+echo "localhost 127.0.0.1" > /etc/hosts
+
+echo "" > /etc/resolv.conf
+if [ "$NAMESERVER" != "none" ]; then
+    echo "nameserver $NAMESERVER" > /etc/resolv.conf
+fi
+
 # setup ifaces
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"  # the first index
@@ -14,10 +23,8 @@ for IFACE in $IFACES; do
     # network suffix should be _0
     if [ "$IP" = "none" ]; then
         # dhcp
-        FILE="/etc/udhcpc/udhcpc.conf"
-        echo "# Do not overwrite /etc/resolv.conf" > $FILE
-        echo 'RESOLV_CONF="no"' >> $FILE
-        udhcpc -i ${IFACE}_0
+        umount /etc/resolv.conf  # docker mounts resolv.conf
+        udhcpc -i ${IFACE}_0     # unmounting allows dhcp to write resolv.conf
     else
         # manual
         ifconfig ${IFACE}_0 $IP netmask $NET_MASK || \
@@ -29,12 +36,6 @@ for IFACE in $IFACES; do
         fi
     fi
 done
-
-# setup dns
-echo "localhost 127.0.0.1" > /etc/hosts
-if [ "$NAMESERVER" != "none" ]; then
-  echo "nameserver $NAMESERVER" > /etc/resolv.conf
-fi
 
 # setup forwarding
 if [ "$FORWARD" = "true" ]; then

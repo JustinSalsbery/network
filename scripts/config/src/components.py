@@ -534,7 +534,7 @@ class DHCP(_Service):
         assert(0 < lease_time)
         self._lease_time = lease_time
 
-    def add_iface(self, iface: Iface, ip: str, gateway: str = "", firewall: FirewallType = FirewallType.none, 
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", firewall: FirewallType = FirewallType.none, 
                   drop_percent: int = 0, delay: int = 0, lease_start: str = "",
                   lease_end: str = "") -> None:
         """
