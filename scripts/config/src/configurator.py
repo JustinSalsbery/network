@@ -116,12 +116,13 @@ class Configurator():
         if _ServiceType.router.name in _comps:
             routers = _comps[_ServiceType.router.name]
 
-        for router in routers:
+        for i, router in enumerate(routers):
             assert(type(router) == Router)
             self.__write_service(file, router)
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
             file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
+            file.write(f"{_SPACE * 3}ID: {i}\n")
 
             cidrs = []
             visibilities = []

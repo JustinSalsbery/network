@@ -124,9 +124,7 @@ done
 
 # setup congestion control
 # for a list of methods, see: sysctl net.ipv4.tcp_allowed_congestion_control
-if [ "$CONGESTION_CONTROL" = "reno" ]; then
-    sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
-fi
+sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
 
 # setup syn cookies
 if [ "$SYN_COOKIE" = "disable" ]; then
@@ -156,7 +154,8 @@ done
 # setup bird
 OUT="/etc/bird.conf"
 
-echo "log syslog all;" > $OUT
+echo "router id $ID;" > $OUT
+echo "log syslog all;" >> $OUT
 echo "" >> $OUT # new line
 echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $OUT
 echo "# routes and it only serves as a module for getting information about network" >> $OUT
@@ -233,6 +232,7 @@ birdc configure
 #   show protocols
 #   show ospf neighbors
 #   show route table t_ospf
+#   show ospf interface
 # Useful ip command:
 #   ip route
 

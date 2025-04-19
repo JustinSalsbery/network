@@ -13,6 +13,8 @@ iface_6 = Iface("170.0.4.0/24")
 iface_7 = Iface("170.0.5.0/24")
 iface_8 = Iface("170.0.6.0/24")
 iface_9 = Iface("170.0.7.0/24")
+# iface_10 = Iface("170.0.0.0/28")  # blackhole
+
 
 dns_0 = Nameserver()
 dns_0.add_iface(iface_8, "170.0.6.3", "170.0.6.1")
@@ -42,6 +44,7 @@ router_3.add_iface(iface_9, "170.0.7.2", firewall=FirewallType.block_l4)
 router_4 = Router()
 router_4.add_iface(iface_6, "170.0.4.2")
 router_4.add_iface(iface_7, "170.0.5.1", firewall=FirewallType.block_new_conn_output_strict)
+# router_4.add_iface(iface_10, "170.0.0.1")
 
 client_0 = Client(nameserver="170.0.6.3")
 client_0.add_iface(iface_5, "169.254.0.2", "169.254.0.1")

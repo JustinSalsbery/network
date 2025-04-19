@@ -124,9 +124,7 @@ done
 
 # setup congestion control
 # for a list of methods, see: sysctl net.ipv4.tcp_allowed_congestion_control
-if [ "$CONGESTION_CONTROL" = "reno" ]; then
-    sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
-fi
+sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
 
 # setup syn cookies
 if [ "$SYN_COOKIE" = "disable" ]; then

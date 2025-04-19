@@ -141,7 +141,7 @@ class _CIDR():
                 return False
 
             prefix_len = int(prefix_len)
-            if not 0 <= prefix_len <= 28:
+            if not 0 <= prefix_len <= 28:  # this limit is for DHCP default lease space
                 return False
         
         except Exception:
