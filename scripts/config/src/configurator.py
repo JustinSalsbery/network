@@ -102,10 +102,10 @@ class Configurator():
             self.__write_service(file, tgen)
 
             file.write(f"{_SPACE * 3}# Locust configuration:\n")
-            file.write(f"{_SPACE * 3}DST_IP: {tgen._target}\n")
+            file.write(f"{_SPACE * 3}TARGET: {tgen._target}\n")
             file.write(f"{_SPACE * 3}CONN_MAX: {tgen._conn_max}\n")
             file.write(f"{_SPACE * 3}CONN_RATE: {tgen._conn_rate}\n")
-            file.write(f"{_SPACE * 3}PROTO: {tgen._proto}\n")
+            file.write(f"{_SPACE * 3}PROTO: {tgen._proto.name}\n")
             file.write(f"{_SPACE * 3}PAGES: {" ".join(tgen._pages)}\n")
             file.write(f"{_SPACE * 3}WAIT_MIN: {tgen._wait_min}\n")
             file.write(f"{_SPACE * 3}WAIT_MAX: {tgen._wait_max}\n")
@@ -121,12 +121,13 @@ class Configurator():
             self.__write_service(file, router)
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
-            file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
             file.write(f"{_SPACE * 3}ID: {i}\n")
+            file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
 
             cidrs = []
             visibilities = []
             nats = []
+            costs = []
 
             for config in router._iface_configs:
                 assert(type(config) == _IfaceConfig)
@@ -134,10 +135,12 @@ class Configurator():
                 cidrs.append(config._iface._cidr._str)
                 visibilities.append(config._iface._cidr._visibility.name)
                 nats.append(config._nat.name)
+                costs.append(f"{config._cost}")
 
             file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
             file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
+            file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
 
         # write nameservers
 

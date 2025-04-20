@@ -71,7 +71,8 @@ Eventual:
     - Postgres for storage.
     - API interface.
     - Requires authentication support on the traffic generator.
-- Script: `pcap` to `dot` graph
+- Script: `pcap` to `dot` graph.
+- Script: Generate graph by connecting components to their interface. Use IPs as the edge labels and the container names as the node name.
 - Script: Randomly restart containers with image name.
 
 Avoid for simplicity:

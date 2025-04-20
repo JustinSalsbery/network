@@ -152,27 +152,27 @@ for IFACE in $IFACES; do
 done
 
 # setup bird
-OUT="/etc/bird.conf"
+FILE="/etc/bird.conf"
 
-echo "router id $ID;" > $OUT
-echo "log syslog all;" >> $OUT
-echo "" >> $OUT # new line
-echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $OUT
-echo "# routes and it only serves as a module for getting information about network" >> $OUT
-echo "# interfaces from the kernel. It is necessary in almost any configuration." >> $OUT
-echo "protocol device {}" >> $OUT
-echo "" >> $OUT # new line
-echo "# The Kernel protocol is not a real routing protocol. Instead of communicating" >> $OUT
-echo "# with other routers in the network, it performs synchronization of BIRD" >> $OUT
-echo "# routing tables with the OS kernel. One instance per table." >> $OUT
-echo "ipv4 table t_master;" >> $OUT
-echo "protocol kernel {" >> $OUT
-echo -e "\tipv4 {" >> $OUT
-echo -e "\t\ttable t_master;" >> $OUT
-echo -e "\t\timport all;" >> $OUT
-echo -e "\t\texport all;" >> $OUT
-echo -e "\t};" >> $OUT
-echo "" >> $OUT # new line
+echo "router id $ID;" > $FILE
+echo "log syslog all;" >> $FILE
+echo "" >> $FILE # new line
+echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $FILE
+echo "# routes and it only serves as a module for getting information about network" >> $FILE
+echo "# interfaces from the kernel. It is necessary in almost any configuration." >> $FILE
+echo "protocol device {}" >> $FILE
+echo "" >> $FILE # new line
+echo "# The Kernel protocol is not a real routing protocol. Instead of communicating" >> $FILE
+echo "# with other routers in the network, it performs synchronization of BIRD" >> $FILE
+echo "# routing tables with the OS kernel. One instance per table." >> $FILE
+echo "ipv4 table t_master;" >> $FILE
+echo "protocol kernel {" >> $FILE
+echo -e "\tipv4 {" >> $FILE
+echo -e "\t\ttable t_master;" >> $FILE
+echo -e "\t\timport all;" >> $FILE
+echo -e "\t\texport all;" >> $FILE
+echo -e "\t};" >> $FILE
+echo "" >> $FILE # new line
 
 # configure ecmp
 # may require CONFIG_IP_ROUTE_MULTIPATH on host machine
@@ -182,47 +182,53 @@ if [ "$ECMP" = "true" ]; then
     sysctl -w net.ipv4.fib_multipath_use_neigh=1
     sysctl -w net.ipv4.fib_multipath_hash_policy=1
     
-    echo -e "\tmerge paths on;" >> $OUT
+    echo -e "\tmerge paths on;" >> $FILE
 fi
 
-echo -e "\tlearn;" >> $OUT
-echo "}" >> $OUT
-echo "" >> $OUT # new line
-echo "ipv4 table t_ospf;" >> $OUT
-echo "protocol ospf v2 {" >> $OUT
-echo -e "\tipv4 {" >> $OUT
-echo -e "\t\ttable t_ospf;" >> $OUT
-echo -e "\t\timport all;" >> $OUT
-echo -e "\t\texport all;" >> $OUT
-echo -e "\t};" >> $OUT
-echo "" >> $OUT # new line
-echo -e "\tarea 0.0.0.0 {" >> $OUT
+echo -e "\tlearn;" >> $FILE
+echo "}" >> $FILE
+echo "" >> $FILE # new line
+echo "ipv4 table t_ospf;" >> $FILE
+echo "protocol ospf v2 {" >> $FILE
+echo -e "\tipv4 {" >> $FILE
+echo -e "\t\ttable t_ospf;" >> $FILE
+echo -e "\t\timport all;" >> $FILE
+echo -e "\t\texport all;" >> $FILE
+echo -e "\t};" >> $FILE
+echo "" >> $FILE # new line
+echo -e "\tarea 0.0.0.0 {" >> $FILE
 
 # advertise public interfaces
 for IFACE in $IFACES; do
     VISIBILITY="$(echo $VISIBILITIES | cut -d' ' -f1)"
     VISIBILITIES="$(echo $VISIBILITIES | cut -d' ' -f2-)"
 
+    COST="$(echo $COSTS | cut -d' ' -f1)"
+    COSTS="$(echo $COSTS | cut -d' ' -f2-)"
+
     if [ "$VISIBILITY" = "private" ]; then
         continue
     fi
 
     # must be double quote
-    echo -e "\t\tinterface \"${IFACE}_0\" { type broadcast; };" >> $OUT
+    echo -e "\t\tinterface \"${IFACE}_0\" {" >> $FILE
+    echo -e "\t\t\ttype broadcast;  # enable automatic router discovery" >> $FILE
+    echo -e "\t\t\tcost $COST;" >> $FILE
+    echo -e "\t\t};" >> $FILE
 done
 
-echo -e "\t};" >> $OUT
-echo "}" >> $OUT
-echo "" >> $OUT # new line
-echo "# The Pipe protocol is not a real routing protocol. It does not generate any" >> $OUT
-echo "# routes but synchronizes routes between tables. It is necessary in almost" >> $OUT
-echo "# any configuration." >> $OUT
-echo "protocol pipe {" >> $OUT
-echo -e "\ttable t_ospf;" >> $OUT
-echo -e "\tpeer table t_master;" >> $OUT
-echo -e "\timport none;" >> $OUT
-echo -e "\texport all;" >> $OUT
-echo "}" >> $OUT
+echo -e "\t};" >> $FILE
+echo "}" >> $FILE
+echo "" >> $FILE # new line
+echo "# The Pipe protocol is not a real routing protocol. It does not generate any" >> $FILE
+echo "# routes but synchronizes routes between tables. It is necessary in almost" >> $FILE
+echo "# any configuration." >> $FILE
+echo "protocol pipe {" >> $FILE
+echo -e "\ttable t_ospf;" >> $FILE
+echo -e "\tpeer table t_master;" >> $FILE
+echo -e "\timport none;" >> $FILE
+echo -e "\texport all;" >> $FILE
+echo "}" >> $FILE
 
 # run bird
 bird

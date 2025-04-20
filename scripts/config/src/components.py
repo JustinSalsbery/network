@@ -296,7 +296,7 @@ class Iface():
 class _IfaceConfig():
     def __init__(self, iface: Iface, ip: str, gateway: str, firewall: FirewallType, 
                  drop_percent: int, delay: int, lease_start: str, lease_end: str, 
-                 nat: NatType):
+                 nat: NatType, cost: int):
         """
         @params:
             - iface: The network interface.
@@ -308,6 +308,7 @@ class _IfaceConfig():
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
             - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
             - nat: Configure NAT. Only implemented on routers.
+            - cost: The cost of routing traffic by the interface. Only implemented on routers.
         """
 
         self._iface = iface
@@ -325,8 +326,11 @@ class _IfaceConfig():
         self._lease_end = _IPv4(lease_end)
         self._nat = nat
 
+        assert(0 <= cost <= 65535)
+        self._cost = cost
+
     def __str__(self) -> str:
-        return f"{"{"} {self._iface}, {self._src}, {self._gateway} {"}"}"
+        return f"{"{"} {self._iface}, {self._ip}, {self._gateway} {"}"}"
 
 
 # SERVICE *********************************************************************
@@ -405,7 +409,8 @@ class _Service():
               for the IP, gateway, and nameserver.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, "", "", NatType.none)
+        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, 
+                              "", "", NatType.none, 0)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -448,7 +453,7 @@ class TrafficGenerator(_Service):
                          disable_swap, forward, syn_cookie, congestion_control)
         
         self._target = target
-        self._proto = proto.name
+        self._proto = proto
         self._pages = pages
         self._conn_max = conn_max
         self._conn_rate = conn_rate
@@ -571,7 +576,7 @@ class DHCP(_Service):
             lease_end = lease_end._str
         
         config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay,
-                              lease_start, lease_end, NatType.none)
+                              lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
 
 
@@ -593,6 +598,9 @@ class Router(_Service):
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+        Note:
+            - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
+              and then selects (2) the route with the lowest cost.
         """
 
         super().__init__(_ServiceType.router, "nat", nameserver, cpu_limit, mem_limit,
@@ -600,14 +608,15 @@ class Router(_Service):
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str = "", nat: NatType = NatType.none, 
-                  gateway: str = "", firewall: FirewallType = FirewallType.none,
+    def add_iface(self, iface: Iface, ip: str = "", nat: NatType = NatType.none,
+                  cost: int = 10, gateway: str = "", firewall: FirewallType = FirewallType.none,
                   drop_percent: int = 0, delay: int = 0) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - nat: Configure NAT.
+            - cost: The cost of routing traffic by the interface.
             - gateway: The IPv4 address of the gateway.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
@@ -617,7 +626,8 @@ class Router(_Service):
               for the IP, gateway, and nameserver.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, "", "", nat)
+        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, 
+                              "", "", nat, cost)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:
