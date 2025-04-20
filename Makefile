@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 PYTHON ?= python3
 
-CONFIG ?= example-5.py
+CONFIG ?= main.py
 
 
 .ONESHELL:
