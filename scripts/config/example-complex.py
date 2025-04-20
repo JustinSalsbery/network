@@ -120,4 +120,5 @@ server_4.add_iface(iface_2, ip="10.0.0.4")
 dns_1.register("server-2.com", "10.0.0.4")
 
 
-conf = Configurator()
+# available range must not overlap with any IPs in the configuration
+conf = Configurator(available_range="169.254.0.0/16")

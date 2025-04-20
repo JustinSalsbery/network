@@ -19,9 +19,10 @@ class Configurator():
             - By default, Docker only supports around 30 network interfaces.
               By writing subnets in the Docker Compose file we can exceed this limitation.
               The containers do not use the subnet.
-            - Docker will create an externally accessable gateway at the .1 of each subnet; 
-              ex. 10.0.0.1 and 10.0.4.1. These gateways may interfere with the host's networking.
-              Other containers (.2, .3, etc) will not be externally accessible.
+            - Docker will create a gateway at the .1 of each subnet; ex. 10.0.0.1 and 10.0.4.1.
+              These gateways are internally and externally accessible and may interfere with 
+              both container networking and host networking.
+            - The available range MUST NOT overlap with any IPs in the configuration.
         """
         
         self.__cidr = _CIDR(available_range)
