@@ -155,7 +155,7 @@ class Configurator():
 
             file.write(f"{_SPACE * 3}# Nameserver configuration:\n")
             file.write(f"{_SPACE * 3}TTL: {nameserver._ttl}\n")
-            file.write(f"{_SPACE * 3}LOG: {str(nameserver._log).islower()}\n")
+            file.write(f"{_SPACE * 3}LOG: {str(nameserver._log).lower()}\n")
 
             names = []
             ips = []

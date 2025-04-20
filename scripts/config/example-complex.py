@@ -2,6 +2,9 @@
 from src.components import *
 from src.configurator import *
 
+
+# larger networks need more time to establish routes
+
 iface_0 = Iface("10.0.0.0/8")
 iface_1 = Iface("10.0.0.0/8")  # networks may overlap
 iface_2 = Iface("10.0.0.0/8")

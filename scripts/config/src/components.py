@@ -436,7 +436,7 @@ class TrafficGenerator(_Service):
         @params:
             - target: The IP address, or the domain name, of the target server.
             - proto: The protocol used for the requests.
-            - pages: The pages to request.
+            - pages: The pages to request. Must be prefaced with '/'.
             - conn_max: The maximum number of simultaneous connections.
             - conn_rate: The rate of establishing new connections.
             - wait_min: The minimum wait between requests.
