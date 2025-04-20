@@ -4,6 +4,9 @@
 echo "localhost 127.0.0.1" > /etc/hosts
 echo "" > /etc/resolv.conf
 
+# disable ipv6
+sysctl -w net.ipv6.conf.all.disable_ipv6=1
+
 # setup ifaces
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"    # the first index
@@ -141,6 +144,9 @@ OUT="shared/locust-$HOSTNAME.csv"
 FILE="locustfile.py"
 
 echo "from locust import FastHttpUser, between, task" > $FILE
+echo "from time import sleep" >> $FILE
+echo "" >> $FILE  # new line
+echo "sleep(60)  # seconds; allow routers time to configure" >> $FILE
 echo "" >> $FILE  # new line
 echo "class WebsiteUser(FastHttpUser):" >> $FILE
 echo -e "\thost = '$PROTO://$TARGET'" >> $FILE
@@ -151,7 +157,7 @@ for PAGE in $PAGES; do
     echo "" >> $FILE  # new line
     echo -e "\t@task" >> $FILE
     echo -e "\tdef page_$i(self):" >> $FILE
-    echo -e "\t\tself.client.get('/$PAGE')" >> $FILE
+    echo -e "\t\tself.client.get('$PAGE')" >> $FILE
 
     i=$((i+1))
 done

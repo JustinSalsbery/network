@@ -4,6 +4,9 @@
 echo "localhost 127.0.0.1" > /etc/hosts
 echo "" > /etc/resolv.conf
 
+# disable ipv6
+sysctl -w net.ipv6.conf.all.disable_ipv6=1
+
 # setup ifaces
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"    # the first index
@@ -154,6 +157,10 @@ echo "no-hosts  # do not use /etc/hosts" > $FILE
 echo "addn-hosts=/etc/dnsmasq.hosts" >> $FILE
 echo "local-ttl=$TTL  # seconds" >> $FILE
 echo "" >> $FILE  # new line
+echo "# without filtering, AAAA requests will return a REFUSED error" >> $FILE
+echo "# various utilities, such as socket.getaddrinfo, will throw a gaierror in response" >> $FILE
+echo "filter-AAAA  # return a FILTERED response" >> $FILE
+echo "" >> $FILE  # new line
 
 if [ "$LOG" = "true" ]; then
     echo "log-queries" >> $FILE
@@ -161,6 +168,10 @@ if [ "$LOG" = "true" ]; then
 fi
 
 dnsmasq  # run
+
+# Useful commands:
+#   Query A    record (IPv4): dig <DOMAIN NAME>
+#   Query AAAA record (IPv6): dig aaaa <DOMAIN NAME>
 
 # sleep
 trap "exit 0" SIGTERM

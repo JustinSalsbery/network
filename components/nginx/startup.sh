@@ -4,6 +4,9 @@
 echo "localhost 127.0.0.1" > /etc/hosts
 echo "" > /etc/resolv.conf
 
+# disable ipv6
+sysctl -w net.ipv6.conf.all.disable_ipv6=1
+
 # setup ifaces
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"    # the first index
