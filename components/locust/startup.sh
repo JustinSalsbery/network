@@ -165,7 +165,7 @@ done
 # run locust
 trap "pkill locust" SIGTERM
 locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-    --csv csv/results 1> /dev/null &
+    --csv csv/results 2> /dev/null &  # locust outputs traffic details to stderr
 
 wait $!  # $! is the PID of locust
 cp csv/results_stats_history.csv $OUT
