@@ -55,25 +55,15 @@ Needed foundation:
     - Docker uses the host clock so NTP is unnecessary for clock synchronization.
     - Many encrypted protocols require clock synchronization, such as HTTPS and Tor,
       so NTP may be necessary in a real-world environment.
-2. Server: Static & Dynamic Pages
+2. Server: Static and dynamic pages.
 
 Neat additions:
 - Damn Vulnerable Web App
 - nmap: Port and IP scanners
-- VPN
-    - Local only firewall rule -> no gateway.
-    - IP destination censorship on Routers.
 - IDS: Router option to duplicate traffic to IDS.
+- VPN: Router option for IP destination censorship.
 
-Eventual:
-- Server:
-    - Redis for authentication.
-    - Postgres for storage.
-    - API interface.
-    - Requires authentication support on the traffic generator.
-- Script: `pcap` to `dot` graph.
-- Script: Generate graph by connecting components to their interface. Use IPs as the edge labels and the container names as the node name.
-- Script: Randomly restart containers with image name.
-
-Avoid for simplicity:
-- Autonomous zones and IXP.
+Needed scripts:
+- `pcap` to `dot` graph.
+- Generate graph by connecting components to their interface. Use IPs as the edge labels and the container names as the node name.
+- Randomly restart containers with a select image name.

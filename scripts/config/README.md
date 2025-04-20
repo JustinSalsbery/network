@@ -5,4 +5,4 @@
 - Enables easy creation and deployment of various network configurations.
 
 ## Usage:
-- `python3 example-1.py`
+- `python3 example-simple.py`
