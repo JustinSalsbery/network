@@ -8,7 +8,6 @@
 - Tweak network configuration within `scripts/network/main.py`.
 - Launch network with `make up`.
 - Record container stats with `make stats`.
-    - Network traffic can be recorded from the host machine with `tcpdump`.
 - Shutdown network with `make down`.
 
 ## Notes:
@@ -61,9 +60,8 @@ Neat additions:
 - Damn Vulnerable Web App
 - nmap: Port and IP scanners
 - IDS: Router option to duplicate traffic to IDS.
-- VPN: Router option for IP destination censorship.
+- VPN: Router options for IP destination censorship and port forwarding.
 
 Needed scripts:
-- `pcap` to `dot` graph.
 - Generate graph by connecting components to their interface. Use IPs as the edge labels and the container names as the node name.
 - Randomly restart containers with a select image name.

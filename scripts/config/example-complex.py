@@ -115,7 +115,7 @@ dhcp_2.add_iface(iface_2, ip="10.0.0.2", gateway="10.0.0.1")
 client_2 = Client()
 client_2.add_iface(iface_2)
 
-tgen_2 = TrafficGenerator("server-0.com", pages=["/40.html"])
+tgen_2 = TrafficGenerator("server-0.com", pages=["/40.html"], proto=Protocol.https)
 tgen_2.add_iface(iface_2)
 
 server_4 = Server()
