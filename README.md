@@ -8,6 +8,8 @@
 - Tweak network configuration within `scripts/network/main.py`.
 - Launch network with `make up`.
 - Record container stats with `make stats`.
+- Record network traffic from the host with `tcpdump`. You must specify the interface!
+    - Note that Wireshark is not designed for a global network view and labels any packet that has a duplicate 5-tuple as being a retransmissions. All forwarded packets, such as by a router, will be labeled as a retransmission regardless of originating from a different MAC address.
 - Shutdown network with `make down`.
 
 ## Notes:
