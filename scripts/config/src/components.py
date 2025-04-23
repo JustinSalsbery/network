@@ -347,6 +347,17 @@ class _ServiceType(Enum):
 
 
 class CongestionControlType(Enum):
+    """
+    The congestion control options are limited by the host kernel.
+    For details see: https://en.wikipedia.org/wiki/TCP_congestion_control
+      - List available options: sysctl net.ipv4.tcp_allowed_congestion_control
+      - List network kernel modules: ls /lib/modules/$(uname -r)/kernel/net/ipv4/
+      - Install kernel module:
+          - Create dependencies: sudo depmod
+          - Add module: sudo modprobe tcp_bbr
+          - Remove module: sudo modprobe -r tcp_bbr
+    """
+    
     cubic = auto()  # alpine default
     reno = auto()
 

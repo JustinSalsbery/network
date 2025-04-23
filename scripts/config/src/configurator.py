@@ -191,6 +191,7 @@ class Configurator():
 
         file.write(f"{_SPACE * 2}volumes:\n")
         file.write(f"{_SPACE * 3}- ./shared:/app/shared\n")
+        file.write(f"{_SPACE * 3}- /lib/modules:/lib/modules  # mount host kernel modules\n")
         file.write(f"{_SPACE * 2}networks:\n")
 
         for config in service._iface_configs:
@@ -198,8 +199,8 @@ class Configurator():
             file.write(f"{_SPACE * 3}- {config._iface._name}\n")
 
         file.write(f"{_SPACE * 2}cap_add:\n")
-        file.write(f"{_SPACE * 3}- NET_ADMIN # enables ifconfig, route\n")
-        file.write(f"{_SPACE * 2}privileged: true # enables sysctl\n")
+        file.write(f"{_SPACE * 3}- NET_ADMIN  # enables ifconfig, route\n")
+        file.write(f"{_SPACE * 2}privileged: true  # enables sysctl, kernel modules\n")
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
         file.write(f"{_SPACE * 3}NAMESERVER: {service._nameserver._str}\n")
@@ -251,9 +252,9 @@ class Configurator():
             file.write(f"{_SPACE * 2}driver: bridge\n")
             file.write(f"{_SPACE * 2}internal: true\n")
             file.write(f"{_SPACE * 2}ipam:\n")
-            file.write(f"{_SPACE * 3}config: # this is a workaround for a docker limitation\n")
-            file.write(f"{_SPACE * 4}- subnet: {self.__get_cidr()} # temporary subnet\n")
-            file.write(f"{_SPACE * 2}driver_opts: # os defines a suffix\n")
+            file.write(f"{_SPACE * 3}config:  # this is a workaround for a docker limitation\n")
+            file.write(f"{_SPACE * 4}- subnet: {self.__get_cidr()}  # temporary subnet\n")
+            file.write(f"{_SPACE * 2}driver_opts:  # os defines a suffix\n")
             file.write(f"{_SPACE * 3}com.docker.network.container_iface_prefix: {iface._name}_\n")
 
     def __get_cidr(self) -> str:
