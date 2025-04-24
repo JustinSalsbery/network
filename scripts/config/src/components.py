@@ -421,9 +421,6 @@ class _Service():
         assert(swap_limit >= 0)
         self._swap_limit = swap_limit
 
-        # resolv.conf only uses the first nameserver
-        # dnsmasq, on the other hand, is configured to use many nameservers
-
         if len(nameservers) > 64:
             print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
             exit(1)
@@ -768,6 +765,10 @@ class Nameserver(_Service):
         WARNING:
             - Only Nameservers cache DNS responses. If DNS caching is important, 
               use a local Nameserver.
+        Note:
+            - resolv.conf only uses the first Nameserver. Most services use resolv.conf
+              and are therefore limited to a single nameserver. 
+              dnsmasq, on the other hand, is configured to use many nameservers. 
         """
 
         super().__init__(_ServiceType.dns, "dns", nameservers, cpu_limit, mem_limit, 
