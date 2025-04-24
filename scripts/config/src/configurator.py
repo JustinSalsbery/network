@@ -183,11 +183,11 @@ class Configurator():
         file.write(f"{_SPACE * 2}deploy:\n")
         file.write(f"{_SPACE * 3}resources:\n")
         file.write(f"{_SPACE * 4}limits:\n")
-        file.write(f"{_SPACE * 5}cpus: {service._cpu_limit}\n")
-        file.write(f"{_SPACE * 5}memory: {service._mem_limit}\n")
+        file.write(f"{_SPACE * 5}cpus: {service._cpu_limit:.2f}\n")
+        file.write(f"{_SPACE * 5}memory: {service._mem_limit}mb\n")
 
-        if service._disable_swap:
-            file.write(f"{_SPACE * 2}memswap_limit: {service._mem_limit}\n")
+        # memory swap represents the total amount of memory and swap that can be used.
+        file.write(f"{_SPACE * 2}memswap_limit: {service._swap_limit + service._mem_limit}mb\n")
 
         file.write(f"{_SPACE * 2}volumes:\n")
         file.write(f"{_SPACE * 3}- ./shared:/app/shared\n")
