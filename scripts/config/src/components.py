@@ -350,16 +350,35 @@ class CongestionControlType(Enum):
     """
     The congestion control options are limited by the host kernel.
     For details see: https://en.wikipedia.org/wiki/TCP_congestion_control
-      - List available options: sysctl net.ipv4.tcp_allowed_congestion_control
-      - List network kernel modules: ls /lib/modules/$(uname -r)/kernel/net/ipv4/
-      - Install kernel module:
+      - List available options: sysctl net.ipv4.tcp_allowed_congestion_control OR lsmod | grep tcp_
+      - List relevant kernel modules: ls /lib/modules/$(uname -r)/kernel/net/ipv4/ | grep tcp_
+      - Install (non-persistent) kernel modules:
           - Create dependencies: sudo depmod
           - Add module: sudo modprobe tcp_bbr
           - Remove module: sudo modprobe -r tcp_bbr
     """
     
-    cubic = auto()  # alpine default
+    # default
+    cubic = auto()
     reno = auto()
+
+    # modules
+    bbr = auto()
+    bic = auto()
+    cdg = auto()
+    dctcp = auto()
+    diag = auto()
+    highspeed = auto()
+    htcp = auto()
+    hybla = auto()
+    illinois = auto()
+    lp = auto()
+    nv = auto()
+    scalable = auto()
+    vegas = auto()
+    veno = auto()
+    westwood = auto()
+    yeah = auto()
 
 
 class SynCookieType(Enum):
