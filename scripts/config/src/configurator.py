@@ -207,6 +207,9 @@ class Configurator():
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
+        file.write(f"{_SPACE * 3}FAST_RETRANS: {str(service._fast_retrans).lower()}\n")
+        file.write(f"{_SPACE * 3}SACKS: {str(service._sacks).lower()}\n")
+        file.write(f"{_SPACE * 3}TIMESTAMPS: {str(service._timestamps).lower()}\n")
 
         ifaces = []
         ips = []

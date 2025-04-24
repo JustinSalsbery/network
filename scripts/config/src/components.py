@@ -390,18 +390,23 @@ class SynCookieType(Enum):
 class _Service():
     def __init__(self, type: _ServiceType, image: str, nameserver: str, cpu_limit: float,
                  mem_limit: int, swap_limit: int, forward: bool, syn_cookie: SynCookieType,
-                 congestion_control: CongestionControlType):
+                 congestion_control: CongestionControlType, fast_retrans: bool, 
+                 sacks: bool, timestamps: bool):
         """
         @params:
             - type: The type of the service.
             - image: The name of the Docker image.
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         """
 
         self._type = type
@@ -420,7 +425,11 @@ class _Service():
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
+        self._fast_retrans = fast_retrans
+        self._sacks = sacks
+        self._timestamps = timestamps
 
+        # add to components
         name = type.name
         if name not in _comps:
             _comps[name] = []
@@ -468,7 +477,8 @@ class TrafficGenerator(_Service):
                  wait_min: float = 5, wait_max: float = 15, nameserver: str = "", 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
             - target: The IP address, or the domain name, of the target server.
@@ -479,16 +489,21 @@ class TrafficGenerator(_Service):
             - wait_min: The minimum wait between requests.
             - wait_max: The maximum wait between requests.
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         """
 
         super().__init__(_ServiceType.tgen, "locust", nameserver, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control)
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
         
         self._target = target
         self._proto = proto
@@ -510,16 +525,21 @@ class Client(_Service):
     def __init__(self, nameserver: str = "", cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         """
 
         super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
@@ -533,16 +553,21 @@ class Server(_Service):
     def __init__(self, nameserver: str = "", cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         Note:
             - Both HTTP (80) and HTTPS (443) are enabled.
             - In the real world, HTTPS requires a certificate signed by a trusted
@@ -550,7 +575,8 @@ class Server(_Service):
         """
 
         super().__init__(_ServiceType.server, "nginx", nameserver, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control)
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
 
 
 # DHCP ************************************************************************
@@ -560,16 +586,21 @@ class DHCP(_Service):
     def __init__(self, lease_time: int = 600, nameserver: str = "", cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable,
-                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         WARNING:
             - The DHCP server is only configured for a single interface.
               Do not add multiple interfaces!
@@ -577,7 +608,8 @@ class DHCP(_Service):
         """
 
         super().__init__(_ServiceType.dhcp, "dhcp", nameserver, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control)
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
         
         assert(0 < lease_time)
         self._lease_time = lease_time
@@ -625,24 +657,30 @@ class Router(_Service):
     def __init__(self, ecmp: bool = False, nameserver: str = "", cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = True, 
                  syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
             - ecmp: Enable or disable ECMP.
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         Note:
             - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
               and then selects (2) the route with the lowest cost.
         """
 
         super().__init__(_ServiceType.router, "nat", nameserver, cpu_limit, mem_limit,
-                         swap_limit, forward, syn_cookie, congestion_control)
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
         
         self._ecmp = ecmp
 
@@ -697,22 +735,28 @@ class Nameserver(_Service):
     def __init__(self, ttl: int = 600, log: bool = False, nameserver: str = "", 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic):
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
             - ttl: The time-to-live for the resolved record in seconds.
             - log: Enable or disable logging of queries.
             - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. 0.1 is 10% of a logical core.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
         """
 
         super().__init__(_ServiceType.dns, "dns", nameserver, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control)
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
         
         assert(ttl > 0)
         self._ttl = ttl

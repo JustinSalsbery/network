@@ -137,6 +137,27 @@ elif [ "$SYN_COOKIE" = "force" ]; then
     sysctl -w net.ipv4.tcp_syncookies=2
 fi
 
+# setup fast retransmission
+if [ "$FAST_RETRANS" = "true" ]; then
+    sysctl -w net.ipv4.tcp_early_retrans=3  # after 3 packets
+else
+    sysctl -w net.ipv4.tcp_early_retrans=0
+fi
+
+# setup selective acknowledgments
+if [ "$SACKS" = "true" ]; then
+    sysctl -w net.ipv4.tcp_sack=1
+else
+    sysctl -w net.ipv4.tcp_sack=0
+fi
+
+# setup timestamps
+if [ "$TIMESTAMPS" = "true" ]; then
+    sysctl -w net.ipv4.tcp_timestamps=1
+else
+    sysctl -w net.ipv4.tcp_timestamps=0
+fi
+
 # setup curl
 echo "--insecure" > $HOME/.curlrc
 
