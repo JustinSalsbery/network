@@ -31,9 +31,11 @@ for IFACE in $IFACES; do
             route add default gateway $GATEWAY ${IFACE}_0
         fi
 
-        if [ "$NAMESERVER" != "none" ]; then
-            echo "nameserver $NAMESERVER" > /etc/resolv.conf
-        fi
+        for NAMESERVER in $NAMESERVERS; do
+            if [ "$NAMESERVER" != "none" ]; then
+                echo "nameserver $NAMESERVER" >> /etc/resolv.conf
+            fi
+        done
     fi
 done
 
@@ -185,9 +187,11 @@ for IFACE in $IFACES; do
         echo "opt router $GATEWAY" >> $FILE
     fi
 
-    if [ "$NAMESERVER" != "none" ]; then
-        echo "opt dns $NAMESERVER" >> $FILE
-    fi
+    for NAMESERVER in $NAMESERVERS; do
+        if [ "$NAMESERVER" != "none" ]; then
+            echo "opt dns $NAMESERVER" >> $FILE
+        fi
+    done
 
     echo "" >> $FILE  # new line
     echo "# IP lease block" >> $FILE

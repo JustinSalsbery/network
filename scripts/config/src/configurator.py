@@ -203,7 +203,18 @@ class Configurator():
         file.write(f"{_SPACE * 2}privileged: true  # enables sysctl, kernel modules\n")
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
-        file.write(f"{_SPACE * 3}NAMESERVER: {service._nameserver._str}\n")
+
+        nameservers = []
+
+        if len(service._nameservers) == 0:
+            nameservers.append("none")
+
+        for nameserver in service._nameservers:
+            assert(type(nameserver) == _IPv4)
+            nameservers.append(nameserver._str)
+
+        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(nameservers)}\n")
+
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")

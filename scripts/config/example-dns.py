@@ -15,7 +15,7 @@ server_0 = Server()
 server_0.add_iface(iface_0, "169.254.0.1")
 dns_0.register("server-0", "169.254.0.1")  # add "server-0" domain to dns_0
 
-dns_1 = Nameserver(nameserver="169.254.0.8")  # dns_1 will reference dns_0
+dns_1 = Nameserver(nameservers=["169.254.0.8"])  # dns_1 will reference dns_0
 dns_1.add_iface(iface_0, ip="169.254.0.9")    # for any domain unknown to dns_1
 
 client_1 = Client(nameserver="169.254.0.9")  # client_1 uses dns_1

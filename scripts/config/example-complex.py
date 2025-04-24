@@ -106,7 +106,7 @@ client_1.add_iface(iface_1)
 tgen_1 = TrafficGenerator("server-0.com", pages=["/40.html"], conn_max=50)
 tgen_1.add_iface(iface_1)
 
-dns_1 = Nameserver(log=True, nameserver="11.2.0.2")
+dns_1 = Nameserver(log=True, nameservers=["11.2.0.2"])
 dns_1.add_iface(iface_2, ip="10.0.0.3", gateway="10.0.0.1")
 
 dhcp_2 = DHCP(nameserver="10.0.0.3")

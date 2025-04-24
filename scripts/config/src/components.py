@@ -388,7 +388,7 @@ class SynCookieType(Enum):
 
 
 class _Service():
-    def __init__(self, type: _ServiceType, image: str, nameserver: str, cpu_limit: float,
+    def __init__(self, type: _ServiceType, image: str, nameservers: list[str], cpu_limit: float,
                  mem_limit: int, swap_limit: int, forward: bool, syn_cookie: SynCookieType,
                  congestion_control: CongestionControlType, fast_retrans: bool, 
                  sacks: bool, timestamps: bool):
@@ -396,7 +396,7 @@ class _Service():
         @params:
             - type: The type of the service.
             - image: The name of the Docker image.
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - nameservers: The IPv4 addresses of the DNS nameservers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -421,7 +421,19 @@ class _Service():
         assert(swap_limit >= 0)
         self._swap_limit = swap_limit
 
-        self._nameserver = _IPv4(nameserver)
+        # resolv.conf only uses the first nameserver
+        # dnsmasq, on the other hand, is configured to use many nameservers
+
+        if len(nameservers) > 64:
+            print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
+            exit(1)
+        
+        self._nameservers = []
+
+        for nameserver in nameservers:
+            ip = _IPv4(nameserver)
+            self._nameservers.append(ip)
+
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
@@ -452,7 +464,7 @@ class _Service():
             - delay: Set a delay on traffic. In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
-              for the IP, gateway, and nameserver.
+              for the IP, gateway, and nameservers.
         """
 
         config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, 
@@ -501,7 +513,7 @@ class TrafficGenerator(_Service):
             - timestamps: Enable or disable tcp timestamps.
         """
 
-        super().__init__(_ServiceType.tgen, "locust", nameserver, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.tgen, "locust", [nameserver], cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -542,8 +554,9 @@ class Client(_Service):
             - timestamps: Enable or disable tcp timestamps.
         """
 
-        super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control)
+        super().__init__(_ServiceType.client, "client", [nameserver], cpu_limit, mem_limit, 
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
 
 
 # SERVER **********************************************************************
@@ -574,7 +587,7 @@ class Server(_Service):
               Certificate Authority (CA).
         """
 
-        super().__init__(_ServiceType.server, "nginx", nameserver, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.server, "nginx", [nameserver], cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
@@ -607,7 +620,7 @@ class DHCP(_Service):
             - The DHCP server will advertise the nameserver.
         """
 
-        super().__init__(_ServiceType.dhcp, "dhcp", nameserver, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.dhcp, "dhcp", [nameserver], cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -678,7 +691,7 @@ class Router(_Service):
               and then selects (2) the route with the lowest cost.
         """
 
-        super().__init__(_ServiceType.router, "nat", nameserver, cpu_limit, mem_limit,
+        super().__init__(_ServiceType.router, "nat", [nameserver], cpu_limit, mem_limit,
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -732,7 +745,7 @@ class _Domain():
     
 
 class Nameserver(_Service):
-    def __init__(self, ttl: int = 600, log: bool = False, nameserver: str = "", 
+    def __init__(self, ttl: int = 600, log: bool = False, nameservers: list[str] = [], 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -741,7 +754,7 @@ class Nameserver(_Service):
         @params:
             - ttl: The time-to-live for the resolved record in seconds.
             - log: Enable or disable logging of queries.
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - nameservers: The IPv4 addresses of the DNS nameservers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -752,9 +765,12 @@ class Nameserver(_Service):
             - fast_retrans: Enable or disable fast retransmission.
             - sacks: Enable or disable selective acknowledgments.
             - timestamps: Enable or disable tcp timestamps.
+        WARNING:
+            - Only Nameservers cache DNS responses. If DNS caching is important, 
+              use a local Nameserver.
         """
 
-        super().__init__(_ServiceType.dns, "dns", nameserver, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.dns, "dns", nameservers, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         

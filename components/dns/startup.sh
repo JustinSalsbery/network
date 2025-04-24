@@ -31,9 +31,17 @@ for IFACE in $IFACES; do
             route add default gateway $GATEWAY ${IFACE}_0
         fi
 
-        if [ "$NAMESERVER" != "none" ]; then
-            echo "nameserver $NAMESERVER" > /etc/resolv.conf
-        fi
+        for NAMESERVER in $NAMESERVERS; do
+            FILE="/etc/resolv.conf"
+
+            echo "# use dnsmasq for dns resolution" >> $FILE
+            echo "nameserver 127.0.0.1  # dnsmasq ignores localhost" >> $FILE
+            echo "" >> $FILE  # new line
+
+            if [ "$NAMESERVER" != "none" ]; then
+                echo "nameserver $NAMESERVER" >> $FILE
+            fi
+        done
     fi
 done
 
@@ -178,6 +186,10 @@ FILE="/etc/dnsmasq.conf"
 echo "no-hosts  # do not use /etc/hosts" > $FILE
 echo "addn-hosts=/etc/dnsmasq.hosts" >> $FILE
 echo "local-ttl=$TTL  # seconds" >> $FILE
+echo "" >> $FILE  # new line
+echo "# if the record is not found locally, forward to all nameservers" >> $FILE
+echo "# by default, dnsmasq and resolv only forward to the first nameserver" >> $FILE
+echo "all-servers" >> $FILE
 echo "" >> $FILE  # new line
 echo "# without filtering, AAAA requests will return a REFUSED error" >> $FILE
 echo "# various utilities, such as socket.getaddrinfo, will throw a gaierror in response" >> $FILE
