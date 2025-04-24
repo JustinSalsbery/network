@@ -1,5 +1,6 @@
 
 from io import TextIOWrapper
+from subprocess import getstatusoutput
 
 from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
 from src.components import *
@@ -32,6 +33,8 @@ class Configurator():
         self.__ip_max = self.__ip + 2 ** suffix_len
 
         self.__prefix_len = prefix_len
+
+        self.__config_hz = self.__get_interrupt_freq()
 
         with open("docker-compose.yml", "w") as file:
 
@@ -226,9 +229,13 @@ class Configurator():
         ips = []
         net_masks = []
         gateways = []
+        rates = []
         firewalls = []
         drop_percents = []
         delays = []
+        mtus = []
+        latencies = []  # tc tbf terminology
+        bursts = []
 
         for config in service._iface_configs:
             assert(type(config) == _IfaceConfig)
@@ -237,17 +244,25 @@ class Configurator():
             ips.append(config._ip._str)
             net_masks.append(config._iface._cidr._netmask._str)
             gateways.append(config._gateway._str)
+            rates.append(f"{config._rate:.3f}")
             firewalls.append(config._firewall.name)
             drop_percents.append(f"{config._drop_percent}")
             delays.append(f"{config._delay}")
+            mtus.append(f"{config._mtu}")
+            latencies.append(f"{config._drop_time}")
+            bursts.append(f"{self.__get_iface_burst(config)}")
 
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
+        file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
         file.write(f"{_SPACE * 3}DROP_PERCENTS: {" ".join(drop_percents)}\n")
         file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}\n")
+        file.write(f"{_SPACE * 3}MTUS: {" ".join(mtus)}\n")
+        file.write(f"{_SPACE * 3}LATENCIES: {" ".join(latencies)}\n")
+        file.write(f"{_SPACE * 3}BURSTS: {" ".join(bursts)}\n")
 
     def __write_inets(self, file: TextIOWrapper):
         """
@@ -288,3 +303,50 @@ class Configurator():
         self.__ip += 2 ** suffix_len  # iterate
 
         return cidr
+
+    def __get_interrupt_freq(self) -> int:
+        """
+        CONFIG_HZ represents the Kernel's interrupt frequency.
+        Most Linux distributions include CONFIG_HZ within the /boot/config-$(uname -r) file.
+        @returns: The CONFIG_HZ.
+        """
+
+        config_hz = 0
+
+        s, o = getstatusoutput("grep 'CONFIG_HZ=' /boot/config-$(uname -r)")
+        if s != 0:
+            print("warning: Interrupt frequency not found. Link rate may be inaccurate.")
+            config_hz = 250  # https://github.com/torvalds/linux/blob/master/kernel/Kconfig.hz
+
+        else:
+            try:
+                config_hz = o.split("=")[1]
+                config_hz = int(config_hz)
+            except Exception as e:
+                print(f"error: Unexpected output {o} for CONFIG_HZ.")
+                print(f"\t{e}")
+                exit(1)
+        
+        return config_hz
+
+    def __get_iface_burst(self, config: _IfaceConfig) -> float:
+        """
+        The maximum amount of data that can be sent within a jiffy. This amount 
+        may temporarily exceed the defined rate. At a minimum, burst should be
+        large enough to support the rate.
+        @params:
+            - config: The _IfaceConfig to calculate the burst for.
+        @returns: The burst in units of kilobits.
+        Note:
+            - This variable is being hidden to avoid dependencies between rate and burst.
+        """
+
+        burst = config._rate / self.__config_hz
+        burst = burst * 1000  # limit the number of decimal places
+                              
+        # burst must be at least 1 MTU else the network will fail
+        burst = round(burst, 0)
+        if burst < 12:  # 12,000kbits / 8bits = 1,500b
+            burst = 12
+        
+        return burst

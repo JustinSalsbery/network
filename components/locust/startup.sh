@@ -39,6 +39,24 @@ for IFACE in $IFACES; do
     fi
 done
 
+# setup iface queue
+for IFACE in $IFACES; do
+    RATE="$(echo $RATES | cut -d' ' -f1)"
+    RATES="$(echo $RATES | cut -d' ' -f2-)"
+
+    MTU="$(echo $MTUS | cut -d' ' -f1)"
+    MTUS="$(echo $MTUS | cut -d' ' -f2-)"
+
+    LATENCY="$(echo $LATENCIES | cut -d' ' -f1)"
+    LATENCIES="$(echo $LATENCIES | cut -d' ' -f2-)"
+
+    BURST="$(echo $BURSTS | cut -d' ' -f1)"
+    BURSTS="$(echo $BURSTS | cut -d' ' -f2-)"
+
+    tc qdisc add dev ${IFACE}_0 root tbf rate ${RATE}mbit burst ${BURST}kbit \
+        latency ${LATENCY}ms mtu $MTU
+done
+
 # setup forwarding
 if [ "$FORWARD" = "true" ]; then
     sysctl -w net.ipv4.ip_forward=1

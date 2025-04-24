@@ -294,26 +294,36 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, ip: str, gateway: str, firewall: FirewallType, 
-                 drop_percent: int, delay: int, lease_start: str, lease_end: str, 
+    def __init__(self, iface: Iface, ip: str, gateway: str, rate: float, firewall: FirewallType, 
+                 drop_percent: int, delay: int, mtu: int, drop_time: int, lease_start: str, lease_end: str, 
                  nat: NatType, cost: int):
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
+            - rate: The bandwidth. The average rate at which data will be sent. In units of megabits.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - mtu: The maximum transmission unit. In units of bytes.
+            - drop_time: Packets are dropped if not sent within this time period. In units of milliseconds.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
             - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
             - nat: Configure NAT. Only implemented on routers.
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
+        WARNING:
+            - Rate cannot be less than 0.001mbits / second.
         """
 
         self._iface = iface
         self._ip = _IPv4(ip)
         self._gateway = _IPv4(gateway)
+
+        rate = round(rate, 3)
+        assert(rate >= 0.001)
+        self._rate = rate
+
         self._firewall = firewall
 
         assert(0 <= drop_percent <= 100)
@@ -321,6 +331,12 @@ class _IfaceConfig():
 
         assert(0 <= delay)
         self._delay = delay
+
+        assert(mtu >= 68)
+        self._mtu = mtu
+
+        assert(drop_time >= 0)
+        self._drop_time = drop_time
 
         self._lease_start = _IPv4(lease_start)
         self._lease_end = _IPv4(lease_end)
@@ -449,23 +465,27 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", firewall: FirewallType = FirewallType.none, 
-                  drop_percent: int = 0, delay: int = 0) -> None:
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 10, firewall: FirewallType = FirewallType.none, 
+                  drop_percent: int = 0, delay: int = 0, mtu: int = 1520, drop_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
+            - rate: The bandwidth. The average rate at which data will be sent. In units of megabits.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - mtu: The maximum transmission unit. In units of bytes.
+            - drop_time: Packets are dropped if not sent within this time period. In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
               for the IP, gateway, and nameservers.
+            - Rate cannot be less than 0.001mbits / second.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, 
-                              "", "", NatType.none, 0)
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop_percent, delay, 
+                              mtu, drop_time, "", "", NatType.none, 0)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -625,8 +645,8 @@ class DHCP(_Service):
         self._lease_time = lease_time
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
-                  lease_end: str = "", firewall: FirewallType = FirewallType.none, 
-                  drop_percent: int = 0, delay: int = 0) -> None:
+                  lease_end: str = "", rate: float = 10, firewall: FirewallType = FirewallType.none, 
+                  drop_percent: int = 0, delay: int = 0, mtu: int = 1520, drop_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -634,14 +654,18 @@ class DHCP(_Service):
             - gateway: The IPv4 address of the gateway.
             - lease_start: The IPv4 address at the start of the lease block.
             - lease_end: The IPv4 address at the end of the lease block.
+            - rate: The bandwidth. The average rate at which data will be sent. In units of megabits.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - mtu: The maximum transmission unit. In units of bytes.
+            - drop_time: Packets are dropped if not sent within this time period. In units of milliseconds.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
             - The DHCP server will advertise the gateway.
             - If the IP is empty, then the service will attempt to use DHCP
               for the IP, gateway, and nameserver.
+            - Rate cannot be less than 0.001mbits / second.
         """
 
         # config default lease_start
@@ -655,8 +679,8 @@ class DHCP(_Service):
             lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
         
-        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay,
-                              lease_start, lease_end, NatType.none, 0)
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop_percent, delay,
+                              mtu, drop_time, lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
 
 
@@ -694,26 +718,30 @@ class Router(_Service):
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str = "", nat: NatType = NatType.none,
-                  cost: int = 10, gateway: str = "", firewall: FirewallType = FirewallType.none,
-                  drop_percent: int = 0, delay: int = 0) -> None:
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", nat: NatType = NatType.none,
+                  cost: int = 10, rate: float = 1000, firewall: FirewallType = FirewallType.none,
+                  drop_percent: int = 0, delay: int = 0, mtu: int = 1520, drop_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
             - nat: Configure NAT.
             - cost: The cost of routing traffic by the interface.
-            - gateway: The IPv4 address of the gateway.
+            - rate: The bandwidth. The average rate at which data will be sent. In units of megabits.
             - firewall: Configure firewall.
             - drop_percent: Drop a percent of random traffic. From 0 to 100.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - mtu: The maximum transmission unit. In units of bytes.
+            - drop_time: Packets are dropped if not sent within this time period. In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
               for the IP, gateway, and nameserver.
+            - Rate cannot be less than 0.001mbits / second.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, firewall, drop_percent, delay, 
-                              "", "", nat, cost)
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop_percent, delay, 
+                              mtu, drop_time, "", "", nat, cost)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:

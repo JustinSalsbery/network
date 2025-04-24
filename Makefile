@@ -62,8 +62,9 @@ up: config
 	# may be undesired
 	# remove output from previous runs
 	rm -f shared/*.csv || true
+	rm -f shared/*.pcap || true
+	
 	mkdir -p shared
-
 	docker compose up -d
 
 down:
@@ -75,6 +76,7 @@ stats:
 
 clean:
 	rm -f shared/*.csv || true
+	rm -f shared/*.pcap || true
 	rm -r ${CERTS_SERVER}
 	
 	docker container stop $$(docker container ls -a -q)
