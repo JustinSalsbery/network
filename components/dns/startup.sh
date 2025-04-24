@@ -53,14 +53,14 @@ for IFACE in $IFACES; do
     MTU="$(echo $MTUS | cut -d' ' -f1)"
     MTUS="$(echo $MTUS | cut -d' ' -f2-)"
 
-    LATENCY="$(echo $LATENCIES | cut -d' ' -f1)"
-    LATENCIES="$(echo $LATENCIES | cut -d' ' -f2-)"
+    QUEUE_TIME="$(echo $QUEUE_TIMES | cut -d' ' -f1)"
+    QUEUE_TIMES="$(echo $QUEUE_TIMES | cut -d' ' -f2-)"
 
     BURST="$(echo $BURSTS | cut -d' ' -f1)"
     BURSTS="$(echo $BURSTS | cut -d' ' -f2-)"
 
     tc qdisc add dev ${IFACE}_0 root tbf rate ${RATE}mbit burst ${BURST}kbit \
-        latency ${LATENCY}ms mtu $MTU
+        latency ${QUEUE_TIME}ms mtu $MTU
 done
 
 # setup forwarding
@@ -132,14 +132,14 @@ done
 #   iptables --flush
 
 for IFACE in $IFACES; do
-    DROP_PERCENT="$(echo $DROP_PERCENTS | cut -d' ' -f1)"
-    DROP_PERCENTS="$(echo $DROP_PERCENTS | cut -d' ' -f2-)"
+    DROP="$(echo $DROPS | cut -d' ' -f1)"
+    DROPS="$(echo $DROPS | cut -d' ' -f2-)"
 
     DELAY="$(echo $DELAYS | cut -d' ' -f1)"
     DELAYS="$(echo $DELAYS | cut -d' ' -f2-)"
 
-    if [ "$DROP_PERCENT" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem loss ${DROP_PERCENT}%
+    if [ "$DROP" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem loss ${DROP}%
     fi
 
     if [ "$DELAY" != "0" ]; then

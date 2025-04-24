@@ -1,6 +1,7 @@
 
 from io import TextIOWrapper
 from subprocess import getstatusoutput
+from math import ceil
 
 from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
 from src.components import *
@@ -205,7 +206,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}- NET_ADMIN  # enables ifconfig, route\n")
         file.write(f"{_SPACE * 2}privileged: true  # enables sysctl, kernel modules\n")
         file.write(f"{_SPACE * 2}environment:\n")
-        file.write(f"{_SPACE * 3}# Interface configurations:\n")
+        file.write(f"{_SPACE * 3}# Host configurations:\n")
 
         nameservers = []
 
@@ -231,10 +232,10 @@ class Configurator():
         gateways = []
         rates = []
         firewalls = []
-        drop_percents = []
+        drops = []
         delays = []
         mtus = []
-        latencies = []  # tc tbf terminology
+        queue_times = []
         bursts = []
 
         for config in service._iface_configs:
@@ -246,23 +247,24 @@ class Configurator():
             gateways.append(config._gateway._str)
             rates.append(f"{config._rate:.3f}")
             firewalls.append(config._firewall.name)
-            drop_percents.append(f"{config._drop_percent}")
+            drops.append(f"{config._drop}")
             delays.append(f"{config._delay}")
             mtus.append(f"{config._mtu}")
-            latencies.append(f"{config._drop_time}")
+            queue_times.append(f"{config._queue_time}")
             bursts.append(f"{self.__get_iface_burst(config)}")
 
+        file.write(f"{_SPACE * 3}# Interface configurations:\n")
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
-        file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}\n")
+        file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}  # mbits/s\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
-        file.write(f"{_SPACE * 3}DROP_PERCENTS: {" ".join(drop_percents)}\n")
-        file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}\n")
-        file.write(f"{_SPACE * 3}MTUS: {" ".join(mtus)}\n")
-        file.write(f"{_SPACE * 3}LATENCIES: {" ".join(latencies)}\n")
-        file.write(f"{_SPACE * 3}BURSTS: {" ".join(bursts)}\n")
+        file.write(f"{_SPACE * 3}DROPS: {" ".join(drops)}  # %\n")
+        file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}  # ms\n")
+        file.write(f"{_SPACE * 3}MTUS: {" ".join(mtus)}  # bytes\n")
+        file.write(f"{_SPACE * 3}QUEUE_TIMES: {" ".join(queue_times)}  # ms\n")
+        file.write(f"{_SPACE * 3}BURSTS: {" ".join(bursts)}  # kbits/s\n")
 
     def __write_inets(self, file: TextIOWrapper):
         """
@@ -342,11 +344,14 @@ class Configurator():
         """
 
         burst = config._rate / self.__config_hz
-        burst = burst * 1000  # limit the number of decimal places
-                              
-        # burst must be at least 1 MTU else the network will fail
-        burst = round(burst, 0)
-        if burst < 12:  # 12,000kbits / 8bits = 1,500b
-            burst = 12
+        burst *= 1000          # convert mbits to kbits
+
+        mtu = config._mtu * 8  # convert bytes to bits
+        mtu /= 1000            # convert bits to kbits
+
+        # the network will fail if the burst is too low
+        if burst < mtu:
+            burst = mtu
         
+        burst = ceil(burst)
         return burst
