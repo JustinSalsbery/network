@@ -59,11 +59,10 @@ Needed foundation:
 2. Server: Static and dynamic pages.
 
 Neat additions:
-- Damn Vulnerable Web App
 - nmap: Port and IP scanners
 - IDS: Router option to duplicate traffic to IDS.
 - VPN: Router options for IP destination censorship and port forwarding.
 
 Needed scripts:
 - Generate graph by connecting components to their interface. Use IPs as the edge labels and the container names as the node name.
-- Randomly restart containers with a select image name.
+- Randomly restart containers by name.
