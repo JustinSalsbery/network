@@ -131,6 +131,8 @@ sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
 # setup syn cookies
 if [ "$SYN_COOKIE" = "disable" ]; then
     sysctl -w net.ipv4.tcp_syncookies=0
+elif [ "$SYN_COOKIE" = "enable" ]; then
+    sysctl -w net.ipv4.tcp_syncookies=1
 elif [ "$SYN_COOKIE" = "force" ]; then
     sysctl -w net.ipv4.tcp_syncookies=2
 fi
