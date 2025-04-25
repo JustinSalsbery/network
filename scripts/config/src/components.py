@@ -280,11 +280,11 @@ class Iface():
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
         """
 
-        if "Iface" not in _comps:
-            _comps["Iface"] = []
+        if "iface" not in _comps:
+            _comps["iface"] = []
         
-        count = len(_comps["Iface"])
-        _comps["Iface"].append(self)
+        count = len(_comps["iface"])
+        _comps["iface"].append(self)
 
         self._name = f"network-{count}"
         self._cidr = _CIDR(cidr)

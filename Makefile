@@ -12,15 +12,16 @@ CONFIG ?= main.py
 options help:
 	echo "Options:"
 	echo -e "\t- build"
-	echo -e "\t- up"
+	echo -e "\t- up       # write docker-compose and launch"
 	echo -e "\t- down"
 	echo -e "\t- clean"
 	
 	echo "" # New line
 
 	echo "Helper:"
-	echo -e "\t- config   # write docker-compose"
+	echo -e "\t- config   # write docker-compose only"
 	echo -e "\t- configs  # list available configurations"
+	echo -e "\t- graph    # create network graph"
 	echo -e "\t- stats"
 
 	echo "" # New line
@@ -41,7 +42,22 @@ build: certs
 		docker build -t $$NAME $$(dirname $$FILE)
 	done
 
-config:
+up: config
+	docker compose up -d
+
+down:
+	docker compose down
+
+# down depends upon the docker-compose file
+# before we generate a new configuration, we must bring down the current network
+
+config: down
+	# may be undesired
+	# remove output from previous runs
+	rm -f shared/*.csv || true
+	rm -f shared/*.pcap || true
+	
+	mkdir -p shared
 	${PYTHON} scripts/config/${CONFIG}
 
 configs:
@@ -58,17 +74,16 @@ configs:
 		echo -e "\t- $${NAME}"
 	done
 
-up: config
-	# may be undesired
-	# remove output from previous runs
-	rm -f shared/*.csv || true
-	rm -f shared/*.pcap || true
-	
-	mkdir -p shared
-	docker compose up -d
+GRAPH := shared/config-graph
+GRAPH_FORMAT := png  # options: jpeg, png, pdf, svg
+graph:
+	if ! [ -f ${GRAPH}.gv ]; then
+		echo "error: ${GRAPH}.gv not found. No network configured."
+		exit 1
+	fi
 
-down:
-	docker compose down
+	neato -T${GRAPH_FORMAT} ${GRAPH}.gv -o ${GRAPH}.${GRAPH_FORMAT}
+	# dot -Ksfdp produces a similar image
 
 stats:
 	echo "Exit with ctrl + c ..."

@@ -5,17 +5,19 @@ from math import ceil
 
 from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
 from src.components import *
+from src.grapher import Grapher
 
 
 _SPACE = "  "
 
 class Configurator():
-    def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22):
+    def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22, color: bool = True):
         """
         Write out the configuration as `docker-compose.yml`.
         @params:
             - available_range: The available IP range in CIDR notation for creating Docker subnets.
             - prefix_len: The size of each subnet.
+            - color: Enables or disables color in the GraphViz diagram.
         WARNING:
             - The configurator MUST be called for the configuration to be created.
             - By default, Docker only supports around 30 network interfaces.
@@ -42,6 +44,8 @@ class Configurator():
             # docker compose down will fail unless networks follow after services
             self.__write_services(file)
             self.__write_inets(file)
+
+        Grapher(color)
 
     def __write_services(self, file: TextIOWrapper):
         """
@@ -276,7 +280,7 @@ class Configurator():
 
         file.write("networks:\n")
 
-        ifaces = _comps["Iface"]
+        ifaces = _comps["iface"]
         for iface in ifaces:
             assert(type(iface) == Iface)
 
@@ -320,6 +324,7 @@ class Configurator():
         s, o = getstatusoutput("grep 'CONFIG_HZ=' /boot/config-$(uname -r)")
         if s != 0:
             print("warning: Interrupt frequency not found. Link rate may be inaccurate.")
+            print("notice: Using a default CONFIG_HZ of 250.")
             config_hz = 250  # https://github.com/torvalds/linux/blob/master/kernel/Kconfig.hz
 
         else:
