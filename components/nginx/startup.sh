@@ -34,6 +34,7 @@ for IFACE in $IFACES; do
 done
 
 # setup nameservers
+# without dnsmasq, only the first nameserver in resolv.conf will be used
 for NAMESERVER in $NAMESERVERS; do
     if [ "$NAMESERVER" != "none" ]; then
         echo "nameserver $NAMESERVER" >> /etc/resolv.conf
