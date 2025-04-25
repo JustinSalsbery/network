@@ -205,6 +205,8 @@ else
     echo -e "\t\theaders = {'Accept-Encoding': 'identity'}  # no compression" >> $FILE
 fi
 
+# all requests are run sequentially, back-to-back
+# requests allow you to, for example, request "index.html", "index.css", and "index.js"
 for REQUEST in $REQUESTS; do
     echo -e "\t\tself.client.get('$REQUEST', headers=headers)" >> $FILE
 done
