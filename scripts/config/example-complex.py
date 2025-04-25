@@ -94,7 +94,7 @@ dhcp_0.add_iface(iface_0, ip="10.0.0.2", gateway="10.0.0.1")
 client_0 = Client()
 client_0.add_iface(iface_0)
 
-tgen_0 = TrafficGenerator("server-0.com", pages=["/40.html"], conn_max=50)
+tgen_0 = TrafficGenerator("server-0.com", requests=["/40.html"], conn_max=50)
 tgen_0.add_iface(iface_0)
 
 dhcp_1 = DHCP(nameserver="11.2.0.2")
@@ -103,7 +103,7 @@ dhcp_1.add_iface(iface_1, ip="10.0.0.2", gateway="10.0.0.1")
 client_1 = Client()
 client_1.add_iface(iface_1)
 
-tgen_1 = TrafficGenerator("server-0.com", pages=["/40.html"], conn_max=50)
+tgen_1 = TrafficGenerator("server-0.com", requests=["/40.html"], conn_max=50)
 tgen_1.add_iface(iface_1)
 
 dns_1 = Nameserver(log=True, nameservers=["11.2.0.2"])
@@ -115,7 +115,7 @@ dhcp_2.add_iface(iface_2, ip="10.0.0.2", gateway="10.0.0.1")
 client_2 = Client()
 client_2.add_iface(iface_2)
 
-tgen_2 = TrafficGenerator("server-0.com", pages=["/40.html"], proto=Protocol.https, conn_max=20)
+tgen_2 = TrafficGenerator("server-0.com", requests=["/40.html"], proto=Protocol.https, conn_max=20)
 tgen_2.add_iface(iface_2)
 
 server_4 = Server()

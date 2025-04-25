@@ -12,7 +12,6 @@ CONFIG ?= main.py
 options help:
 	echo "Options:"
 	echo -e "\t- build"
-	echo -e "\t- config"
 	echo -e "\t- up"
 	echo -e "\t- down"
 	echo -e "\t- clean"
@@ -20,6 +19,7 @@ options help:
 	echo "" # New line
 
 	echo "Helper:"
+	echo -e "\t- config   # write docker-compose"
 	echo -e "\t- configs  # list available configurations"
 	echo -e "\t- stats"
 
@@ -58,7 +58,7 @@ configs:
 		echo -e "\t- $${NAME}"
 	done
 
-up: down
+up: config
 	# may be undesired
 	# remove output from previous runs
 	rm -f shared/*.csv || true

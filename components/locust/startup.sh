@@ -55,7 +55,7 @@ for IFACE in $IFACES; do
     BURSTS="$(echo $BURSTS | cut -d' ' -f2-)"
 
     tc qdisc add dev ${IFACE}_0 root tbf rate ${RATE}mbit burst ${BURST}kbit \
-        latency ${QUEUE_TIME}ms mtu $MTU
+        latency ${QUEUE_TIME}ms  # mtu option does not seem to work
 done
 
 # setup forwarding
@@ -143,8 +143,8 @@ for IFACE in $IFACES; do
 done
 
 # Useful tc commands:
-#   tc qdisc show dev $IFACE
-#   tc qdisc del dev $IFACE
+#   tc qdisc list
+#   tc qdisc del dev $IFACE root
 
 # setup congestion control
 sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
@@ -194,23 +194,24 @@ echo "" >> $FILE  # new line
 echo "class WebsiteUser(FastHttpUser):" >> $FILE
 echo -e "\thost = '$PROTO://$TARGET'" >> $FILE
 echo -e "\twait_time = between($WAIT_MIN, $WAIT_MAX)" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t@task($CONN_DUR)" >> $FILE
+echo -e "\tdef request(self):" >> $FILE
 
-i=0
-for PAGE in $PAGES; do
-    echo "" >> $FILE  # new line
-    echo -e "\t@task" >> $FILE
-    echo -e "\tdef page_$i(self):" >> $FILE
+if [ "$GZIP" = "true" ]; then
+    echo -e "\t\theaders = {'Accept-Encoding': 'gzip'}" >> $FILE
+else
+    echo -e "\t\theaders = {'Accept-Encoding': 'identity'}  # no compression" >> $FILE
+fi
 
-    if [ "$GZIP" = "true" ]; then
-        echo -e "\t\theaders = {'Accept-Encoding': 'gzip'}" >> $FILE
-        echo -e "\t\tself.client.get('$PAGE', headers=headers)" >> $FILE
-    else
-        echo -e "\t\theaders = {'Accept-Encoding': 'identity'}  # no compression" >> $FILE
-        echo -e "\t\tself.client.get('$PAGE', headers=headers)" >> $FILE
-    fi
-
-    i=$((i+1))
+for REQUEST in $REQUESTS; do
+    echo -e "\t\tself.client.get('$REQUEST', headers=headers)" >> $FILE
 done
+
+echo "" >> $FILE  # new line
+echo -e "\t@task(1)" >> $FILE
+echo -e "\tdef close(self):" >> $FILE
+echo -e "\t\tself.client.client.close()" >> $FILE
 
 # run locust
 trap "pkill locust" SIGTERM

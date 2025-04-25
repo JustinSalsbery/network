@@ -466,7 +466,7 @@ class _Service():
         self._iface_configs = []
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 100, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, mtu: int = 1520, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, mtu: int = 1500, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -501,8 +501,8 @@ class Protocol(Enum):
 
 
 class TrafficGenerator(_Service):
-    def __init__(self, target: str, proto: Protocol = Protocol.http, pages: list[str] = ["/"],
-                 conn_max: int = 500, conn_rate: int = 5, wait_min: float = 5, 
+    def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
+                 conn_max: int = 500, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
                  wait_max: float = 15, gzip: bool = True, nameserver: str = "", 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
@@ -512,9 +512,10 @@ class TrafficGenerator(_Service):
         @params:
             - target: The IP address, or the domain name, of the target server.
             - proto: The protocol used for the requests.
-            - pages: The pages to request. Must be prefaced with '/'.
+            - requests: The files to request. Must be prefaced with '/'.
             - conn_max: The maximum number of simultaneous connections.
             - conn_rate: The rate of establishing new connections.
+            - conn_dur: The average number of requests before closing the connection.
             - wait_min: The minimum wait between requests.
             - wait_max: The maximum wait between requests.
             - gzip: Enable or disable gzip compression.
@@ -537,16 +538,20 @@ class TrafficGenerator(_Service):
         
         self._target = target
         self._proto = proto
-        self._pages = pages
+        self._requests = requests
         self._conn_max = conn_max
         self._conn_rate = conn_rate
+
+        assert(conn_dur > 0)
+        self._conn_dur = conn_dur
+
         self._wait_min = wait_min
         self._wait_max = wait_max
         self._gzip = gzip
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._proto}, {self._target}, " \
-               + f"{self._pages}, {self._conn_max} {"}"}"
+               + f"{self._gets}, {self._conn_max} {"}"}"
 
 
 # CLIENT **********************************************************************
@@ -648,7 +653,7 @@ class DHCP(_Service):
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
                   lease_end: str = "", rate: float = 100, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, mtu: int = 1520, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, mtu: int = 1500, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -722,7 +727,7 @@ class Router(_Service):
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", nat: NatType = NatType.none,
                   cost: int = 10, rate: float = 10000, firewall: FirewallType = FirewallType.none,
-                  drop: int = 0, delay: int = 0, mtu: int = 1520, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, mtu: int = 1500, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
