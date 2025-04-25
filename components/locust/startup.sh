@@ -30,12 +30,13 @@ for IFACE in $IFACES; do
         if [ "$GATEWAY" != "none" ]; then
             route add default gateway $GATEWAY ${IFACE}_0
         fi
+    fi
+done
 
-        for NAMESERVER in $NAMESERVERS; do
-            if [ "$NAMESERVER" != "none" ]; then
-                echo "nameserver $NAMESERVER" >> /etc/resolv.conf
-            fi
-        done
+# setup nameservers
+for NAMESERVER in $NAMESERVERS; do
+    if [ "$NAMESERVER" != "none" ]; then
+        echo "nameserver $NAMESERVER" >> /etc/resolv.conf
     fi
 done
 

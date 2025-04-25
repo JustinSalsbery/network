@@ -30,18 +30,19 @@ for IFACE in $IFACES; do
         if [ "$GATEWAY" != "none" ]; then
             route add default gateway $GATEWAY ${IFACE}_0
         fi
+    fi
+done
 
-        for NAMESERVER in $NAMESERVERS; do
-            FILE="/etc/resolv.conf"
+# setup nameservers
+for NAMESERVER in $NAMESERVERS; do
+    FILE="/etc/resolv.conf"
 
-            echo "# use dnsmasq for dns resolution" >> $FILE
-            echo "nameserver 127.0.0.1  # dnsmasq ignores localhost" >> $FILE
-            echo "" >> $FILE  # new line
+    echo "# use dnsmasq for dns resolution" >> $FILE
+    echo "nameserver 127.0.0.1  # dnsmasq ignores localhost" >> $FILE
+    echo "" >> $FILE  # new line
 
-            if [ "$NAMESERVER" != "none" ]; then
-                echo "nameserver $NAMESERVER" >> $FILE
-            fi
-        done
+    if [ "$NAMESERVER" != "none" ]; then
+        echo "nameserver $NAMESERVER" >> $FILE
     fi
 done
 
