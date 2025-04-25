@@ -11,8 +11,8 @@ COLOR_MAP = {
     _ServiceType.dhcp.name: "blue",
     _ServiceType.dns.name: "purple",
     _ServiceType.server.name: "deepskyblue",
-    _ServiceType.router.name: "green",
-    _ServiceType.lb.name: "coral",
+    _ServiceType.router.name: "darkgreen",
+    _ServiceType.lb.name: "gold",
 }
 
 
