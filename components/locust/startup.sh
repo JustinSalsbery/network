@@ -199,7 +199,14 @@ for PAGE in $PAGES; do
     echo "" >> $FILE  # new line
     echo -e "\t@task" >> $FILE
     echo -e "\tdef page_$i(self):" >> $FILE
-    echo -e "\t\tself.client.get('$PAGE')" >> $FILE
+
+    if [ "$GZIP" = "true" ]; then
+        echo -e "\t\theaders = {'Accept-Encoding': 'gzip'}" >> $FILE
+        echo -e "\t\tself.client.get('$PAGE', headers=headers)" >> $FILE
+    else
+        echo -e "\t\theaders = {'Accept-Encoding': 'identity'}  # no compression" >> $FILE
+        echo -e "\t\tself.client.get('$PAGE', headers=headers)" >> $FILE
+    fi
 
     i=$((i+1))
 done

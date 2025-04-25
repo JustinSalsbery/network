@@ -6,6 +6,7 @@
 ## Usage:
 - Build docker images with `make build`.
 - Tweak network configuration within `scripts/network/main.py`.
+- Create configuration with `make config`.
 - Launch network with `make up`.
 - Record container stats with `make stats`.
 - Record network traffic from the host with `tcpdump`. You must specify the interface!

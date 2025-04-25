@@ -12,6 +12,7 @@ CONFIG ?= main.py
 options help:
 	echo "Options:"
 	echo -e "\t- build"
+	echo -e "\t- config"
 	echo -e "\t- up"
 	echo -e "\t- down"
 	echo -e "\t- clean"
@@ -19,14 +20,13 @@ options help:
 	echo "" # New line
 
 	echo "Helper:"
-	echo -e "\t- config  # write docker-compose only"
 	echo -e "\t- configs  # list available configurations"
 	echo -e "\t- stats"
 
 	echo "" # New line
 
 	echo "Notes:"
-	echo -e "\t- Compose specific config: 'make up CONFIG=NAME'"
+	echo -e "\t- Compose specific config: 'make config CONFIG=NAME'"
 
 CERTS_SERVER := components/nginx/ssl
 certs:
@@ -58,7 +58,7 @@ configs:
 		echo -e "\t- $${NAME}"
 	done
 
-up: config
+up: down
 	# may be undesired
 	# remove output from previous runs
 	rm -f shared/*.csv || true

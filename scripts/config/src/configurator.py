@@ -114,6 +114,7 @@ class Configurator():
             file.write(f"{_SPACE * 3}PAGES: {" ".join(tgen._pages)}\n")
             file.write(f"{_SPACE * 3}WAIT_MIN: {tgen._wait_min}\n")
             file.write(f"{_SPACE * 3}WAIT_MAX: {tgen._wait_max}\n")
+            file.write(f"{_SPACE * 3}GZIP: {str(tgen._gzip).lower()}\n")
 
         # write routers
 

@@ -501,9 +501,9 @@ class Protocol(Enum):
 
 
 class TrafficGenerator(_Service):
-    def __init__(self, target: str, proto: Protocol = Protocol.http,
-                 pages: list[str] = ["/"], conn_max: int = 500, conn_rate: int = 5, 
-                 wait_min: float = 5, wait_max: float = 15, nameserver: str = "", 
+    def __init__(self, target: str, proto: Protocol = Protocol.http, pages: list[str] = ["/"],
+                 conn_max: int = 500, conn_rate: int = 5, wait_min: float = 5, 
+                 wait_max: float = 15, gzip: bool = True, nameserver: str = "", 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -517,6 +517,7 @@ class TrafficGenerator(_Service):
             - conn_rate: The rate of establishing new connections.
             - wait_min: The minimum wait between requests.
             - wait_max: The maximum wait between requests.
+            - gzip: Enable or disable gzip compression.
             - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
@@ -541,6 +542,7 @@ class TrafficGenerator(_Service):
         self._conn_rate = conn_rate
         self._wait_min = wait_min
         self._wait_max = wait_max
+        self._gzip = gzip
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._proto}, {self._target}, " \
