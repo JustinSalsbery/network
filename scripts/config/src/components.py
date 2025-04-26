@@ -306,20 +306,24 @@ class _IfaceConfig():
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - queue_time: Packets are dropped if not sent within this time period. In units of milliseconds.
+            - queue_time: Packets are dropped if not sent within this time period. 
+                          In units of milliseconds.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
             - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
             - nat: Configure NAT. Only implemented on routers.
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
         WARNING:
-            - Rate cannot be less than 0.001mbits / second.
+            - Rate cannot be less than 0.001 megabits per second.
+            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+              Additional routers may be added to the path to implement many rules.
             - The MTU is not handled correctly. All interfaces use the default MTU of 1500 bytes.
               Despite this, packets may be up to 65,535 bytes in length.
+            - The maximum packet length is determined by the burst. A burst of 12 kilobits is 
+              1500 bytes and, thus, the MTU will be correct. With a CONFIG_HZ of 1000, 
+              12 megabits per second is the maximum rate that will be correct.
             - I have experimented with dropping packets larger than 1500 bytes with iptables and
               I have experimented with specifying the MTU with tc using the tbf queueing discipline.
-              Neither worked. Another tc queueing discipline may work. 
-            - Further experimentations should focus on limiting the sent traffic by the MTU.
-              Limiting the received traffic by the MTU is problematic as it must involve ICMP.
+              Neither worked.
         """
 
         self._iface = iface
@@ -426,6 +430,9 @@ class _Service():
             - fast_retrans: Enable or disable fast retransmission.
             - sacks: Enable or disable selective acknowledgments.
             - timestamps: Enable or disable tcp timestamps.
+        Note:
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         self._type = type
@@ -468,8 +475,9 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 100, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
+    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 12, 
+                  firewall: FirewallType = FirewallType.none, drop: int = 0, 
+                  delay: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -479,11 +487,14 @@ class _Service():
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - queue_time: Packets are dropped if not sent within this time period. In units of milliseconds.
+            - queue_time: Packets are dropped if not sent within this time period. 
+                          In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
               for the IP, gateway, and nameservers.
-            - Rate cannot be less than 0.001mbits / second.
+            - Rate cannot be less than 0.001 megabits per second.
+            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+              Additional routers may be added to the path to implement many rules.
         """
 
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, 
@@ -504,7 +515,7 @@ class Protocol(Enum):
 
 class TrafficGenerator(_Service):
     def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
-                 conn_max: int = 500, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
+                 conn_max: int = 50, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
                  wait_max: float = 15, gzip: bool = True, nameserver: str = "", 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
@@ -532,6 +543,11 @@ class TrafficGenerator(_Service):
             - fast_retrans: Enable or disable fast retransmission.
             - sacks: Enable or disable selective acknowledgments.
             - timestamps: Enable or disable tcp timestamps.
+        WARNING:
+            - Locust prioritizes creating new connections over successful requests.
+        Note:
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         super().__init__(_ServiceType.tgen, "locust", [nameserver], cpu_limit, mem_limit, 
@@ -578,6 +594,9 @@ class Client(_Service):
             - fast_retrans: Enable or disable fast retransmission.
             - sacks: Enable or disable selective acknowledgments.
             - timestamps: Enable or disable tcp timestamps.
+        Note:
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         super().__init__(_ServiceType.client, "client", [nameserver], cpu_limit, mem_limit, 
@@ -611,6 +630,8 @@ class Server(_Service):
             - Both HTTP (80) and HTTPS (443) are enabled.
             - In the real world, HTTPS requires a certificate signed by a trusted
               Certificate Authority (CA).
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         super().__init__(_ServiceType.server, "nginx", [nameserver], cpu_limit, mem_limit, 
@@ -644,6 +665,9 @@ class DHCP(_Service):
             - The DHCP server is only configured for a single interface.
               Do not add multiple interfaces!
             - The DHCP server will advertise the nameserver.
+        Note:
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         super().__init__(_ServiceType.dhcp, "dhcp", [nameserver], cpu_limit, mem_limit, 
@@ -654,7 +678,7 @@ class DHCP(_Service):
         self._lease_time = lease_time
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
-                  lease_end: str = "", rate: float = 100, firewall: FirewallType = FirewallType.none, 
+                  lease_end: str = "", rate: float = 12, firewall: FirewallType = FirewallType.none, 
                   drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
         """
         @params:
@@ -667,13 +691,16 @@ class DHCP(_Service):
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - queue_time: Packets are dropped if not sent within this time period. In units of milliseconds.
+            - queue_time: Packets are dropped if not sent within this time period. 
+                          In units of milliseconds.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
             - The DHCP server will advertise the gateway.
             - If the IP is empty, then the service will attempt to use DHCP
               for the IP, gateway, and nameserver.
-            - Rate cannot be less than 0.001mbits / second.
+            - Rate cannot be less than 0.001 megabits per second.
+            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+              Additional routers may be added to the path to implement many rules.
         """
 
         # config default lease_start
@@ -718,6 +745,8 @@ class Router(_Service):
         Note:
             - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
               and then selects (2) the route with the lowest cost.
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         super().__init__(_ServiceType.router, "nat", [nameserver], cpu_limit, mem_limit,
@@ -727,7 +756,7 @@ class Router(_Service):
         self._ecmp = ecmp
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", nat: NatType = NatType.none,
-                  cost: int = 10, rate: float = 10000, firewall: FirewallType = FirewallType.none,
+                  cost: int = 10, rate: float = 100, firewall: FirewallType = FirewallType.none,
                   drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
         """
         @params:
@@ -740,11 +769,14 @@ class Router(_Service):
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - queue_length: Packets are dropped if not sent within this time period. In units of milliseconds.
+            - queue_length: Packets are dropped if not sent within this time period. 
+                            In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
               for the IP, gateway, and nameserver.
-            - Rate cannot be less than 0.001mbits / second.
+            - Rate cannot be less than 0.001 megabits per second.
+            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+              Additional routers may be added to the path to implement many rules.
         """
 
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, 
@@ -803,7 +835,9 @@ class Nameserver(_Service):
         Note:
             - resolv.conf only uses the first Nameserver. Most services use resolv.conf
               and are therefore limited to a single nameserver. 
-              dnsmasq, on the other hand, is configured to use many nameservers. 
+              dnsmasq, on the other hand, is configured to use many nameservers.
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
         """
 
         super().__init__(_ServiceType.dns, "dns", nameservers, cpu_limit, mem_limit, 

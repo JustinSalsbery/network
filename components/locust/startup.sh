@@ -42,6 +42,8 @@ for NAMESERVER in $NAMESERVERS; do
 done
 
 # setup iface queue
+# each interface may only have a single tc rule
+# tc rules will overwrite each other so that only the last tc rule will apply
 for IFACE in $IFACES; do
     RATE="$(echo $RATES | cut -d' ' -f1)"
     RATES="$(echo $RATES | cut -d' ' -f2-)"
@@ -56,12 +58,26 @@ for IFACE in $IFACES; do
         latency ${QUEUE_TIME}ms
 done
 
-# setup forwarding
-if [ "$FORWARD" = "true" ]; then
-    sysctl -w net.ipv4.ip_forward=1
-else
-    sysctl -w net.ipv4.ip_forward=0
-fi
+# setup iface behaviors
+for IFACE in $IFACES; do
+    DROP="$(echo $DROPS | cut -d' ' -f1)"
+    DROPS="$(echo $DROPS | cut -d' ' -f2-)"
+
+    DELAY="$(echo $DELAYS | cut -d' ' -f1)"
+    DELAYS="$(echo $DELAYS | cut -d' ' -f2-)"
+
+    if [ "$DROP" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem loss ${DROP}%
+    fi
+
+    if [ "$DELAY" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem delay ${DELAY}ms
+    fi
+done
+
+# Useful tc commands:
+#   tc qdisc list
+#   tc qdisc del dev $IFACE root
 
 # setup firewall
 for IFACE in $IFACES; do
@@ -124,28 +140,15 @@ done
 #   iptables --table nat --list --verbose
 #   iptables --flush
 
-for IFACE in $IFACES; do
-    DROP="$(echo $DROPS | cut -d' ' -f1)"
-    DROPS="$(echo $DROPS | cut -d' ' -f2-)"
-
-    DELAY="$(echo $DELAYS | cut -d' ' -f1)"
-    DELAYS="$(echo $DELAYS | cut -d' ' -f2-)"
-
-    if [ "$DROP" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem loss ${DROP}%
-    fi
-
-    if [ "$DELAY" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem delay ${DELAY}ms
-    fi
-done
-
-# Useful tc commands:
-#   tc qdisc list
-#   tc qdisc del dev $IFACE root
-
 # setup congestion control
 sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
+
+# setup forwarding
+if [ "$FORWARD" = "true" ]; then
+    sysctl -w net.ipv4.ip_forward=1
+else
+    sysctl -w net.ipv4.ip_forward=0
+fi
 
 # setup syn cookies
 if [ "$SYN_COOKIE" = "disable" ]; then
@@ -181,7 +184,7 @@ fi
 echo "--insecure" > $HOME/.curlrc
 
 # setup locust
-OUT="shared/locust-$HOSTNAME.csv"
+CSV="shared/locust-$HOSTNAME.csv"
 FILE="locustfile.py"
 
 echo "from locust import FastHttpUser, between, task" > $FILE
@@ -219,4 +222,4 @@ locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
     --csv csv/results 2> /dev/null &  # locust outputs traffic details to stderr
 
 wait $!  # $! is the PID of locust
-cp csv/results_stats_history.csv $OUT
+cp csv/results_stats_history.csv $CSV
