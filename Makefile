@@ -14,7 +14,7 @@ options help:
 	echo -e "\t- build"
 	echo -e "\t- up       # write docker-compose and launch"
 	echo -e "\t- down"
-	echo -e "\t- clean"
+	echo -e "\t- clean    # stops all containers and deletes all images"
 	
 	echo "" # New line
 
