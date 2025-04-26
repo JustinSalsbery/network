@@ -111,3 +111,4 @@ class Grapher():
                         file.write(f"[ label=\"{rate}mbps\" ]")
                     
                     file.write("\n")
+                    
