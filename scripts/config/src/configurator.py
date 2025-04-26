@@ -242,7 +242,6 @@ class Configurator():
         firewalls = []
         drops = []
         delays = []
-        mtus = []
         queue_times = []
         bursts = []
 
@@ -257,7 +256,6 @@ class Configurator():
             firewalls.append(config._firewall.name)
             drops.append(f"{config._drop}")
             delays.append(f"{config._delay}")
-            mtus.append(f"{config._mtu}")
             queue_times.append(f"{config._queue_time}")
             bursts.append(f"{self.__get_iface_burst(config)}")
 
@@ -270,7 +268,6 @@ class Configurator():
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
         file.write(f"{_SPACE * 3}DROPS: {" ".join(drops)}  # %\n")
         file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}  # ms\n")
-        file.write(f"{_SPACE * 3}MTUS: {" ".join(mtus)}  # bytes\n")
         file.write(f"{_SPACE * 3}QUEUE_TIMES: {" ".join(queue_times)}  # ms\n")
         file.write(f"{_SPACE * 3}BURSTS: {" ".join(bursts)}  # kbits/s\n")
 
@@ -353,10 +350,10 @@ class Configurator():
         """
 
         burst = config._rate / self.__config_hz
-        burst *= 1000          # convert mbits to kbits
+        burst *= 1000   # convert mbits to kbits
 
-        mtu = config._mtu * 8  # convert bytes to bits
-        mtu /= 1000            # convert bits to kbits
+        mtu = 1500 * 8  # convert bytes to bits
+        mtu /= 1000     # convert bits to kbits
 
         # the network will fail if the burst is too low
         if burst < mtu:

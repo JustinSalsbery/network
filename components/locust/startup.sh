@@ -46,9 +46,6 @@ for IFACE in $IFACES; do
     RATE="$(echo $RATES | cut -d' ' -f1)"
     RATES="$(echo $RATES | cut -d' ' -f2-)"
 
-    MTU="$(echo $MTUS | cut -d' ' -f1)"
-    MTUS="$(echo $MTUS | cut -d' ' -f2-)"
-
     QUEUE_TIME="$(echo $QUEUE_TIMES | cut -d' ' -f1)"
     QUEUE_TIMES="$(echo $QUEUE_TIMES | cut -d' ' -f2-)"
 
@@ -56,7 +53,7 @@ for IFACE in $IFACES; do
     BURSTS="$(echo $BURSTS | cut -d' ' -f2-)"
 
     tc qdisc add dev ${IFACE}_0 root tbf rate ${RATE}mbit burst ${BURST}kbit \
-        latency ${QUEUE_TIME}ms  # mtu option does not seem to work
+        latency ${QUEUE_TIME}ms
 done
 
 # setup forwarding

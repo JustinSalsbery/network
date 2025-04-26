@@ -47,9 +47,7 @@ up: config
 
 down:
 	if [ -f "docker-compose.yml" ]; then
-		# docker compose down may fail; this is not considered an error
-		docker compose down 2> /dev/null || \
-			echo "warning: Docker compose down failed."
+		docker compose down
 	else
 		echo "info: No docker compose file found."
 	fi

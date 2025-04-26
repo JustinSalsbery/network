@@ -295,7 +295,7 @@ class Iface():
 
 class _IfaceConfig():
     def __init__(self, iface: Iface, ip: str, gateway: str, rate: float, firewall: FirewallType, 
-                 drop: int, delay: int, mtu: int, queue_time: int, lease_start: str, lease_end: str, 
+                 drop: int, delay: int, queue_time: int, lease_start: str, lease_end: str, 
                  nat: NatType, cost: int):
         """
         @params:
@@ -306,7 +306,6 @@ class _IfaceConfig():
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - mtu: The maximum transmission unit. In units of bytes.
             - queue_time: Packets are dropped if not sent within this time period. In units of milliseconds.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
             - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
@@ -314,6 +313,13 @@ class _IfaceConfig():
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
         WARNING:
             - Rate cannot be less than 0.001mbits / second.
+            - The MTU is not handled correctly. All interfaces use the default MTU of 1500 bytes.
+              Despite this, packets may be up to 65,535 bytes in length.
+            - I have experimented with dropping packets larger than 1500 bytes with iptables and
+              I have experimented with specifying the MTU with tc using the tbf queueing discipline.
+              Neither worked. Another tc queueing discipline may work. 
+            - Further experimentations should focus on limiting the sent traffic by the MTU.
+              Limiting the received traffic by the MTU is problematic as it must involve ICMP.
         """
 
         self._iface = iface
@@ -332,9 +338,6 @@ class _IfaceConfig():
         assert(0 <= delay)
         self._delay = delay
 
-        assert(mtu >= 68)  # minimum MTU; network will likely break
-        self._mtu = mtu
-
         assert(queue_time >= 0)
         self._queue_time = queue_time
 
@@ -346,7 +349,7 @@ class _IfaceConfig():
         self._cost = cost
 
     def __str__(self) -> str:
-        return f"{"{"} {self._iface}, {self._ip}, {self._gateway} {"}"}"
+        return f"{"{"} {self._iface}, {self._ip}, {self._gateway}, {self._rate} {"}"}"
 
 
 # SERVICE *********************************************************************
@@ -466,7 +469,7 @@ class _Service():
         self._iface_configs = []
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 100, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, mtu: int = 1500, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -476,7 +479,6 @@ class _Service():
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - mtu: The maximum transmission unit. In units of bytes.
             - queue_time: Packets are dropped if not sent within this time period. In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
@@ -485,7 +487,7 @@ class _Service():
         """
 
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, 
-                              mtu, queue_time, "", "", NatType.none, 0)
+                              queue_time, "", "", NatType.none, 0)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -551,7 +553,7 @@ class TrafficGenerator(_Service):
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._proto}, {self._target}, " \
-               + f"{self._gets}, {self._conn_max} {"}"}"
+               + f"{self._requests}, {self._conn_max} {"}"}"
 
 
 # CLIENT **********************************************************************
@@ -653,7 +655,7 @@ class DHCP(_Service):
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
                   lease_end: str = "", rate: float = 100, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, mtu: int = 1500, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -665,7 +667,6 @@ class DHCP(_Service):
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - mtu: The maximum transmission unit. In units of bytes.
             - queue_time: Packets are dropped if not sent within this time period. In units of milliseconds.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
@@ -687,7 +688,7 @@ class DHCP(_Service):
             lease_end = lease_end._str
         
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay,
-                              mtu, queue_time, lease_start, lease_end, NatType.none, 0)
+                              queue_time, lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
 
 
@@ -727,7 +728,7 @@ class Router(_Service):
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", nat: NatType = NatType.none,
                   cost: int = 10, rate: float = 10000, firewall: FirewallType = FirewallType.none,
-                  drop: int = 0, delay: int = 0, mtu: int = 1500, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -739,7 +740,6 @@ class Router(_Service):
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
-            - mtu: The maximum transmission unit. In units of bytes.
             - queue_length: Packets are dropped if not sent within this time period. In units of milliseconds.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP
@@ -748,7 +748,7 @@ class Router(_Service):
         """
 
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, 
-                              mtu, queue_time, "", "", nat, cost)
+                              queue_time, "", "", nat, cost)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:
