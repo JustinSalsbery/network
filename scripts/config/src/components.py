@@ -295,8 +295,8 @@ class Iface():
 
 class _IfaceConfig():
     def __init__(self, iface: Iface, ip: str, gateway: str, rate: float, firewall: FirewallType, 
-                 drop: int, delay: int, queue_time: int, lease_start: str, lease_end: str, 
-                 nat: NatType, cost: int):
+                 drop: int, delay: int, corrupt: int, queue_time: int, lease_start: str, 
+                 lease_end: str, nat: NatType, cost: int):
         """
         @params:
             - iface: The network interface.
@@ -306,6 +306,7 @@ class _IfaceConfig():
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - corrupt: Corrupt random packets. In units of percents.
             - queue_time: Packets are dropped if not sent within this time period. 
                           In units of milliseconds.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
@@ -314,7 +315,7 @@ class _IfaceConfig():
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
         WARNING:
             - Rate cannot be less than 0.001 megabits per second.
-            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
               Additional routers may be added to the path to implement many rules.
             - The MTU is not handled correctly. All interfaces use the default MTU of 1500 bytes.
               Despite this, packets may be up to 65,535 bytes in length.
@@ -341,6 +342,9 @@ class _IfaceConfig():
 
         assert(0 <= delay)
         self._delay = delay
+
+        assert(0 <= corrupt <= 100)
+        self._corrupt = corrupt
 
         assert(queue_time >= 0)
         self._queue_time = queue_time
@@ -476,8 +480,8 @@ class _Service():
         self._iface_configs = []
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 12, 
-                  firewall: FirewallType = FirewallType.none, drop: int = 0, 
-                  delay: int = 0, queue_time: int = 50) -> None:
+                  firewall: FirewallType = FirewallType.none, drop: int = 0, delay: int = 0, 
+                  corrupt: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -487,17 +491,18 @@ class _Service():
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - corrupt: Corrupt random packets. In units of percents.
             - queue_time: Packets are dropped if not sent within this time period. 
                           In units of milliseconds.
         WARNING:
-            - If the IP is empty, then the service will attempt to use DHCP
-              for the IP, gateway, and nameservers.
+            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
+              gateway, and nameservers.
             - Rate cannot be less than 0.001 megabits per second.
-            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
               Additional routers may be added to the path to implement many rules.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, 
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
                               queue_time, "", "", NatType.none, 0)
         self._iface_configs.append(config)
 
@@ -679,7 +684,7 @@ class DHCP(_Service):
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
                   lease_end: str = "", rate: float = 12, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -691,15 +696,16 @@ class DHCP(_Service):
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - corrupt: Corrupt random packets. In units of percents.
             - queue_time: Packets are dropped if not sent within this time period. 
                           In units of milliseconds.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
             - The DHCP server will advertise the gateway.
-            - If the IP is empty, then the service will attempt to use DHCP
-              for the IP, gateway, and nameserver.
+            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
+              gateway, and nameserver.
             - Rate cannot be less than 0.001 megabits per second.
-            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
               Additional routers may be added to the path to implement many rules.
         """
 
@@ -714,7 +720,7 @@ class DHCP(_Service):
             lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
         
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay,
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
                               queue_time, lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
 
@@ -757,7 +763,7 @@ class Router(_Service):
 
     def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", nat: NatType = NatType.none,
                   cost: int = 10, rate: float = 100, firewall: FirewallType = FirewallType.none,
-                  drop: int = 0, delay: int = 0, queue_time: int = 50) -> None:
+                  drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
         @params:
             - iface: The network interface.
@@ -769,17 +775,18 @@ class Router(_Service):
             - firewall: Configure firewall.
             - drop: Drop random traffic. In unit of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
+            - corrupt: Corrupt random packets. In units of percents.
             - queue_length: Packets are dropped if not sent within this time period. 
                             In units of milliseconds.
         WARNING:
-            - If the IP is empty, then the service will attempt to use DHCP
-              for the IP, gateway, and nameserver.
+            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
+              gateway, and nameserver.
             - Rate cannot be less than 0.001 megabits per second.
-            - Drop, delay, and rate are mutually exclusive. Only 1 may be active at once.
+            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
               Additional routers may be added to the path to implement many rules.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, 
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
                               queue_time, "", "", nat, cost)
         self._iface_configs.append(config)
 

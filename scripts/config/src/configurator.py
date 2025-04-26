@@ -242,6 +242,7 @@ class Configurator():
         firewalls = []
         drops = []
         delays = []
+        corrupts = []
         queue_times = []
         bursts = []
 
@@ -256,6 +257,7 @@ class Configurator():
             firewalls.append(config._firewall.name)
             drops.append(f"{config._drop}")
             delays.append(f"{config._delay}")
+            corrupts.append(f"{config._corrupt}")
             queue_times.append(f"{config._queue_time}")
             bursts.append(f"{self.__get_iface_burst(config)}")
 
@@ -268,6 +270,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
         file.write(f"{_SPACE * 3}DROPS: {" ".join(drops)}  # %\n")
         file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}  # ms\n")
+        file.write(f"{_SPACE * 3}CORRUPTS: {" ".join(corrupts)}  # %\n")
         file.write(f"{_SPACE * 3}QUEUE_TIMES: {" ".join(queue_times)}  # ms\n")
         file.write(f"{_SPACE * 3}BURSTS: {" ".join(bursts)}  # kbits/s\n")
 

@@ -66,18 +66,29 @@ done
 
 # setup iface behaviors
 for IFACE in $IFACES; do
-    DROP="$(echo $DROPS | cut -d' ' -f1)"
-    DROPS="$(echo $DROPS | cut -d' ' -f2-)"
-
     DELAY="$(echo $DELAYS | cut -d' ' -f1)"
     DELAYS="$(echo $DELAYS | cut -d' ' -f2-)"
 
-    if [ "$DROP" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem loss ${DROP}%
-    fi
+    DROP="$(echo $DROPS | cut -d' ' -f1)"
+    DROPS="$(echo $DROPS | cut -d' ' -f2-)"
+
+    CORRUPT="$(echo $CORRUPTS | cut -d' ' -f1)"
+    CORRUPTS="$(echo $CORRUPTS | cut -d' ' -f2-)"
+
+    # the limit is the number of packets that the queue may hold
+    # the default is 1,000; 10,000 shouldn't cause an issue
+    LIMIT=10000
 
     if [ "$DELAY" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem delay ${DELAY}ms
+        tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT delay ${DELAY}ms
+    fi
+
+    if [ "$DROP" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT loss random ${DROP}%
+    fi
+
+    if [ "$CORRUPT" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT corrupt ${CORRUPT}%
     fi
 done
 
