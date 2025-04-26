@@ -6,13 +6,13 @@ from src.components import _comps, Iface, _ServiceType, _Service, _IfaceConfig
 
 # supported colors: https://graphviz.org/doc/info/colors.html
 COLOR_MAP = {
-    _ServiceType.client.name: "red",
-    _ServiceType.tgen.name: "brown",
-    _ServiceType.dhcp.name: "blue",
-    _ServiceType.dns.name: "purple",
-    _ServiceType.server.name: "deepskyblue",
-    _ServiceType.router.name: "darkgreen",
-    _ServiceType.lb.name: "gold",
+    _ServiceType.client.name: "bisque",
+    _ServiceType.tgen.name: "tan",
+    _ServiceType.dhcp.name: "aquamarine",
+    _ServiceType.dns.name: "paleturquoise",
+    _ServiceType.server.name: "lightskyblue",
+    _ServiceType.router.name: "palegreen",
+    _ServiceType.lb.name: "plum",
 }
 
 
@@ -62,6 +62,7 @@ class Grapher():
         """
 
         file.write("\t# COMPONENTS\n")
+        default_color = "gainsboro"
 
         for comps in self.__comps.values():
             for service in comps:  # comps is a list
@@ -69,11 +70,11 @@ class Grapher():
 
                 name = service._name
 
-                color = "black"
+                fill_color = default_color
                 if color and service._type.name in COLOR_MAP:
-                    color = COLOR_MAP[service._type.name]
+                    fill_color = COLOR_MAP[service._type.name]
 
-                file.write(f"\t\"{name}\" [ color=\"{color}\" fontcolor=\"{color}\" ]\n")
+                file.write(f"\t\"{name}\" [ style=\"filled\" fillcolor=\"{fill_color}\" ]\n")
         
         file.write("\n")  # new line
         file.write("\t# IFACES\n")
@@ -83,7 +84,7 @@ class Grapher():
             name = iface._name
             cidr = iface._cidr._str
 
-            file.write(f"\t\"{name}\" [ label=\"{name}\\n{cidr}\" ]\n")
+            file.write(f"\t\"{name}\" [ label=\"{name}\\n{cidr}\" style=\"filled\" fillcolor=\"{default_color}\" ]\n")
 
     def __write_connections(self, file: TextIOWrapper):
         """
