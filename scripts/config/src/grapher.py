@@ -17,10 +17,11 @@ COLOR_MAP = {
 
 
 class Grapher():
-    def __init__(self, color: bool):
+    def __init__(self, color: bool, edge_labels: bool):
         """
         @params:
             - color: Enable or disable coloring nodes by service type.
+            - edge_labels: Enable or disable edge labels.
         """
 
         try:
@@ -50,7 +51,7 @@ class Grapher():
 
             file.write("\n")  # new line
             file.write("\t# CONNECTIONS\n")
-            self.__write_connections(file)
+            self.__write_connections(file, edge_labels)
 
             file.write("}\n")
 
@@ -62,7 +63,7 @@ class Grapher():
         """
 
         file.write("\t# COMPONENTS\n")
-        default_color = "gainsboro"
+        color_default = "gainsboro"
 
         for comps in self.__comps.values():
             for service in comps:  # comps is a list
@@ -70,11 +71,11 @@ class Grapher():
 
                 name = service._name
 
-                fill_color = default_color
+                color_fill = color_default
                 if color and service._type.name in COLOR_MAP:
-                    fill_color = COLOR_MAP[service._type.name]
+                    color_fill = COLOR_MAP[service._type.name]
 
-                file.write(f"\t\"{name}\" [ style=\"filled\" fillcolor=\"{fill_color}\" ]\n")
+                file.write(f"\t\"{name}\" [ style=\"filled\" fillcolor=\"{color_fill}\" ]\n")
         
         file.write("\n")  # new line
         file.write("\t# IFACES\n")
@@ -84,12 +85,13 @@ class Grapher():
             name = iface._name
             cidr = iface._cidr._str
 
-            file.write(f"\t\"{name}\" [ label=\"{name}\\n{cidr}\" style=\"filled\" fillcolor=\"{default_color}\" ]\n")
+            file.write(f"\t\"{name}\" [ label=\"{name}\\n{cidr}\" style=\"filled\" fillcolor=\"{color_default}\" ]\n")
 
-    def __write_connections(self, file: TextIOWrapper):
+    def __write_connections(self, file: TextIOWrapper, edge_labels: bool):
         """
         @params:
             - file: File to write to.
+            - edge_labels: Enable or disable edge labels.
         """
 
         for comps in self.__comps.values():
@@ -102,7 +104,10 @@ class Grapher():
                     assert(type(config) == _IfaceConfig)
 
                     name_iface = config._iface._name
-                    ip = config._ip._str
                     rate = config._rate  #mbps
 
-                    file.write(f"\t\"{name_service}\" -- \"{name_iface}\" [ label=\"{ip}\\n{rate}mbps\" ]\n")
+                    file.write(f"\t\"{name_service}\" -- \"{name_iface}\"")
+                    if edge_labels:
+                        file.write(f"[ label=\"{rate}mbps\" ]")
+                    
+                    file.write("\n")

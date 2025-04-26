@@ -11,13 +11,15 @@ from src.grapher import Grapher
 _SPACE = "  "
 
 class Configurator():
-    def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22, color: bool = True):
+    def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22, 
+                 color: bool = True, edge_labels: bool = False):
         """
         Write out the configuration as `docker-compose.yml`.
         @params:
             - available_range: The available IP range in CIDR notation for creating Docker subnets.
             - prefix_len: The size of each subnet.
             - color: Enables or disables color in the GraphViz diagram.
+            - edge_labels: Enables or disables edge labels in the GraphViz diagram.
         WARNING:
             - The configurator MUST be called for the configuration to be created.
             - By default, Docker only supports around 30 network interfaces.
@@ -45,7 +47,7 @@ class Configurator():
             self.__write_services(file)
             self.__write_inets(file)
 
-        Grapher(color)
+        Grapher(color, edge_labels)
 
     def __write_services(self, file: TextIOWrapper):
         """
