@@ -96,8 +96,6 @@ for IFACE in $IFACES; do
     FIREWALLS="$(echo $FIREWALLS | cut -d' ' -f2-)"
 
     # for endpoints, add rules to output/input table
-
-    # routing protocols, vpns, k8s, databases, etc are unaccounted for
     # limit ports:
     #   - tcp: 22 (ssh), 80 (http), 443 (https), 5000 (tor node), 7000 (tor directory), 9050 (tor socks)
     #   - udp: 53 (dns), 67 (dhcp), 123 (ntp), 443 (quic)

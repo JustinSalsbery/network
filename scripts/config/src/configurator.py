@@ -135,7 +135,7 @@ class Configurator():
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
             file.write(f"{_SPACE * 3}ID: {i}\n")
-            file.write(f"{_SPACE * 3}ECMP: {str(router._ecmp).lower()}\n")
+            file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
 
             cidrs = []
             visibilities = []

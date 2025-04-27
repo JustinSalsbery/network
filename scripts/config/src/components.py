@@ -656,6 +656,7 @@ class DHCP(_Service):
         """
         @params:
             - nameserver: The IPv4 address for the DNS nameserver.
+                          The nameserver will be advertised.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -669,7 +670,6 @@ class DHCP(_Service):
         WARNING:
             - The DHCP server is only configured for a single interface.
               Do not add multiple interfaces!
-            - The DHCP server will advertise the nameserver.
         Note:
             - ECN is not supported as the tc queueing discipline used for rate does not
               support ECN notifications.
@@ -689,7 +689,7 @@ class DHCP(_Service):
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
-            - gateway: The IPv4 address of the gateway.
+            - gateway: The IPv4 address of the gateway. The gateway will be advertised.
             - lease_start: The IPv4 address at the start of the lease block.
             - lease_end: The IPv4 address at the end of the lease block.
             - rate: The average rate at which data will be sent. In units of megabits per second.
@@ -701,7 +701,6 @@ class DHCP(_Service):
                           In units of milliseconds.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
-            - The DHCP server will advertise the gateway.
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
               gateway, and nameserver.
             - Rate cannot be less than 0.001 megabits per second.
@@ -728,15 +727,21 @@ class DHCP(_Service):
 # ROUTER **********************************************************************
 
 
+class ECMPType(Enum):
+    none = auto()
+    l3 = auto()  # (Source IP, Destination IP, IP Protocol)
+    l4 = auto()  # (Source IP, Destination IP, Source Port, Destination Port, IP Protocol)
+
+
 class Router(_Service):
-    def __init__(self, ecmp: bool = False, nameserver: str = "", cpu_limit: float = 0.5, 
+    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = "", cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = True, 
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
-            - ecmp: Enable or disable ECMP.
+            - ecmp: Configure ECMP.
             - nameserver: The IPv4 address for the DNS nameserver.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
@@ -748,6 +753,9 @@ class Router(_Service):
             - fast_retrans: Enable or disable fast retransmission.
             - sacks: Enable or disable selective acknowledgments.
             - timestamps: Enable or disable tcp timestamps.
+        WARNING:
+            - ECMP requires that CONFIG_IP_ROUTE_MULTIPATH is enabled on the host machine.
+              See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
         Note:
             - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
               and then selects (2) the route with the lowest cost.

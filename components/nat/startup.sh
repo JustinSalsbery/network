@@ -96,8 +96,6 @@ for IFACE in $IFACES; do
     FIREWALLS="$(echo $FIREWALLS | cut -d' ' -f2-)"
 
     # for routers, add rules to forwarding table
-
-    # routing protocols, vpns, k8s, databases, etc are unaccounted for
     # limit ports:
     #   - tcp: 22 (ssh), 80 (http), 443 (https), 5000 (tor node), 7000 (tor directory), 9050 (tor socks)
     #   - udp: 53 (dns), 67 (dhcp), 123 (ntp), 443 (quic)
@@ -194,6 +192,15 @@ fi
 # setup curl
 echo "--insecure" > $HOME/.curlrc
 
+# configure ecmp
+if [ "$ECMP" = "l3" ]; then
+    sysctl -w net.ipv4.fib_multipath_hash_policy=0
+    sysctl -w net.ipv4.fib_multipath_use_neigh=1
+elif [ "$ECMP" = "l4" ]; then
+    sysctl -w net.ipv4.fib_multipath_hash_policy=1
+    sysctl -w net.ipv4.fib_multipath_use_neigh=1
+fi
+
 # setup nat
 for IFACE in $IFACES; do
     NAT="$(echo $NATS | cut -d' ' -f1)"
@@ -232,14 +239,7 @@ echo -e "\t\texport all;" >> $FILE
 echo -e "\t};" >> $FILE
 echo "" >> $FILE # new line
 
-# configure ecmp
-# may require CONFIG_IP_ROUTE_MULTIPATH on host machine
-#   see: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
-
-if [ "$ECMP" = "true" ]; then
-    sysctl -w net.ipv4.fib_multipath_use_neigh=1
-    sysctl -w net.ipv4.fib_multipath_hash_policy=1
-    
+if [ "$ECMP" != "none" ]; then    
     echo -e "\tmerge paths on;" >> $FILE
 fi
 
