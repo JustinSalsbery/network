@@ -254,6 +254,13 @@ echo -e "\t\timport all;" >> $FILE
 echo -e "\t\texport all;" >> $FILE
 echo -e "\t};" >> $FILE
 echo "" >> $FILE # new line
+
+if [ "$ECMP" != "none" ]; then    
+    echo -e "\tecmp on;" >> $FILE
+    echo -e "\tmerge external on;" >> $FILE
+fi
+
+echo "" >> $FILE # new line
 echo -e "\tarea 0.0.0.0 {" >> $FILE
 
 # advertise public interfaces

@@ -3,20 +3,23 @@
 ## Description:
 - Simple deployment for various network configurations.
 
+## Requirements:
+- Linux: [Supported on Debian-based Distributions]
+    - Add the user to the `docker` group.
+    - While not necessary, the following file should exist: `/boot/config-$(uname -r)`
+- Mac: [Unsupported]
+    - Use a recent version of `make`.
+    - Currently, neither `dhcp` nor the `routers` will function correctly.
+- Windows: [Unsupported and Untested]
+
 ## Usage:
 - Build docker images with `make build`.
 - Tweak network configuration within `scripts/network/main.py`.
-- Create configuration with `make config`.
 - Launch network with `make up`.
 - Record container stats with `make stats`.
 - Record network traffic from the host with `tcpdump`. You must specify the interface!
     - Note that Wireshark is not designed for a global network view and labels any packet that has a duplicate 5-tuple as being a retransmissions. All forwarded packets, such as by a router, will be labeled as a retransmission regardless of originating from a different MAC address.
 - Shutdown network with `make down`.
-
-## Notes:
-- If the Makefile fails, update `make`. [Mac]
-    - I no longer support Mac. The networking is not working correctly!
-- Add the user to the `docker` group. [Linux]
 
 ## Useful `docker` commands:
 - List:
@@ -40,30 +43,23 @@
     - Resource usage: `docker stats`
 
 ## Misc:
-- Access container ID w/in container: `$HOSTNAME`
+- Access the container ID within the container with `$HOSTNAME`.
 
 ---
 
 # Todo:
-Needed for work:
-1. HAproxy
-2. Katran
-3. Tor
-4. CDN
-5. K8s
+1. CDN for Caching
+2. K8s Deployments
+3. Random restart script
 
-Needed foundation:
-1. NTP: Add WARNING to Tor.
-    - Docker uses the host clock so NTP is unnecessary for clock synchronization.
-    - Many encrypted protocols require clock synchronization, such as HTTPS and Tor,
-      so NTP may be necessary in a real-world environment.
-2. Server: Static and dynamic pages.
+---
 
-Neat additions:
-- nmap: Port and IP scanners
-- IDS: Router option to duplicate traffic to IDS.
-- VPN: Router options for IP destination censorship and port forwarding.
+# Considered:
+I want to limit the scope so that future maintanence is easier. I have considered adding many new components, including the following:
 
-Needed scripts:
-- Generate graph by connecting components to their interface. Use IPs as the edge labels and the container names as the node name.
-- Randomly restart containers by name.
+1. Tor
+2. VPN
+3. IDS
+4. ... and many more.
+
+I may consider adding such components in the future if I see a need.

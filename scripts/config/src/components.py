@@ -633,6 +633,9 @@ class Server(_Service):
             - timestamps: Enable or disable tcp timestamps.
         Note:
             - Both HTTP (80) and HTTPS (443) are enabled.
+            - Many encrypted protocols require clock synchronization, such as HTTPS 
+              and Tor. Docker uses the host clock so explicit synchronization, such
+              as by NTP, is unnecessary.
             - In the real world, HTTPS requires a certificate signed by a trusted
               Certificate Authority (CA).
             - ECN is not supported as the tc queueing discipline used for rate does not
