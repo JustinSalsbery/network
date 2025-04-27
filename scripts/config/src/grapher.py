@@ -38,12 +38,15 @@ class Grapher():
             file.write("\tfontname=\"Helvetica,Arial,sans-serif\"\n")
             file.write("\tnode [ fontname=\"Helvetica,Arial,sans-serif\" ]\n")
             file.write("\tedge [ fontname=\"Helvetica,Arial,sans-serif\" ]\n")
-            file.write("\n")  # new line
 
-            # dpi increases sharpness; scale increases size when there is overlap
-            file.write("\tgraph [ splines=line overlap=scale dpi=150 ]\n")
+            file.write("\n")  # new line
             file.write("\tlabel=\"Network Configuration\"\n")
             file.write("\tlabelloc=\"t\"  # place graph label at top\n")
+            
+            file.write("\n")  # new line
+            file.write("\t# scale increases the size when there is overlap\n")
+            file.write("\t# dpi increases sharpness\n")
+            file.write("\tgraph [ splines=line overlap=scale dpi=150 ]\n")
 
             file.write("\n")  # new line
             file.write("\t# NODES\n")
