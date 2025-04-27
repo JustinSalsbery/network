@@ -316,14 +316,17 @@ class Configurator():
 
     def __get_interrupt_freq(self) -> int:
         """
-        CONFIG_HZ represents the Kernel's interrupt frequency.
-        Most Linux distributions include CONFIG_HZ within the /boot/config-$(uname -r) file.
         @returns: The CONFIG_HZ.
+        Note:
+            - CONFIG_HZ represents the Kernel's interrupt frequency.
+        WARNING:
+            - Rate may be inaccurate if the CONFIG_HZ is not found.
+              See: `grep CONFIG_HZ= /boot/config-$(uname -r)`
         """
 
         config_hz = 0
 
-        s, o = getstatusoutput("grep 'CONFIG_HZ=' /boot/config-$(uname -r)")
+        s, o = getstatusoutput("grep CONFIG_HZ= /boot/config-$(uname -r)")
         if s != 0:
             print("warning: Interrupt frequency not found. Link rate may be inaccurate.")
             print("notice: Using a default CONFIG_HZ of 250.")
@@ -342,13 +345,14 @@ class Configurator():
 
     def __get_iface_burst(self, config: _IfaceConfig) -> float:
         """
-        The maximum amount of data that can be sent within a jiffy. This amount 
-        may temporarily exceed the defined rate. At a minimum, burst should be
-        large enough to support the rate.
         @params:
             - config: The _IfaceConfig to calculate the burst for.
         @returns: The burst in units of kilobits.
         Note:
+            - The maximum amount of data that can be sent every interrupt (also known
+              as a jiffy). This amount may temporarily exceed the defined rate. 
+            - At a minimum, burst should be large enough to support the rate such
+              that interrupt frequency * burst = rate.
             - This variable is being hidden to avoid dependencies between rate and burst.
         """
 
