@@ -69,20 +69,20 @@ for IFACE in $IFACES; do
     CORRUPT="$(echo $CORRUPTS | cut -d' ' -f1)"
     CORRUPTS="$(echo $CORRUPTS | cut -d' ' -f2-)"
 
-    # the limit is the number of packets that the queue may hold
-    # the default is 1,000; 10,000 shouldn't cause an issue
-    LIMIT=10000
-
     if [ "$DELAY" != "0" ]; then
+        # the limit is the number of packets that the queue may hold at once
+        # the default is 1,000 packets, but that is not enough with a large delay
+        LIMIT=$((1000 + (1000 * $DELAYS / 50)))  # seems reasonable
+
         tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT delay ${DELAY}ms
     fi
 
-    if [ "$DROP" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT loss random ${DROP}%
+    if [ "$DROP" != "0" ]; then  # line rate
+        tc qdisc add dev ${IFACE}_0 root netem loss random ${DROP}%
     fi
 
-    if [ "$CORRUPT" != "0" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT corrupt ${CORRUPT}%
+    if [ "$CORRUPT" != "0" ]; then  # line rate
+        tc qdisc add dev ${IFACE}_0 root netem corrupt ${CORRUPT}%
     fi
 done
 
