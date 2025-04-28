@@ -39,6 +39,8 @@
     - Remove network: `docker network rm <ID>`
 - Container information:
     - Container logs: `docker logs <ID>`
+        - STDOUT: `docker logs <ID> 2> /dev/null`
+        - STDERR: `docker logs <ID> 1> /dev/null`
     - Inspect container: `docker inspect <ID>`
     - Resource usage: `docker stats`
 
@@ -48,9 +50,12 @@
 ---
 
 # Todo:
-1. CDN for Caching
-2. K8s Deployments
-3. Random restart script
+1. Rework Logging
+    - Logging should be enabled by default to STDERR
+    - Remove Logging Toggles
+2. CDN for Caching
+3. K8s Deployments
+4. Random restart script
 
 ---
 

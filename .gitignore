@@ -3,6 +3,7 @@
 .*
 *.key
 *.crt
+*.pem
 *.pcap
 
 docker-compose.yml
