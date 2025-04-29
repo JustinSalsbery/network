@@ -130,10 +130,7 @@ class _CIDR():
 
         try:
             ip, prefix_len = cidr.split("/")
-
             ip = _IPv4(ip)
-            if ip._str == "none":
-                return False
 
             prefix_len = int(prefix_len)
             if not 0 <= prefix_len <= 28:  # this limit is for DHCP default lease space
@@ -324,13 +321,13 @@ class _IfaceConfig():
 
         self._iface = iface
 
-        self._ip = "none"
+        self._ip = None
         if ip != None:
-            self._ip = _IPv4(ip)._str
+            self._ip = _IPv4(ip)
 
-        self._gateway = "none"
+        self._gateway = None
         if gateway != None:
-            self._gateway = _IPv4(gateway)._str
+            self._gateway = _IPv4(gateway)
 
         rate = round(rate, 3)
         assert(rate >= 0.001)
@@ -350,13 +347,13 @@ class _IfaceConfig():
         assert(queue_time >= 0)
         self._queue_time = queue_time
 
-        self._lease_start = "none"
+        self._lease_start = None
         if lease_start != None:
-            self._lease_start = _IPv4(lease_start)._str
+            self._lease_start = _IPv4(lease_start)
 
-        self._lease_end = "none"
+        self._lease_end = None
         if lease_end != None:
-            self._lease_end = _IPv4(lease_end)._str
+            self._lease_end = _IPv4(lease_end)
         
         self._nat = nat
 
@@ -457,21 +454,18 @@ class _Service():
 
         assert(swap_limit >= 0)
         self._swap_limit = swap_limit
-
-        if len(nameservers) > 64:
-            print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
-            exit(1)
         
         self._nameservers = []
-        for nameserver in nameservers:
-            if nameserver == None:
-                continue
-
-            ip = _IPv4(nameserver)
-            self._nameservers.append(ip._str)
+        if nameservers != None:
+            for nameserver in nameservers:
+                ip = _IPv4(nameserver)
+                self._nameservers.append(ip)
 
         if len(self._nameservers) == 0:
-            self._nameservers.append("none")
+            self._nameservers = None
+        elif len(self._nameservers) > 64:
+            print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
+            exit(1)
 
         self._forward = forward
         self._syn_cookie = syn_cookie
@@ -567,11 +561,13 @@ class TrafficGenerator(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.tgen, "locust", [nameserver], cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.tgen, "locust", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
+        assert(target != "")
         self._target = target
+        
         self._proto = proto
         self._requests = requests
         self._conn_max = conn_max
@@ -616,7 +612,7 @@ class Client(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.client, "client", [nameserver], cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
@@ -654,7 +650,7 @@ class Server(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.server, "nginx", [nameserver], cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.server, "nginx", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
@@ -690,14 +686,14 @@ class DHCP(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.dhcp, "dhcp", [nameserver], cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.dhcp, "dhcp", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
         assert(0 < lease_time)
         self._lease_time = lease_time
 
-    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, lease_start: str = None, 
+    def add_iface(self, iface: Iface, ip: str, gateway: str = None, lease_start: str = None, 
                   lease_end: str = None, rate: float = 12, firewall: FirewallType = FirewallType.none, 
                   drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
@@ -723,17 +719,18 @@ class DHCP(_Service):
               Additional routers may be added to the path to implement many rules.
         """
 
-        # config default lease_start
+        # configure default lease_start
         if lease_start == None:
             lease_start = _IPv4(iface._cidr._ip._int + 10)
-            lease_start = lease_start._str
+            lease_start = lease_start._str  # _IfaceConfig expects a string
 
-        # config default lease_end
+        # configure default lease_end
         if lease_end == None:
             suffix_len = 32 - iface._cidr._prefix_len
             lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
         
+        assert(_IPv4(ip))  # must have legal ip
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
                               queue_time, lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
@@ -749,9 +746,9 @@ class ECMPType(Enum):
 
 
 class Router(_Service):
-    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = None, cpu_limit: float = 0.5, 
-                 mem_limit: int = 256, swap_limit: int = 64, forward: bool = True, 
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
+    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = None, 
+                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
+                 forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
@@ -778,7 +775,7 @@ class Router(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.router, "nat", [nameserver], cpu_limit, mem_limit,
+        super().__init__(_ServiceType.router, "nat", nameserver, cpu_limit, mem_limit,
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -828,7 +825,7 @@ class _Domain():
             - ip: The IPv4 address of the service.
         """
 
-        assert(name != None)
+        assert(name != "" and name != None)
         self._name = name
 
         self._ip = _IPv4(ip)
@@ -838,7 +835,7 @@ class _Domain():
     
 
 class Nameserver(_Service):
-    def __init__(self, ttl: int = 600, log: bool = False, nameservers: list[str] = [], 
+    def __init__(self, ttl: int = 600, log: bool = False, nameservers: list[str] = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -905,7 +902,8 @@ class LBAlgorithm(Enum):
     roundrobin = auto()
     random = auto()
     leastconn = auto()
-    source = auto()
+    source = auto()  # hash of the source IP
+                     # each LB will hash the IP to the same value
 
 
 class LoadBalancer(_Service):
@@ -934,28 +932,31 @@ class LoadBalancer(_Service):
             - fast_retrans: Enable or disable fast retransmission.
             - sacks: Enable or disable selective acknowledgments.
             - timestamps: Enable or disable tcp timestamps.
+        WARNING:
+            - The interface that is being advertised must be added to the load balancer.
         Note:
             - ECN is not supported as the tc queueing discipline used for rate does not
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.lb, "haproxy", [nameserver], cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.lb, "haproxy", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
         self._backends = []
         for backend in backends:
             ip = _IPv4(backend)
-            self._backends.append(ip._str)
+            self._backends.append(ip)
 
         if len(self._backends) == 0:
-            self._backends.append("none")
+            self._backends = None
 
         self._type = type
         self._algorithm = algorithm
 
-        self._advertise = "none"
+        self._advertise = None
         if advertise != None:
-            self._advertise = advertise._name
+            self._advertise = advertise
 
+        assert(health_check != "")
         self._health_check = health_check

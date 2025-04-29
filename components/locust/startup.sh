@@ -226,9 +226,13 @@ echo -e "\tdef close(self):" >> $FILE
 echo -e "\t\tself.client.client.close()" >> $FILE
 
 # run locust
-trap "pkill locust" SIGTERM
 locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
     --csv csv/results 2> /dev/null &  # locust outputs traffic details to stderr
 
-wait $!  # $! is the PID of locust
+# sleep
+trap "pkill locust" SIGTERM
+sleep infinity &
+
+wait $!  # $! is the PID of sleep
+
 cp csv/results_stats_history.csv $CSV

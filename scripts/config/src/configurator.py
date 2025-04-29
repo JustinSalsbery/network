@@ -12,14 +12,14 @@ _SPACE = "  "
 
 class Configurator():
     def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22, 
-                 graph_color: bool = True, graph_extra: bool = False):
+                 color: bool = True, extra: bool = False):
         """
         Write out the configuration as `docker-compose.yml`.
         @params:
             - available_range: The available IP range in CIDR notation for creating Docker subnets.
             - prefix_len: The size of each subnet.
-            - graph_color: Enables or disables color in the graph.
-            - graph_extra: Enables or disables extra information in the graph.
+            - color: Enables or disables color in the graph.
+            - extra: Enables or disables extra information in the graph.
         WARNING:
             - The configurator MUST be called for the configuration to be created.
             - By default, Docker only supports around 30 network interfaces.
@@ -47,7 +47,7 @@ class Configurator():
             self.__write_services(file)
             self.__write_inets(file)
 
-        Grapher(graph_color, graph_extra)
+        Grapher(color, extra)
 
     def __write_services(self, file: TextIOWrapper):
         """
@@ -86,8 +86,9 @@ class Configurator():
             for config in dhcp._iface_configs:
                 assert(type(config) == _IfaceConfig)
 
-                lease_starts.append(config._lease_start)
-                lease_ends.append(config._lease_end)
+                # none should be impossible
+                lease_starts.append(config._lease_start._str if config._lease_start else exit(1))
+                lease_ends.append(config._lease_end._str if config._lease_end else exit(1))
 
             file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
             file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
@@ -194,14 +195,17 @@ class Configurator():
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
 
             backends = []
-            for backend in lb._backends:
-                assert(type(backend) == str)
-                backends.append(backend)
+            if lb._backends:
+                for backend in lb._backends:
+                    assert(type(backend) == _IPv4)
+                    backends.append(backend._str)
+            else:
+                backends.append("none")
 
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
             file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
             file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
-            file.write(f"{_SPACE * 3}ADVERTISE: {lb._advertise}\n")
+            file.write(f"{_SPACE * 3}ADVERTISE: {lb._advertise._name if lb._advertise else "none"}\n")
             file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
 
     def __write_service(self, file: TextIOWrapper, service: _Service):
@@ -227,11 +231,13 @@ class Configurator():
         file.write(f"{_SPACE * 2}volumes:\n")
         file.write(f"{_SPACE * 3}- ./shared:/app/shared\n")
         file.write(f"{_SPACE * 3}- /lib/modules:/lib/modules  # mount host kernel modules\n")
-        file.write(f"{_SPACE * 2}networks:\n")
 
-        for config in service._iface_configs:
-            assert(type(config) == _IfaceConfig)
-            file.write(f"{_SPACE * 3}- {config._iface._name}\n")
+        if len(service._iface_configs):  # docker compose throws an error if network map is empty
+            file.write(f"{_SPACE * 2}networks:\n")
+
+            for config in service._iface_configs:
+                assert(type(config) == _IfaceConfig)
+                file.write(f"{_SPACE * 3}- {config._iface._name}\n")
 
         file.write(f"{_SPACE * 2}cap_add:\n")
         file.write(f"{_SPACE * 3}- NET_ADMIN  # enables ifconfig, route\n")
@@ -240,16 +246,14 @@ class Configurator():
         file.write(f"{_SPACE * 3}# Host configurations:\n")
 
         nameservers = []
-
-        if len(service._nameservers) == 0:
+        if service._nameservers:
+            for nameserver in service._nameservers:
+                assert(type(nameserver) == _IPv4)
+                nameservers.append(nameserver._str)
+        else:
             nameservers.append("none")
 
-        for nameserver in service._nameservers:
-            assert(type(nameserver) == str)
-            nameservers.append(nameserver)
-
         file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(nameservers)}\n")
-
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
@@ -273,9 +277,9 @@ class Configurator():
             assert(type(config) == _IfaceConfig)
 
             ifaces.append(config._iface._name)
-            ips.append(config._ip)
+            ips.append(config._ip._str if config._ip else "none")
             net_masks.append(config._iface._cidr._netmask._str)
-            gateways.append(config._gateway)
+            gateways.append(config._gateway._str if config._gateway else "none")
             rates.append(f"{config._rate:.3f}")
             firewalls.append(config._firewall.name)
             drops.append(f"{config._drop}")

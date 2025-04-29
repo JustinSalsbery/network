@@ -193,6 +193,7 @@ fi
 echo "--insecure" > $HOME/.curlrc
 
 # setup bird
+# haproxy is not a router; advertise the route, but do not import any routes
 FILE="/etc/bird.conf"
 
 if [ "$ADVERTISE" != "none" ]; then
@@ -232,7 +233,7 @@ if [ "$TYPE" == "l4" ]; then
     echo -e "\t*:443 accept-proxy" >> $FILE
     echo "" >> $FILE  # new line
     echo -e "\tmode tcp" >> $FILE
-elif [ "$TYPE" == "l5" ]; then
+elif [ "$TYPE" == "l5" ]; then  # on the frontend, ssl enables ssl termination
     echo -e "\t*:443 accept-proxy ssl crt /app/ssl/cert.pem ssl-min-ver TLSv1.2" >> $FILE
     echo "" >> $FILE  # new line
     echo -e "\tmode http" >> $FILE
@@ -253,7 +254,7 @@ echo -e "\tbalance $ALGORITHM" >> $FILE
 if [ "$ALGORITHM" == "source" ]; then
     echo -e "\thash-type consistent  # deterministic routing" >> $FILE
 elif [ "$TYPE" == "l4" ]; then
-    echo -e "\tstick-table type ip size 5m expire 10m" >> $FILE
+    echo -e "\tstick-table type ip size 5m expire 10m  # 50 bytes per entry" >> $FILE
     echo -e "\tstick on src  # https must be sticky; use lookup table" >> $FILE
 elif [ "$TYPE" == "l5" ]; then
     echo -e "\t# non-deterministic routing" >> $FILE
@@ -261,7 +262,7 @@ fi
 
 echo "" >> $FILE  # new line
 echo -e "\toption httpchk $CHECK" >> $FILE
-echo -e "\tcheck-ssl" >> $FILE
+echo -e "\tcheck-ssl  # use ssl for health checks" >> $FILE
 echo ""  >> $FILE  # new line
 echo "\t# the backend uses https for all traffic" >> $FILE
 
@@ -275,14 +276,14 @@ if [ "$TYPE" == "l4" ]; then
         i=((i + 1))
     done
 elif [ "$TYPE" == "l5" ]; then
-    for BACKEND in $BACKENDS; do
+    for BACKEND in $BACKENDS; do  # l5 load balancers cannot be direct server return
         echo "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
 
         i=((i + 1))
     done
 fi
 
-# haproxy -f $FILE  # run haproxy
+haproxy -f $FILE  # run haproxy
 
 # sleep
 trap "exit 0" SIGTERM
