@@ -54,6 +54,9 @@
     - Logging should be enabled by default to STDERR
     - Remove Logging Toggles
 2. CDN for Caching
+    - I could cache on the L5 LB instead.
+    - Vary HTTP Header: Enable or Disable Caching
+    - Max-age HTTP Header: TTL for Caching
 3. K8s Deployments
 4. Random restart script
 

@@ -22,11 +22,6 @@ class _IPv4():
             - ip: The IPv4 address.
         """
 
-        if ip == "":  # special case
-            self._str = "none"
-            self._int = nan
-            return
-
         if type(ip) == str:
             if not self.__is_legal(ip):
                 print(f"error: Illegal IPv4 address {ip}")
@@ -328,8 +323,14 @@ class _IfaceConfig():
         """
 
         self._iface = iface
-        self._ip = _IPv4(ip)
-        self._gateway = _IPv4(gateway)
+
+        self._ip = "none"
+        if ip != None:
+            self._ip = _IPv4(ip)._str
+
+        self._gateway = "none"
+        if gateway != None:
+            self._gateway = _IPv4(gateway)._str
 
         rate = round(rate, 3)
         assert(rate >= 0.001)
@@ -349,8 +350,14 @@ class _IfaceConfig():
         assert(queue_time >= 0)
         self._queue_time = queue_time
 
-        self._lease_start = _IPv4(lease_start)
-        self._lease_end = _IPv4(lease_end)
+        self._lease_start = "none"
+        if lease_start != None:
+            self._lease_start = _IPv4(lease_start)._str
+
+        self._lease_end = "none"
+        if lease_end != None:
+            self._lease_end = _IPv4(lease_end)._str
+        
         self._nat = nat
 
         assert(0 <= cost <= 65535)
@@ -456,10 +463,15 @@ class _Service():
             exit(1)
         
         self._nameservers = []
-
         for nameserver in nameservers:
+            if nameserver == None:
+                continue
+
             ip = _IPv4(nameserver)
-            self._nameservers.append(ip)
+            self._nameservers.append(ip._str)
+
+        if len(self._nameservers) == 0:
+            self._nameservers.append("none")
 
         self._forward = forward
         self._syn_cookie = syn_cookie
@@ -479,7 +491,7 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", rate: float = 12, 
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, rate: float = 12, 
                   firewall: FirewallType = FirewallType.none, drop: int = 0, delay: int = 0, 
                   corrupt: int = 0, queue_time: int = 50) -> None:
         """
@@ -503,7 +515,7 @@ class _Service():
         """
 
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
-                              queue_time, "", "", NatType.none, 0)
+                              queue_time, None, None, NatType.none, 0)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -521,7 +533,7 @@ class Protocol(Enum):
 class TrafficGenerator(_Service):
     def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
                  conn_max: int = 50, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
-                 wait_max: float = 15, gzip: bool = True, nameserver: str = "", 
+                 wait_max: float = 15, gzip: bool = True, nameserver: str = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -581,7 +593,7 @@ class TrafficGenerator(_Service):
 
 
 class Client(_Service):
-    def __init__(self, nameserver: str = "", cpu_limit: float = 0.5, mem_limit: int = 256, 
+    def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -613,7 +625,7 @@ class Client(_Service):
 
 
 class Server(_Service):
-    def __init__(self, nameserver: str = "", cpu_limit: float = 0.5, mem_limit: int = 256, 
+    def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -651,7 +663,7 @@ class Server(_Service):
 
 
 class DHCP(_Service):
-    def __init__(self, lease_time: int = 600, nameserver: str = "", cpu_limit: float = 0.5, 
+    def __init__(self, lease_time: int = 600, nameserver: str = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable,
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -685,8 +697,8 @@ class DHCP(_Service):
         assert(0 < lease_time)
         self._lease_time = lease_time
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", lease_start: str = "", 
-                  lease_end: str = "", rate: float = 12, firewall: FirewallType = FirewallType.none, 
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, lease_start: str = None, 
+                  lease_end: str = None, rate: float = 12, firewall: FirewallType = FirewallType.none, 
                   drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
         @params:
@@ -712,12 +724,12 @@ class DHCP(_Service):
         """
 
         # config default lease_start
-        if lease_start == "":
+        if lease_start == None:
             lease_start = _IPv4(iface._cidr._ip._int + 10)
             lease_start = lease_start._str
 
         # config default lease_end
-        if lease_end == "":
+        if lease_end == None:
             suffix_len = 32 - iface._cidr._prefix_len
             lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
@@ -737,7 +749,7 @@ class ECMPType(Enum):
 
 
 class Router(_Service):
-    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = "", cpu_limit: float = 0.5, 
+    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = True, 
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -772,7 +784,7 @@ class Router(_Service):
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str = "", gateway: str = "", nat: NatType = NatType.none,
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, nat: NatType = NatType.none,
                   cost: int = 10, rate: float = 100, firewall: FirewallType = FirewallType.none,
                   drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
@@ -798,7 +810,7 @@ class Router(_Service):
         """
 
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
-                              queue_time, "", "", nat, cost)
+                              queue_time, None, None, nat, cost)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:
@@ -816,10 +828,9 @@ class _Domain():
             - ip: The IPv4 address of the service.
         """
 
-        assert(name != "")
+        assert(name != None)
         self._name = name
 
-        assert(ip != "")
         self._ip = _IPv4(ip)
 
     def __str__(self) -> str:
@@ -880,4 +891,71 @@ class Nameserver(_Service):
 
     def __str__(self) -> str:
         return f"{"{"} {super().__str__()}, {self._ttl}, {self._domains} {"}"}"
-    
+
+
+# Load Balancer ***************************************************************
+
+
+class LBType(Enum):
+    l4 = auto()
+    l5 = auto()
+
+
+class LBAlgorithm(Enum):
+    roundrobin = auto()
+    random = auto()
+    leastconn = auto()
+    source = auto()
+
+
+class LoadBalancer(_Service):
+    def __init__(self, backends: list[str], type: LBType = LBType.l5, 
+                 algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: Iface = None, 
+                 health_check: str = "/", nameserver: str = None, cpu_limit: float = 0.5, 
+                 mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+        """
+        @params:
+            - backends: The list of IPv4 addresses to balance between.
+            - type: The type of the load balancer.
+            - algorithm: The algorithm to use for backend selection.
+            - advertise: The interface to advertise via OSPF.
+            - health_check: The server page to request for health checks.
+            - nameserver: The IPv4 address for the DNS nameserver.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
+            - mem_limit: Limit service memory. In units of megabytes.
+            - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
+            - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
+        Note:
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
+        """
+
+        super().__init__(_ServiceType.lb, "haproxy", [nameserver], cpu_limit, mem_limit, 
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
+
+        self._backends = []
+        for backend in backends:
+            ip = _IPv4(backend)
+            self._backends.append(ip._str)
+
+        if len(self._backends) == 0:
+            self._backends.append("none")
+
+        self._type = type
+        self._algorithm = algorithm
+
+        self._advertise = "none"
+        if advertise != None:
+            self._advertise = advertise._name
+
+        self._health_check = health_check

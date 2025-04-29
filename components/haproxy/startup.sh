@@ -192,56 +192,100 @@ fi
 # setup curl
 echo "--insecure" > $HOME/.curlrc
 
+# setup bird
+FILE="/etc/bird.conf"
+
+if [ "$ADVERTISE" != "none" ]; then
+    echo "protocol ospf v2 {" > $FILE
+    echo -e "\tipv4 {" >> $FILE
+    echo -e "\t\timport none;" >> $FILE
+    echo -e "\t\texport all;" >> $FILE
+    echo -e "\t}" >> $FILE
+    echo "" >> $FILE # new line
+    echo -e "\tarea 0.0.0.0 {" >> $FILE
+    echo -e "\t\tinterface $ADVERTISE { type broadcast; };" >> $FILE
+    echo -e "\t};" >> $FILE
+    echo "}" >> $FILE
+
+    # run bird
+    bird
+    birdc configure
+fi
+
+# Useful birdc commands:
+#   show protocols
+#   show ospf neighbors
+#   show route table t_ospf
+#   show ospf interface
+# Useful ip command:
+#   ip route
+
+FILE="/etc/haproxy/haproxy.cfg"
+
+echo "global" > $FILE
+echo -e "\tdaemon" >> $FILE
+echo "" >> $FILE  # new line
+echo "frontend $TYPE" >> $FILE
+echo -e "\t*:80  accept-proxy" >> $FILE
+
+if [ "$TYPE" == "l4" ]; then
+    echo -e "\t*:443 accept-proxy" >> $FILE
+    echo "" >> $FILE  # new line
+    echo -e "\tmode tcp" >> $FILE
+elif [ "$TYPE" == "l5" ]; then
+    echo -e "\t*:443 accept-proxy ssl crt /app/ssl/cert.pem ssl-min-ver TLSv1.2" >> $FILE
+    echo "" >> $FILE  # new line
+    echo -e "\tmode http" >> $FILE
+fi
+
+echo -e "\tdefault_backend servers" >> $FILE
+echo "" >> $FILE  # new line
+echo "backend servers" >> $FILE
+
+if [ "$TYPE" == "l4" ]; then
+    echo -e "\tmode tcp" >> $FILE
+elif [ "$TYPE" == "l5" ]; then
+    echo -e "\tmode http" >> $FILE
+fi
+
+echo -e "\tbalance $ALGORITHM" >> $FILE
+
+if [ "$ALGORITHM" == "source" ]; then
+    echo -e "\thash-type consistent  # deterministic routing" >> $FILE
+elif [ "$TYPE" == "l4" ]; then
+    echo -e "\tstick-table type ip size 5m expire 10m" >> $FILE
+    echo -e "\tstick on src  # https must be sticky; use lookup table" >> $FILE
+elif [ "$TYPE" == "l5" ]; then
+    echo -e "\t# non-deterministic routing" >> $FILE
+fi
+
+echo "" >> $FILE  # new line
+echo -e "\toption httpchk $CHECK" >> $FILE
+echo -e "\tcheck-ssl" >> $FILE
+echo ""  >> $FILE  # new line
+echo "\t# the backend uses https for all traffic" >> $FILE
+
+i = 0
+if [ "$TYPE" == "l4" ]; then
+    echo "\t# send-proxy allows for direct server return" >> $FILE
+
+    for BACKEND in $BACKENDS; do
+        echo "\tserver server_$i $BACKEND:443 send-proxy check ssl verify none" >> $FILE
+
+        i=((i + 1))
+    done
+elif [ "$TYPE" == "l5" ]; then
+    for BACKEND in $BACKENDS; do
+        echo "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
+
+        i=((i + 1))
+    done
+fi
+
+# haproxy -f $FILE  # run haproxy
+
 # sleep
 trap "exit 0" SIGTERM
 sleep infinity &
 
 wait $!  # $! is the PID of sleep
-
-
-"""
-protocol ospf v2 {
-    ipv4 {
-        import none;
-        export all;
-    }
-  
-    area 0.0.0.0 {
-        interface "eth0" { type broadcast; };
-    };
-}
-"""
-
-# https://www.haproxy.com/documentation/haproxy-configuration-manual/3-0r1/
-# http://haproxy.1wt.eu/download/1.5/doc/configuration.txt
-
-global
-    daemon
-
-    # option httplog    # better logging
-    # log stderr local0 # log to stderr
-
-frontend http
-    bind *:80  accept-proxy
-    bind *:443 accept-proxy ssl crt /app/ssl/cert.pem ssl-min-ver TLSv1.2
-
-    # ssl crt default should only be used in http mode
-    mode tcp  # tcp, http
-
-    default_backend servers
-
-backend servers
-    mode tcp  # tcp, http
-    # source is deterministic, all LBs will route the same
-    # all others are non-deterministic
-    balance source        # roundrobin, random, leastconn, source
-    hash-type consistent  # use with source only
-
-    option httpchk /
-    check-ssl
-
-    # the backend uses https for all traffic
-    server server_1 192.168.0.1:443 send-proxy check ssl verify none
-    server server_2 192.168.0.2:443 send-proxy check ssl verify none
-
-# haproxy -f /etc/haproxy/haproxy.cfg

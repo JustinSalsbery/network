@@ -86,8 +86,8 @@ class Configurator():
             for config in dhcp._iface_configs:
                 assert(type(config) == _IfaceConfig)
 
-                lease_starts.append(config._lease_start._str)
-                lease_ends.append(config._lease_end._str)
+                lease_starts.append(config._lease_start)
+                lease_ends.append(config._lease_end)
 
             file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
             file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
@@ -181,6 +181,29 @@ class Configurator():
             file.write(f"{_SPACE * 3}HOSTS: {" ".join(names)}\n")
             file.write(f"{_SPACE * 3}HOST_IPS: {" ".join(ips)}\n")
 
+        # write load balancers
+
+        lbs = []
+        if _ServiceType.lb.name in _comps:
+            lbs = _comps[_ServiceType.lb.name]
+
+        for lb in lbs:
+            assert(type(lb) == LoadBalancer)
+            self.__write_service(file, lb)
+
+            file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
+
+            backends = []
+            for backend in lb._backends:
+                assert(type(backend) == str)
+                backends.append(backend)
+
+            file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
+            file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
+            file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
+            file.write(f"{_SPACE * 3}ADVERTISE: {lb._advertise}\n")
+            file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
+
     def __write_service(self, file: TextIOWrapper, service: _Service):
         """
         @params:
@@ -222,8 +245,8 @@ class Configurator():
             nameservers.append("none")
 
         for nameserver in service._nameservers:
-            assert(type(nameserver) == _IPv4)
-            nameservers.append(nameserver._str)
+            assert(type(nameserver) == str)
+            nameservers.append(nameserver)
 
         file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(nameservers)}\n")
 
@@ -250,9 +273,9 @@ class Configurator():
             assert(type(config) == _IfaceConfig)
 
             ifaces.append(config._iface._name)
-            ips.append(config._ip._str)
+            ips.append(config._ip)
             net_masks.append(config._iface._cidr._netmask._str)
-            gateways.append(config._gateway._str)
+            gateways.append(config._gateway)
             rates.append(f"{config._rate:.3f}")
             firewalls.append(config._firewall.name)
             drops.append(f"{config._drop}")
