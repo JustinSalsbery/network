@@ -1,7 +1,6 @@
 
 from enum import Enum, auto
-from random import choice
-from math import nan
+from traceback import print_stack
 
 
 _comps = {} # Created components are registered here.
@@ -25,6 +24,7 @@ class _IPv4():
         if type(ip) == str:
             if not self.__is_legal(ip):
                 print(f"error: Illegal IPv4 address {ip}")
+                print_stack()
                 exit(1)
         
             self._str = ip
@@ -32,12 +32,14 @@ class _IPv4():
         elif type(ip) == int:
             if ip < 0 or ip > 0xffffffff:
                 print(f"error: Illegal IPv4 address {ip}")
+                print_stack()
                 exit(1)
 
             self._int = ip
             self._str = self.__int_to_str(ip)
         else:  # unknown type
             print(f"error: Illegal IPv4 of type {type(ip)}")
+            print_stack()
             exit(1)
 
     def __is_legal(self, ip: str) -> bool:
@@ -110,6 +112,7 @@ class _CIDR():
 
         if not self.__is_legal(cidr):
             print(f"error: Illegal CIDR {cidr}")
+            print_stack()
             exit(1)
 
         self._str = cidr
@@ -202,6 +205,7 @@ class _CIDR():
             if prefix_len < prefix_len_private:
                 cidr_private = f"{ip_private._str}/{prefix_len_private}"
                 print(f"error: Public subnet {cidr} overlaps private subnet {cidr_private}.")
+                print_stack()
                 exit(1)
 
             return _Visibility.private
@@ -465,6 +469,7 @@ class _Service():
             self._nameservers = None
         elif len(self._nameservers) > 64:
             print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
+            print_stack()
             exit(1)
 
         self._forward = forward
@@ -567,7 +572,7 @@ class TrafficGenerator(_Service):
         
         assert(target != "")
         self._target = target
-        
+
         self._proto = proto
         self._requests = requests
         self._conn_max = conn_max
