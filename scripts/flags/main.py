@@ -159,13 +159,15 @@ def write(output: str, flags: dict, start: int, end: int, unit: int):
             else:
                 stats = flags[i]
 
-                # SYN and SYN/ACK open in 1-direction
-                # FIN and FIN/ACK close in 1-direction
-                # RST closes in both directions
-                #
+                # For estimating # of connections:
+                #   SYN and SYN/ACK open in 1-direction
+                #   FIN and FIN/ACK close in 1-direction
+                #   RST closes in both directions
+
                 # Unaccounted for errors:
-                # Retransmitted SYN, SYN/ACK, FIN, FIN/ACK, RST
-                # RST in response to SYN, FIN, or FIN/ACK
+                #   Retransmitted SYN, SYN/ACK, FIN, FIN/ACK, RST
+                #   RST in response to SYN, FIN, or FIN/ACK
+                
                 estimated_connections += (stats["SYN"] + stats["SYN/ACK"]) \
                     - (stats["FIN"] + stats["FIN/ACK"] + 2 * stats["RST"])
 

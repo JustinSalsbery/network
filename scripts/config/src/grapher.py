@@ -28,7 +28,7 @@ class Grapher():
             self.__comps = _comps.copy()  # remove ifaces without affecting external
             self.__ifaces = self.__comps.pop("iface")
         except Exception as _:
-            print("notice: No interfaces found. Skipping.")
+            print("notice: No interfaces found. Stopping...")
             return
 
         with open("shared/config-graph.gv", "w") as file:
