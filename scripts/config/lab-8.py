@@ -13,8 +13,8 @@ client_0.add_iface(iface_1, ip="169.254.1.1")
 client_1 = Client()
 client_1.add_iface(iface_0, ip="169.254.0.2", gateway="169.254.0.1")
 
-server_0 = Server()
-server_0.add_iface(iface_1, ip="169.254.1.2", gateway="169.254.1.1")
+http_0 = HTTPServer()
+http_0.add_iface(iface_1, ip="169.254.1.2", gateway="169.254.1.1")
 
 
 conf = Configurator()

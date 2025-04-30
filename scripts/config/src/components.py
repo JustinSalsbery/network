@@ -372,9 +372,9 @@ class _IfaceConfig():
 
 
 class _ServiceType(Enum):
-    server = auto()
+    http = auto()
     tgen = auto()  # traffic generator
-    lb = auto()  # load balancer
+    lb = auto()    # load balancer
     router = auto()
     client = auto()
     dhcp = auto()
@@ -521,6 +521,39 @@ class _Service():
         return f"{"{"} {self._name}, {self._image}, {self._iface_configs} {"}"}"
 
 
+# CLIENT **********************************************************************
+
+
+class Client(_Service):
+    def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
+                 swap_limit: int = 64, forward: bool = False,
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+        """
+        @params:
+            - nameserver: The IPv4 address for the DNS nameserver.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
+            - mem_limit: Limit service memory. In units of megabytes.
+            - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
+            - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
+        Note:
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
+        """
+
+        nameserver = [nameserver] if nameserver else None
+        super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
+
+
 # TRAFFIC GENERATOR ***********************************************************
 
 
@@ -566,6 +599,7 @@ class TrafficGenerator(_Service):
               support ECN notifications.
         """
 
+        nameserver = [nameserver] if nameserver else None
         super().__init__(_ServiceType.tgen, "locust", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
@@ -590,42 +624,10 @@ class TrafficGenerator(_Service):
                + f"{self._requests}, {self._conn_max} {"}"}"
 
 
-# CLIENT **********************************************************************
+# HTTP SERVER *****************************************************************
 
 
-class Client(_Service):
-    def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, forward: bool = False,
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
-        """
-        @params:
-            - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
-                         Ex. 0.1 is 10% of a logical core.
-            - mem_limit: Limit service memory. In units of megabytes.
-            - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
-            - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        Note:
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
-        """
-
-        super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
-
-
-# SERVER **********************************************************************
-
-
-class Server(_Service):
+class HTTPServer(_Service):
     def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
@@ -655,15 +657,16 @@ class Server(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.server, "nginx", nameserver, cpu_limit, mem_limit, 
+        nameserver = [nameserver] if nameserver else None
+        super().__init__(_ServiceType.http, "nginx", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
 
-# DHCP ************************************************************************
+# DHCP SERVER *****************************************************************
 
 
-class DHCP(_Service):
+class DHCPServer(_Service):
     def __init__(self, lease_time: int = 600, nameserver: str = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable,
@@ -691,7 +694,8 @@ class DHCP(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.dhcp, "dhcp", nameserver, cpu_limit, mem_limit, 
+        nameserver = [nameserver] if nameserver else None
+        super().__init__(_ServiceType.dhcp, "udhcpd", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -741,85 +745,7 @@ class DHCP(_Service):
         self._iface_configs.append(config)
 
 
-# ROUTER **********************************************************************
-
-
-class ECMPType(Enum):
-    none = auto()
-    l3 = auto()  # (Source IP, Destination IP, IP Protocol)
-    l4 = auto()  # (Source IP, Destination IP, Source Port, Destination Port, IP Protocol)
-
-
-class Router(_Service):
-    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = None, 
-                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
-                 forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
-        """
-        @params:
-            - ecmp: Configure ECMP.
-            - nameserver: The IPv4 address for the DNS nameserver.
-            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
-                         Ex. 0.1 is 10% of a logical core.
-            - mem_limit: Limit service memory. In units of megabytes.
-            - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
-            - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        WARNING:
-            - ECMP requires that CONFIG_IP_ROUTE_MULTIPATH is enabled on the host machine.
-              See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
-        Note:
-            - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
-              and then selects (2) the route with the lowest cost.
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
-        """
-
-        super().__init__(_ServiceType.router, "nat", nameserver, cpu_limit, mem_limit,
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
-        
-        self._ecmp = ecmp
-
-    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, nat: NatType = NatType.none,
-                  cost: int = 10, rate: float = 100, firewall: FirewallType = FirewallType.none,
-                  drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
-        """
-        @params:
-            - iface: The network interface.
-            - ip: The IPv4 address of the service.
-            - gateway: The IPv4 address of the gateway.
-            - nat: Configure NAT.
-            - cost: The cost of routing traffic by the interface.
-            - rate: The average rate at which data will be sent. In units of megabits per second.
-            - firewall: Configure firewall.
-            - drop: Drop random traffic. In unit of percents.
-            - delay: Set a delay on traffic. In units of milliseconds.
-            - corrupt: Corrupt random packets. In units of percents.
-            - queue_length: Packets are dropped if not sent within this time period. 
-                            In units of milliseconds.
-        WARNING:
-            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
-              gateway, and nameserver.
-            - Rate cannot be less than 0.001 megabits per second.
-            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
-              Additional routers may be added to the path to implement many rules.
-        """
-
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
-                              queue_time, None, None, nat, cost)
-        self._iface_configs.append(config)
-
-    def __str__(self) -> str:
-        return f"{"{"} {super().__str__()}, {self._ecmp} {"}"}"
-
-
-# DNS *************************************************************************
+# DNS SERVER ******************************************************************
 
 
 class _Domain():
@@ -839,7 +765,7 @@ class _Domain():
         return f"{"{"} {self._name}, {self._ip._str} {"}"}"
     
 
-class Nameserver(_Service):
+class DNSServer(_Service):
     def __init__(self, ttl: int = 600, log: bool = False, nameservers: list[str] = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
@@ -871,7 +797,7 @@ class Nameserver(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.dns, "dns", nameservers, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.dns, "dnsmasq", nameservers, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -944,6 +870,7 @@ class LoadBalancer(_Service):
               support ECN notifications.
         """
 
+        nameserver = [nameserver] if nameserver else None
         super().__init__(_ServiceType.lb, "haproxy", nameserver, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
@@ -954,14 +881,96 @@ class LoadBalancer(_Service):
             self._backends.append(ip)
 
         if len(self._backends) == 0:
-            self._backends = None
+            print("error: Load balancer initialized without backend.")
+            print_stack()
+            exit(1)
 
         self._type = type
         self._algorithm = algorithm
 
         self._advertise = None
         if advertise != None:
+            assert(advertise._cidr._visibility == _Visibility.public)
             self._advertise = advertise
 
         assert(health_check != "")
         self._health_check = health_check
+
+
+# ROUTER **********************************************************************
+
+
+class ECMPType(Enum):
+    none = auto()
+    l3 = auto()  # (Source IP, Destination IP, IP Protocol)
+    l4 = auto()  # (Source IP, Destination IP, Source Port, Destination Port, IP Protocol)
+
+
+class Router(_Service):
+    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = None, 
+                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
+                 forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
+                 congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+        """
+        @params:
+            - ecmp: Configure ECMP.
+            - nameserver: The IPv4 address for the DNS nameserver.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
+            - mem_limit: Limit service memory. In units of megabytes.
+            - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
+            - forward: Enable or disable packet forwarding.
+            - syn_cookie: Configure SYN cookies.
+            - congestion_control: Configure congestion control.
+            - fast_retrans: Enable or disable fast retransmission.
+            - sacks: Enable or disable selective acknowledgments.
+            - timestamps: Enable or disable tcp timestamps.
+        WARNING:
+            - ECMP requires that CONFIG_IP_ROUTE_MULTIPATH is enabled on the host machine.
+              See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
+        Note:
+            - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
+              and then selects (2) the route with the lowest cost.
+            - ECN is not supported as the tc queueing discipline used for rate does not
+              support ECN notifications.
+        """
+
+        nameserver = [nameserver] if nameserver else None
+        super().__init__(_ServiceType.router, "bird", nameserver, cpu_limit, mem_limit,
+                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
+                         sacks, timestamps)
+        
+        self._ecmp = ecmp
+
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, nat: NatType = NatType.none,
+                  cost: int = 10, rate: float = 100, firewall: FirewallType = FirewallType.none,
+                  drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
+        """
+        @params:
+            - iface: The network interface.
+            - ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
+            - nat: Configure NAT.
+            - cost: The cost of routing traffic by the interface.
+            - rate: The average rate at which data will be sent. In units of megabits per second.
+            - firewall: Configure firewall.
+            - drop: Drop random traffic. In unit of percents.
+            - delay: Set a delay on traffic. In units of milliseconds.
+            - corrupt: Corrupt random packets. In units of percents.
+            - queue_length: Packets are dropped if not sent within this time period. 
+                            In units of milliseconds.
+        WARNING:
+            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
+              gateway, and nameserver.
+            - Rate cannot be less than 0.001 megabits per second.
+            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
+              Additional routers may be added to the path to implement many rules.
+        """
+
+        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
+                              queue_time, None, None, nat, cost)
+        self._iface_configs.append(config)
+
+    def __str__(self) -> str:
+        return f"{"{"} {super().__str__()}, {self._ecmp} {"}"}"

@@ -10,7 +10,7 @@ COLOR_MAP = {
     _ServiceType.tgen.name: "tan",
     _ServiceType.dhcp.name: "aquamarine",
     _ServiceType.dns.name: "paleturquoise",
-    _ServiceType.server.name: "lightskyblue",
+    _ServiceType.http.name: "lightskyblue",
     _ServiceType.router.name: "palegreen",
     _ServiceType.lb.name: "plum",
 }

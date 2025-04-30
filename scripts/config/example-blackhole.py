@@ -11,15 +11,15 @@ iface_4 = Iface("100.0.4.0/24")
 iface_5 = Iface("100.0.5.0/24")
 iface_6 = Iface("100.0.2.0/28")  # blackhole
 
-dns_0 = Nameserver()
+dns_0 = DNSServer()
 dns_0.add_iface(iface_4, ip="100.0.4.2", gateway="100.0.4.1")
 
-server_0 = Server()
-server_0.add_iface(iface_2, ip="100.0.2.2", gateway="100.0.2.1")
+http_0 = HTTPServer()
+http_0.add_iface(iface_2, ip="100.0.2.2", gateway="100.0.2.1")
 dns_0.register("server", "100.0.2.2")  # will be blackholed
 
-server_1 = Server()
-server_1.add_iface(iface_2, ip="100.0.2.16", gateway="100.0.2.1")
+http_1 = HTTPServer()
+http_1.add_iface(iface_2, ip="100.0.2.16", gateway="100.0.2.1")
 dns_0.register("server", "100.0.2.16")  # will not be blackholed
 
 client_0 = Client(nameserver="100.0.4.2")

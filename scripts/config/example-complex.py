@@ -69,26 +69,26 @@ router_9.add_iface(iface_11, ip="11.8.0.2")
 router_9.add_iface(iface_12, ip="11.9.0.2")
 router_9.add_iface(iface_15, ip="11.12.0.2")
 
-dns_0 = Nameserver()
+dns_0 = DNSServer()
 dns_0.add_iface(iface_5, ip="11.2.0.2", gateway="11.2.0.1")
 
-server_0 = Server()
-server_0.add_iface(iface_4, ip="11.1.0.2", gateway="11.1.0.1")
+http_0 = HTTPServer()
+http_0.add_iface(iface_4, ip="11.1.0.2", gateway="11.1.0.1")
 dns_0.register("server-0.com", "11.1.0.2")
 
-server_1 = Server()
-server_1.add_iface(iface_4, ip="11.1.0.3", gateway="11.1.0.1")
+http_1 = HTTPServer()
+http_1.add_iface(iface_4, ip="11.1.0.3", gateway="11.1.0.1")
 dns_0.register("server-0.com", "11.1.0.3")  # dns load balancing
 
-server_2 = Server()
-server_2.add_iface(iface_4, ip="11.1.0.4", gateway="11.1.0.1")
+http_2 = HTTPServer()
+http_2.add_iface(iface_4, ip="11.1.0.4", gateway="11.1.0.1")
 dns_0.register("server-0.com", "11.1.0.4")
 
-server_3 = Server()
-server_3.add_iface(iface_3, ip="11.0.0.2")  # using snat rather than gateway
+http_3 = HTTPServer()
+http_3.add_iface(iface_3, ip="11.0.0.2")  # using snat rather than gateway
 dns_0.register("server-1.com", "11.0.0.2")
 
-dhcp_0 = DHCP(nameserver="11.2.0.2")
+dhcp_0 = DHCPServer(nameserver="11.2.0.2")
 dhcp_0.add_iface(iface_0, ip="10.0.0.2", gateway="10.0.0.1")
 
 client_0 = Client()
@@ -97,7 +97,7 @@ client_0.add_iface(iface_0)
 tgen_0 = TrafficGenerator("server-0.com", requests=["/40.html"], conn_max=50)
 tgen_0.add_iface(iface_0)
 
-dhcp_1 = DHCP(nameserver="11.2.0.2")
+dhcp_1 = DHCPServer(nameserver="11.2.0.2")
 dhcp_1.add_iface(iface_1, ip="10.0.0.2", gateway="10.0.0.1")
 
 client_1 = Client()
@@ -106,10 +106,10 @@ client_1.add_iface(iface_1)
 tgen_1 = TrafficGenerator("server-0.com", requests=["/40.html"], conn_max=50)
 tgen_1.add_iface(iface_1)
 
-dns_1 = Nameserver(log=True, nameservers=["11.2.0.2"])
+dns_1 = DNSServer(log=True, nameservers=["11.2.0.2"])
 dns_1.add_iface(iface_2, ip="10.0.0.3", gateway="10.0.0.1")
 
-dhcp_2 = DHCP(nameserver="10.0.0.3")
+dhcp_2 = DHCPServer(nameserver="10.0.0.3")
 dhcp_2.add_iface(iface_2, ip="10.0.0.2", gateway="10.0.0.1")
 
 client_2 = Client()
@@ -118,8 +118,8 @@ client_2.add_iface(iface_2)
 tgen_2 = TrafficGenerator("server-0.com", requests=["/40.html"], proto=Protocol.https, conn_max=20)
 tgen_2.add_iface(iface_2)
 
-server_4 = Server()
-server_4.add_iface(iface_2, ip="10.0.0.4")
+http_4 = HTTPServer()
+http_4.add_iface(iface_2, ip="10.0.0.4")
 dns_1.register("server-2.com", "10.0.0.4")
 
 

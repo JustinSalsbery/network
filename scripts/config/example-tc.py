@@ -12,8 +12,8 @@ tgen_0 = TrafficGenerator("169.254.0.5", requests=["/40.html"], congestion_contr
 tgen_0.add_iface(iface_0, ip="169.254.0.3", gateway="169.254.0.1", drop=50)
 tgen_1 = TrafficGenerator("169.254.0.5", requests=["/40.html"], congestion_control=CongestionControlType.reno)
 tgen_1.add_iface(iface_0, ip="169.254.0.4", gateway="169.254.0.1", drop=50)
-server_0 = Server(syn_cookie=SynCookieType.disable)
-server_0.add_iface(iface_0, ip="169.254.0.5", gateway="169.254.0.1")
+http_0 = HTTPServer(syn_cookie=SynCookieType.disable)
+http_0.add_iface(iface_0, ip="169.254.0.5", gateway="169.254.0.1")
 
 router_0 = Router()
 router_0.add_iface(iface_0, ip="169.254.0.1")
@@ -25,8 +25,8 @@ tgen_2 = TrafficGenerator("169.254.1.5", requests=["/40.html"], congestion_contr
 tgen_2.add_iface(iface_1, ip="169.254.1.3", gateway="169.254.1.1", drop=50)
 tgen_3 = TrafficGenerator("169.254.1.5", requests=["/40.html"], congestion_control=CongestionControlType.reno)
 tgen_3.add_iface(iface_1, ip="169.254.1.4", gateway="169.254.1.1", drop=50)
-server_1 = Server(syn_cookie=SynCookieType.force)
-server_1.add_iface(iface_1, ip="169.254.1.5", gateway="169.254.1.1")
+http_1 = HTTPServer(syn_cookie=SynCookieType.force)
+http_1.add_iface(iface_1, ip="169.254.1.5", gateway="169.254.1.1")
 
 
 conf = Configurator()

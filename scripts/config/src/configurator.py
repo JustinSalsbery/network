@@ -57,42 +57,6 @@ class Configurator():
 
         file.write("services:\n")
 
-        # write servers
-
-        servers = []
-        if _ServiceType.server.name in _comps:
-            servers = _comps[_ServiceType.server.name]
-
-        for server in servers:
-            assert(type(server) == Server)
-            self.__write_service(file, server)
-
-        # write dhcp
-
-        dhcps = []
-        if _ServiceType.dhcp.name in _comps:
-            dhcps = _comps[_ServiceType.dhcp.name]
-
-        for dhcp in dhcps:
-            assert(type(dhcp) == DHCP)
-            self.__write_service(file, dhcp)
-
-            file.write(f"{_SPACE * 3}# DHCP configuration:\n")
-            file.write(f"{_SPACE * 3}LEASE_TIME: {dhcp._lease_time}\n")
-
-            lease_starts = []
-            lease_ends = []
-
-            for config in dhcp._iface_configs:
-                assert(type(config) == _IfaceConfig)
-
-                # none should be impossible
-                lease_starts.append(config._lease_start._str if config._lease_start else exit(1))
-                lease_ends.append(config._lease_end._str if config._lease_end else exit(1))
-
-            file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
-            file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
-
         # write clients
 
         clients = []
@@ -124,56 +88,60 @@ class Configurator():
             file.write(f"{_SPACE * 3}WAIT_MAX: {tgen._wait_max}\n")
             file.write(f"{_SPACE * 3}GZIP: {str(tgen._gzip).lower()}\n")
 
-        # write routers
+        # write http servers
 
-        routers = []
-        if _ServiceType.router.name in _comps:
-            routers = _comps[_ServiceType.router.name]
+        http_servers = []
+        if _ServiceType.http.name in _comps:
+            http_servers = _comps[_ServiceType.http.name]
 
-        for i, router in enumerate(routers):
-            assert(type(router) == Router)
-            self.__write_service(file, router)
+        for http_server in http_servers:
+            assert(type(http_server) == HTTPServer)
+            self.__write_service(file, http_server)
 
-            file.write(f"{_SPACE * 3}# Router configuration:\n")
-            file.write(f"{_SPACE * 3}ID: {i}\n")
-            file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
+        # write dhcp servers
 
-            cidrs = []
-            visibilities = []
-            nats = []
-            costs = []
+        dhcp_servers = []
+        if _ServiceType.dhcp.name in _comps:
+            dhcp_servers = _comps[_ServiceType.dhcp.name]
 
-            for config in router._iface_configs:
+        for dhcp_server in dhcp_servers:
+            assert(type(dhcp_server) == DHCPServer)
+            self.__write_service(file, dhcp_server)
+
+            file.write(f"{_SPACE * 3}# DHCP Server configuration:\n")
+            file.write(f"{_SPACE * 3}LEASE_TIME: {dhcp_server._lease_time}\n")
+
+            lease_starts = []
+            lease_ends = []
+
+            for config in dhcp_server._iface_configs:
                 assert(type(config) == _IfaceConfig)
 
-                cidrs.append(config._iface._cidr._str)
-                visibilities.append(config._iface._cidr._visibility.name)
-                nats.append(config._nat.name)
-                costs.append(f"{config._cost}")
+                # none should be impossible
+                lease_starts.append(config._lease_start._str if config._lease_start else exit(1))
+                lease_ends.append(config._lease_end._str if config._lease_end else exit(1))
 
-            file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
-            file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
-            file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
-            file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
+            file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
+            file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
 
-        # write nameservers
+        # write dns servers
 
-        nameservers = []
+        dns_servers = []
         if _ServiceType.dns.name in _comps:
-            nameservers = _comps[_ServiceType.dns.name]
+            dns_servers = _comps[_ServiceType.dns.name]
 
-        for nameserver in nameservers:
-            assert(type(nameserver) == Nameserver)
-            self.__write_service(file, nameserver)
+        for dns_server in dns_servers:
+            assert(type(dns_server) == DNSServer)
+            self.__write_service(file, dns_server)
 
-            file.write(f"{_SPACE * 3}# Nameserver configuration:\n")
-            file.write(f"{_SPACE * 3}TTL: {nameserver._ttl}\n")
-            file.write(f"{_SPACE * 3}LOG: {str(nameserver._log).lower()}\n")
+            file.write(f"{_SPACE * 3}# DNS Server configuration:\n")
+            file.write(f"{_SPACE * 3}TTL: {dns_server._ttl}\n")
+            file.write(f"{_SPACE * 3}LOG: {str(dns_server._log).lower()}\n")
 
             names = []
             ips = []
 
-            for domain in nameserver._domains:
+            for domain in dns_server._domains:
                 assert(type(domain) == _Domain)
 
                 names.append(domain._name)
@@ -207,6 +175,38 @@ class Configurator():
             file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
             file.write(f"{_SPACE * 3}ADVERTISE: {lb._advertise._name if lb._advertise else "none"}\n")
             file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
+
+        # write routers
+
+        routers = []
+        if _ServiceType.router.name in _comps:
+            routers = _comps[_ServiceType.router.name]
+
+        for i, router in enumerate(routers):
+            assert(type(router) == Router)
+            self.__write_service(file, router)
+
+            file.write(f"{_SPACE * 3}# Router configuration:\n")
+            file.write(f"{_SPACE * 3}ID: {i}\n")
+            file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
+
+            cidrs = []
+            visibilities = []
+            nats = []
+            costs = []
+
+            for config in router._iface_configs:
+                assert(type(config) == _IfaceConfig)
+
+                cidrs.append(config._iface._cidr._str)
+                visibilities.append(config._iface._cidr._visibility.name)
+                nats.append(config._nat.name)
+                costs.append(f"{config._cost}")
+
+            file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
+            file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
+            file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
+            file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
 
     def __write_service(self, file: TextIOWrapper, service: _Service):
         """
@@ -330,7 +330,9 @@ class Configurator():
 
         if self.__ip >= self.__ip_max:
             print(f"error: Allocated subnet {self.__cidr._str} exceeded.")
-            print("\tConsider changing settings for the Configurator.")
+            print("info: Consider changing settings for the Configurator.")
+            
+            print_stack()
             exit(1)
 
         ip = _IPv4(self.__ip)
@@ -364,8 +366,10 @@ class Configurator():
                 config_hz = o.split("=")[1]
                 config_hz = int(config_hz)
             except Exception as e:
-                print(f"error: Unexpected output {o} for CONFIG_HZ.")
-                print(f"\t{e}")
+                print(f"info: Unexpected output {o} for CONFIG_HZ.")
+                print(f"error: {e}")
+                
+                print_stack()
                 exit(1)
         
         return config_hz

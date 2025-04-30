@@ -18,10 +18,10 @@ router_1.add_iface(iface_1, ip="170.0.1.2")
 router_1.add_iface(iface_2, ip="169.254.2.1", nat=NatType.snat_input)
 router_1.add_iface(iface_3, ip="169.254.3.1", nat=NatType.snat_input)
 
-server_0 = Server()
-server_0.add_iface(iface_0, ip="170.0.0.2", gateway="170.0.0.1")
+http_0 = HTTPServer()
+http_0.add_iface(iface_0, ip="170.0.0.2", gateway="170.0.0.1")
 
-dhcp_0 = DHCP()
+dhcp_0 = DHCPServer()
 dhcp_0.add_iface(iface_2, ip="169.254.2.2", gateway="169.254.2.1")
 
 client_0 = Client()
