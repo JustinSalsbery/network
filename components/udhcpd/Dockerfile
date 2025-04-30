@@ -9,10 +9,10 @@ RUN apk add iptables iproute2 iputils busybox-extras
 
 # busybox-extras includes udhcpd
 
+WORKDIR /app
+
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
-
-WORKDIR /app
 
 RUN mkdir ./shared
 

@@ -12,6 +12,7 @@ RUN apk add iptables iproute2 iputils busybox-extras
 RUN apk add bird haproxy
 
 WORKDIR /app
+
 COPY ./ssl ./ssl
 
 # typically utilities, such as apk, are removed and the user is changed from sudo

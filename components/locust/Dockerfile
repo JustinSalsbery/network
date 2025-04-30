@@ -34,12 +34,13 @@ RUN apk add python3
 ENV PATH="venv/bin:$PATH"
 
 WORKDIR /app
-COPY --from=0 /app /app
 
-RUN mkdir ./shared
+COPY --from=0 /app /app
 
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
+
+RUN mkdir ./shared
 
 COPY ./startup.sh .
 RUN chmod +x ./startup.sh
