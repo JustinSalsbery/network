@@ -22,7 +22,7 @@ http_1 = HTTPServer()
 http_1.add_iface(iface_2, ip="100.0.2.16", gateway="100.0.2.1")
 dns_0.register("server", "100.0.2.16")  # will not be blackholed
 
-client_0 = Client(nameserver="100.0.4.2")
+client_0 = Client(dns_server="100.0.4.2")
 client_0.add_iface(iface_0, ip="100.0.0.2", gateway="100.0.0.1")
 
 router_0 = Router()

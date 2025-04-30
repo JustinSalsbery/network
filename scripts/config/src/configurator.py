@@ -1,6 +1,7 @@
 
 from io import TextIOWrapper
 from subprocess import getstatusoutput
+from traceback import print_stack
 from math import ceil
 
 from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
@@ -245,15 +246,15 @@ class Configurator():
         file.write(f"{_SPACE * 2}environment:\n")
         file.write(f"{_SPACE * 3}# Host configurations:\n")
 
-        nameservers = []
-        if service._nameservers:
-            for nameserver in service._nameservers:
-                assert(type(nameserver) == _IPv4)
-                nameservers.append(nameserver._str)
+        dns_servers = []
+        if service._dns_servers:
+            for dns_server in service._dns_servers:
+                assert(type(dns_server) == _IPv4)
+                dns_servers.append(dns_server._str)
         else:
-            nameservers.append("none")
+            dns_servers.append("none")
 
-        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(nameservers)}\n")
+        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")

@@ -423,7 +423,7 @@ class SynCookieType(Enum):
 
 
 class _Service():
-    def __init__(self, type: _ServiceType, image: str, nameservers: list[str], cpu_limit: float,
+    def __init__(self, type: _ServiceType, image: str, dns_servers: list[str], cpu_limit: float,
                  mem_limit: int, swap_limit: int, forward: bool, syn_cookie: SynCookieType,
                  congestion_control: CongestionControlType, fast_retrans: bool, 
                  sacks: bool, timestamps: bool):
@@ -431,7 +431,7 @@ class _Service():
         @params:
             - type: The type of the service.
             - image: The name of the Docker image.
-            - nameservers: The IPv4 addresses of the DNS nameservers.
+            - dns_servers: The IPv4 addresses of the DNS servers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -459,15 +459,15 @@ class _Service():
         assert(swap_limit >= 0)
         self._swap_limit = swap_limit
         
-        self._nameservers = []
-        if nameservers != None:
-            for nameserver in nameservers:
-                ip = _IPv4(nameserver)
-                self._nameservers.append(ip)
+        self._dns_servers = []
+        if dns_servers != None:
+            for dns_server in dns_servers:
+                ip = _IPv4(dns_server)
+                self._dns_servers.append(ip)
 
-        if len(self._nameservers) == 0:
-            self._nameservers = None
-        elif len(self._nameservers) > 64:
+        if len(self._dns_servers) == 0:
+            self._dns_servers = None
+        elif len(self._dns_servers) > 64:
             print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
             print_stack()
             exit(1)
@@ -525,14 +525,13 @@ class _Service():
 
 
 class Client(_Service):
-    def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, forward: bool = False,
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
+    def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
+                 swap_limit: int = 64, forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -548,8 +547,8 @@ class Client(_Service):
               support ECN notifications.
         """
 
-        nameserver = [nameserver] if nameserver else None
-        super().__init__(_ServiceType.client, "client", nameserver, cpu_limit, mem_limit, 
+        dns_server = [dns_server] if dns_server else None
+        super().__init__(_ServiceType.client, "client", dns_server, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
@@ -565,7 +564,7 @@ class Protocol(Enum):
 class TrafficGenerator(_Service):
     def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
                  conn_max: int = 50, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
-                 wait_max: float = 15, gzip: bool = True, nameserver: str = None, 
+                 wait_max: float = 15, gzip: bool = True, dns_server: str = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -581,7 +580,7 @@ class TrafficGenerator(_Service):
             - wait_min: The minimum wait between requests.
             - wait_max: The maximum wait between requests.
             - gzip: Enable or disable gzip compression.
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -599,8 +598,8 @@ class TrafficGenerator(_Service):
               support ECN notifications.
         """
 
-        nameserver = [nameserver] if nameserver else None
-        super().__init__(_ServiceType.tgen, "locust", nameserver, cpu_limit, mem_limit, 
+        dns_server = [dns_server] if dns_server else None
+        super().__init__(_ServiceType.tgen, "locust", dns_server, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -628,14 +627,14 @@ class TrafficGenerator(_Service):
 
 
 class HTTPServer(_Service):
-    def __init__(self, nameserver: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
+    def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, forward: bool = False,
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -657,8 +656,8 @@ class HTTPServer(_Service):
               support ECN notifications.
         """
 
-        nameserver = [nameserver] if nameserver else None
-        super().__init__(_ServiceType.http, "nginx", nameserver, cpu_limit, mem_limit, 
+        dns_server = [dns_server] if dns_server else None
+        super().__init__(_ServiceType.http, "nginx", dns_server, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
@@ -667,15 +666,14 @@ class HTTPServer(_Service):
 
 
 class DHCPServer(_Service):
-    def __init__(self, lease_time: int = 600, nameserver: str = None, cpu_limit: float = 0.5, 
+    def __init__(self, lease_time: int = 600, dns_server: str = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable,
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
         @params:
-            - nameserver: The IPv4 address for the DNS nameserver.
-                          The nameserver will be advertised.
+            - dns_server: The IPv4 addresses of the DNS server. The server will be advertised.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -694,8 +692,8 @@ class DHCPServer(_Service):
               support ECN notifications.
         """
 
-        nameserver = [nameserver] if nameserver else None
-        super().__init__(_ServiceType.dhcp, "udhcpd", nameserver, cpu_limit, mem_limit, 
+        dns_server = [dns_server] if dns_server else None
+        super().__init__(_ServiceType.dhcp, "udhcpd", dns_server, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -766,7 +764,7 @@ class _Domain():
     
 
 class DNSServer(_Service):
-    def __init__(self, ttl: int = 600, log: bool = False, nameservers: list[str] = None, 
+    def __init__(self, ttl: int = 600, log: bool = False, dns_servers: list[str] = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
                  forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -775,7 +773,7 @@ class DNSServer(_Service):
         @params:
             - ttl: The time-to-live for the resolved record in seconds.
             - log: Enable or disable logging of queries.
-            - nameservers: The IPv4 addresses of the DNS nameservers.
+            - dns_servers: The IPv4 addresses of the DNS servers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -797,7 +795,7 @@ class DNSServer(_Service):
               support ECN notifications.
         """
 
-        super().__init__(_ServiceType.dns, "dnsmasq", nameservers, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.dns, "dnsmasq", dns_servers, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
@@ -840,7 +838,7 @@ class LBAlgorithm(Enum):
 class LoadBalancer(_Service):
     def __init__(self, backends: list[str], type: LBType = LBType.l5, 
                  algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: Iface = None, 
-                 health_check: str = "/", nameserver: str = None, cpu_limit: float = 0.5, 
+                 health_check: str = "/", dns_server: str = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -852,7 +850,7 @@ class LoadBalancer(_Service):
             - algorithm: The algorithm to use for backend selection.
             - advertise: The interface to advertise via OSPF.
             - health_check: The server page to request for health checks.
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -870,8 +868,8 @@ class LoadBalancer(_Service):
               support ECN notifications.
         """
 
-        nameserver = [nameserver] if nameserver else None
-        super().__init__(_ServiceType.lb, "haproxy", nameserver, cpu_limit, mem_limit, 
+        dns_server = [dns_server] if dns_server else None
+        super().__init__(_ServiceType.lb, "haproxy", dns_server, cpu_limit, mem_limit, 
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
 
@@ -890,7 +888,11 @@ class LoadBalancer(_Service):
 
         self._advertise = None
         if advertise != None:
-            assert(advertise._cidr._visibility == _Visibility.public)
+            if advertise._cidr._visibility == _Visibility.public:
+                print(f"error: Interface {advertise._name} is private.")
+                print_stack()
+                exit(1)
+
             self._advertise = advertise
 
         assert(health_check != "")
@@ -907,7 +909,7 @@ class ECMPType(Enum):
 
 
 class Router(_Service):
-    def __init__(self, ecmp: ECMPType = ECMPType.none, nameserver: str = None, 
+    def __init__(self, ecmp: ECMPType = ECMPType.none, dns_server: str = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
                  forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
@@ -915,7 +917,7 @@ class Router(_Service):
         """
         @params:
             - ecmp: Configure ECMP.
-            - nameserver: The IPv4 address for the DNS nameserver.
+            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -936,8 +938,8 @@ class Router(_Service):
               support ECN notifications.
         """
 
-        nameserver = [nameserver] if nameserver else None
-        super().__init__(_ServiceType.router, "bird", nameserver, cpu_limit, mem_limit,
+        dns_server = [dns_server] if dns_server else None
+        super().__init__(_ServiceType.router, "bird", dns_server, cpu_limit, mem_limit,
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         

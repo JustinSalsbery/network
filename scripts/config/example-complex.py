@@ -88,7 +88,7 @@ http_3 = HTTPServer()
 http_3.add_iface(iface_3, ip="11.0.0.2")  # using snat rather than gateway
 dns_0.register("server-1.com", "11.0.0.2")
 
-dhcp_0 = DHCPServer(nameserver="11.2.0.2")
+dhcp_0 = DHCPServer(dns_server="11.2.0.2")
 dhcp_0.add_iface(iface_0, ip="10.0.0.2", gateway="10.0.0.1")
 
 client_0 = Client()
@@ -97,7 +97,7 @@ client_0.add_iface(iface_0)
 tgen_0 = TrafficGenerator("server-0.com", requests=["/40.html"], conn_max=50)
 tgen_0.add_iface(iface_0)
 
-dhcp_1 = DHCPServer(nameserver="11.2.0.2")
+dhcp_1 = DHCPServer(dns_server="11.2.0.2")
 dhcp_1.add_iface(iface_1, ip="10.0.0.2", gateway="10.0.0.1")
 
 client_1 = Client()
@@ -106,10 +106,10 @@ client_1.add_iface(iface_1)
 tgen_1 = TrafficGenerator("server-0.com", requests=["/40.html"], conn_max=50)
 tgen_1.add_iface(iface_1)
 
-dns_1 = DNSServer(log=True, nameservers=["11.2.0.2"])
+dns_1 = DNSServer(log=True, dns_servers=["11.2.0.2"])
 dns_1.add_iface(iface_2, ip="10.0.0.3", gateway="10.0.0.1")
 
-dhcp_2 = DHCPServer(nameserver="10.0.0.3")
+dhcp_2 = DHCPServer(dns_server="10.0.0.3")
 dhcp_2.add_iface(iface_2, ip="10.0.0.2", gateway="10.0.0.1")
 
 client_2 = Client()
