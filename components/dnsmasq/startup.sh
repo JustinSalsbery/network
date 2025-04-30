@@ -202,11 +202,11 @@ echo "--insecure" > $HOME/.curlrc
 FILE="/etc/dnsmasq.hosts"
 echo "" > $FILE  # new line
 
-for HOST in $HOSTS; do
+for HOST_NAME in $HOST_NAMES; do
     HOST_IP="$(echo $HOST_IPS | cut -d' ' -f1)"
     HOST_IPS="$(echo $HOST_IPS | cut -d' ' -f2-)"
 
-    echo "$HOST_IP $HOST" >> $FILE
+    echo "$HOST_IP $HOST_NAME" >> $FILE
 done
 
 # setup dns

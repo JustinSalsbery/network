@@ -118,9 +118,9 @@ class Configurator():
             for config in dhcp_server._iface_configs:
                 assert(type(config) == _IfaceConfig)
 
-                # none should be impossible
-                lease_starts.append(config._lease_start._str if config._lease_start else exit(1))
-                lease_ends.append(config._lease_end._str if config._lease_end else exit(1))
+                assert(config._lease_start and config._lease_end)
+                lease_starts.append(config._lease_start._str)
+                lease_ends.append(config._lease_end._str)
 
             file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
             file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
@@ -148,7 +148,7 @@ class Configurator():
                 names.append(domain._name)
                 ips.append(domain._ip._str)
 
-            file.write(f"{_SPACE * 3}HOSTS: {" ".join(names)}\n")
+            file.write(f"{_SPACE * 3}HOST_NAMES: {" ".join(names)}\n")
             file.write(f"{_SPACE * 3}HOST_IPS: {" ".join(ips)}\n")
 
         # write load balancers
@@ -163,13 +163,10 @@ class Configurator():
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
 
-            backends = []
-            if lb._backends:
-                for backend in lb._backends:
-                    assert(type(backend) == _IPv4)
-                    backends.append(backend._str)
-            else:
-                backends.append("none")
+            backends = []  # required
+            for backend in lb._backends:
+                assert(type(backend) == _IPv4)
+                backends.append(backend._str)
 
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
             file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
@@ -254,7 +251,7 @@ class Configurator():
         else:
             dns_servers.append("none")
 
-        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}\n")
+        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}  # alternative name for dns server\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
@@ -289,6 +286,8 @@ class Configurator():
             queue_times.append(f"{config._queue_time}")
             bursts.append(f"{self.__get_iface_burst(config)}")
 
+        # if no interfaces have been added, all of these variables will be empty
+        
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
@@ -308,9 +307,11 @@ class Configurator():
             - file: File to write to.
         """
 
-        file.write("networks:\n")
+        ifaces = []
+        if "iface" in _comps:
+            ifaces = _comps["iface"]
+            file.write("networks:\n")
 
-        ifaces = _comps["iface"]
         for iface in ifaces:
             assert(type(iface) == Iface)
 

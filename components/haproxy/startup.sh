@@ -270,6 +270,7 @@ i = 0
 if [ "$TYPE" == "l4" ]; then
     echo "\t# send-proxy allows for direct server return" >> $FILE
 
+    # backends are required; no error handling
     for BACKEND in $BACKENDS; do
         echo "\tserver server_$i $BACKEND:443 send-proxy check ssl verify none" >> $FILE
 

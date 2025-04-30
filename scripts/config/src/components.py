@@ -276,6 +276,9 @@ class Iface():
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
         """
 
+        self._cidr = _CIDR(cidr)
+
+        # add to components
         if "iface" not in _comps:
             _comps["iface"] = []
         
@@ -283,7 +286,6 @@ class Iface():
         _comps["iface"].append(self)
 
         self._name = f"network-{count}"
-        self._cidr = _CIDR(cidr)
         
     def __str__(self) -> str:
         return f"{"{"} {self._name}, {self._cidr} {"}"}"
@@ -326,11 +328,11 @@ class _IfaceConfig():
         self._iface = iface
 
         self._ip = None
-        if ip != None:
+        if ip:
             self._ip = _IPv4(ip)
 
         self._gateway = None
-        if gateway != None:
+        if gateway:
             self._gateway = _IPv4(gateway)
 
         rate = round(rate, 3)
@@ -352,11 +354,11 @@ class _IfaceConfig():
         self._queue_time = queue_time
 
         self._lease_start = None
-        if lease_start != None:
+        if lease_start:
             self._lease_start = _IPv4(lease_start)
 
         self._lease_end = None
-        if lease_end != None:
+        if lease_end:
             self._lease_end = _IPv4(lease_end)
         
         self._nat = nat
@@ -460,17 +462,13 @@ class _Service():
         self._swap_limit = swap_limit
         
         self._dns_servers = []
-        if dns_servers != None:
+        if dns_servers:
+            assert(len(dns_servers) <= 64)
             for dns_server in dns_servers:
                 ip = _IPv4(dns_server)
                 self._dns_servers.append(ip)
-
-        if len(self._dns_servers) == 0:
+        else:
             self._dns_servers = None
-        elif len(self._dns_servers) > 64:
-            print(f"error: Exceeded maximum number of nameservers on service of type {type.name}.")
-            print_stack()
-            exit(1)
 
         self._forward = forward
         self._syn_cookie = syn_cookie
@@ -607,15 +605,25 @@ class TrafficGenerator(_Service):
         self._target = target
 
         self._proto = proto
+
+        assert(len(requests) > 0 and "" not in requests)
         self._requests = requests
+
+        assert(conn_max > 0)
         self._conn_max = conn_max
+
+        assert(conn_rate > 0)
         self._conn_rate = conn_rate
 
         assert(conn_dur > 0)
         self._conn_dur = conn_dur
 
+        assert(wait_min >= 0 and wait_min <= wait_max)
         self._wait_min = wait_min
+
+        assert(wait_max >= 0)  # must be >= wait_min
         self._wait_max = wait_max
+
         self._gzip = gzip
 
     def __str__(self) -> str:
@@ -628,8 +636,7 @@ class TrafficGenerator(_Service):
 
 class HTTPServer(_Service):
     def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, forward: bool = False,
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 swap_limit: int = 64, forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
         """
@@ -697,7 +704,7 @@ class DHCPServer(_Service):
                          swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
                          sacks, timestamps)
         
-        assert(0 < lease_time)
+        assert(lease_time > 0)
         self._lease_time = lease_time
 
     def add_iface(self, iface: Iface, ip: str, gateway: str = None, lease_start: str = None, 
@@ -737,7 +744,7 @@ class DHCPServer(_Service):
             lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
         
-        assert(_IPv4(ip))  # must have legal ip
+        _IPv4(ip)  # must have legal ip
         config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
                               queue_time, lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
@@ -754,7 +761,7 @@ class _Domain():
             - ip: The IPv4 address of the service.
         """
 
-        assert(name != "" and name != None)
+        assert(name and name != "")
         self._name = name
 
         self._ip = _IPv4(ip)
@@ -874,25 +881,18 @@ class LoadBalancer(_Service):
                          sacks, timestamps)
 
         self._backends = []
+        assert(len(backends) > 0)
+
         for backend in backends:
             ip = _IPv4(backend)
             self._backends.append(ip)
-
-        if len(self._backends) == 0:
-            print("error: Load balancer initialized without backend.")
-            print_stack()
-            exit(1)
-
+        
         self._type = type
         self._algorithm = algorithm
 
         self._advertise = None
-        if advertise != None:
-            if advertise._cidr._visibility == _Visibility.public:
-                print(f"error: Interface {advertise._name} is private.")
-                print_stack()
-                exit(1)
-
+        if advertise:
+            assert(advertise._cidr._visibility == _Visibility.public)
             self._advertise = advertise
 
         assert(health_check != "")
