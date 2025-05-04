@@ -43,7 +43,7 @@ certs:
 	# combine the public and private keys
 	cat ${CERTS_LB}/public.crt ${CERTS_LB}/private.key > ${CERTS_LB}/cert.pem
 
-build: certs
+build: down certs
 	FILES=$$(find components -name "Dockerfile")
 	for FILE in $$FILES; do
 		NAME=$$(basename $$(dirname $$FILE))
@@ -68,6 +68,7 @@ config: down
 	# remove output from previous runs
 	rm -f shared/*.csv || true
 	rm -f shared/*.pcap || true
+	rm -f shared/*.png || true
 	
 	mkdir -p shared
 	${PYTHON} scripts/config/${CONFIG}
@@ -104,6 +105,7 @@ stats:
 clean:
 	rm -f shared/*.csv || true
 	rm -f shared/*.pcap || true
+	rm -f shared/*.png || true
 	
 	rm -r ${CERTS_SERVER}
 	rm -r ${CERTS_LB}

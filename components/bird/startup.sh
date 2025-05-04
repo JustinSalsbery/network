@@ -291,6 +291,7 @@ echo "# any configuration." >> $FILE
 echo "protocol pipe {" >> $FILE
 echo -e "\ttable t_ospf;" >> $FILE
 echo -e "\tpeer table t_master;" >> $FILE
+echo "" >> $FILE # new line
 echo -e "\timport none;" >> $FILE
 echo -e "\texport all;" >> $FILE
 echo "}" >> $FILE
@@ -312,3 +313,23 @@ trap "exit 0" SIGTERM
 sleep infinity &
 
 wait $!  # $! is the PID of sleep
+
+
+router id 1;
+log syslog all;
+
+protocol device {}
+
+ipv4 table t_ospf;
+protocol ospf v2 {
+        ipv4 {
+                table t_ospf;
+                import none;
+                export all;
+        };
+
+        area 0.0.0.0 {
+                interface "network-0_0" { type broadcast; };
+                interface "network-2_0" { type broadcast; };
+        };
+}

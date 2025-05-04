@@ -197,14 +197,19 @@ echo "--insecure" > $HOME/.curlrc
 FILE="/etc/bird.conf"
 
 if [ "$ADVERTISE" != "none" ]; then
-    echo "protocol ospf v2 {" > $FILE
+    echo "router id $ID;" > $FILE
+    echo "log syslog all;" >> $FILE
+    echo "" >> $FILE # new line
+    echo "protocol device {}" >> $FILE
+    echo "" >> $FILE # new line
+    echo "protocol ospf v2 {" >> $FILE
     echo -e "\tipv4 {" >> $FILE
     echo -e "\t\timport none;" >> $FILE
     echo -e "\t\texport all;" >> $FILE
-    echo -e "\t}" >> $FILE
+    echo -e "\t};" >> $FILE
     echo "" >> $FILE # new line
     echo -e "\tarea 0.0.0.0 {" >> $FILE
-    echo -e "\t\tinterface $ADVERTISE { type broadcast; };" >> $FILE
+    echo -e "\t\tinterface \"${ADVERTISE}_0\" { type broadcast; };" >> $FILE
     echo -e "\t};" >> $FILE
     echo "}" >> $FILE
 
@@ -223,25 +228,7 @@ fi
 
 FILE="/etc/haproxy/haproxy.cfg"
 
-echo "global" > $FILE
-echo -e "\tdaemon" >> $FILE
-echo "" >> $FILE  # new line
-echo "frontend $TYPE" >> $FILE
-echo -e "\t*:80  accept-proxy" >> $FILE
-
-if [ "$TYPE" == "l4" ]; then
-    echo -e "\t*:443 accept-proxy" >> $FILE
-    echo "" >> $FILE  # new line
-    echo -e "\tmode tcp" >> $FILE
-elif [ "$TYPE" == "l5" ]; then  # on the frontend, ssl enables ssl termination
-    echo -e "\t*:443 accept-proxy ssl crt /app/ssl/cert.pem ssl-min-ver TLSv1.2" >> $FILE
-    echo "" >> $FILE  # new line
-    echo -e "\tmode http" >> $FILE
-fi
-
-echo -e "\tdefault_backend servers" >> $FILE
-echo "" >> $FILE  # new line
-echo "backend servers" >> $FILE
+echo "defaults" > $FILE
 
 if [ "$TYPE" == "l4" ]; then
     echo -e "\tmode tcp" >> $FILE
@@ -249,42 +236,72 @@ elif [ "$TYPE" == "l5" ]; then
     echo -e "\tmode http" >> $FILE
 fi
 
+echo "" >> $FILE  # new line
+echo -e "\ttimeout connect 10s" >> $FILE
+echo -e "\ttimeout client 30s # client and server should be equivalent"  >> $FILE
+echo -e "\ttimeout server 30s"  >> $FILE
+echo "" >> $FILE  # new line
+echo "frontend http" >> $FILE
+echo -e "\tbind *:80" >> $FILE
+echo -e "\tdefault_backend http_servers" >> $FILE
+echo "" >> $FILE  # new line
+echo "frontend https" >> $FILE
+
+if [ "$TYPE" == "l4" ]; then
+    echo -e "\tbind *:443" >> $FILE
+elif [ "$TYPE" == "l5" ]; then
+    echo -e "\t# enable ssl termination" >> $FILE
+    echo -e "\tbind *:443 ssl crt /app/ssl/cert.pem ssl-min-ver TLSv1.2 no-tls-tickets" >> $FILE
+fi
+
+echo -e "\tdefault_backend https_servers" >> $FILE
+echo "" >> $FILE  # new line
+echo "backend http_servers" >> $FILE
 echo -e "\tbalance $ALGORITHM" >> $FILE
 
 if [ "$ALGORITHM" == "source" ]; then
     echo -e "\thash-type consistent  # deterministic routing" >> $FILE
 elif [ "$TYPE" == "l4" ]; then
     echo -e "\tstick-table type ip size 5m expire 10m  # 50 bytes per entry" >> $FILE
-    echo -e "\tstick on src  # https must be sticky; use lookup table" >> $FILE
+    echo -e "\tstick on src  # tcp must be sticky; use lookup table" >> $FILE
 elif [ "$TYPE" == "l5" ]; then
-    echo -e "\t# non-deterministic routing" >> $FILE
+    echo -e "\t# non-determinism will cause issues if segmentation occurs from the client" >> $FILE
 fi
 
 echo "" >> $FILE  # new line
-echo -e "\toption httpchk $CHECK" >> $FILE
-echo -e "\tcheck-ssl  # use ssl for health checks" >> $FILE
+echo -e "\toption httpchk GET $CHECK" >> $FILE
 echo ""  >> $FILE  # new line
-echo "\t# the backend uses https for all traffic" >> $FILE
 
-i = 0
-if [ "$TYPE" == "l4" ]; then
-    echo "\t# send-proxy allows for direct server return" >> $FILE
+i=0
+for BACKEND in $BACKENDS; do
+    echo -e "\tserver server_$i $BACKEND:80 check" >> $FILE
+    i=$((i + 1))
+done
 
-    # backends are required; no error handling
-    for BACKEND in $BACKENDS; do
-        echo "\tserver server_$i $BACKEND:443 send-proxy check ssl verify none" >> $FILE
+echo "" >> $FILE  # new line
+echo "backend https_servers" >> $FILE
+echo -e "\tbalance $ALGORITHM" >> $FILE
 
-        i=((i + 1))
-    done
+if [ "$ALGORITHM" == "source" ]; then
+    echo -e "\thash-type consistent  # deterministic routing" >> $FILE
+elif [ "$TYPE" == "l4" ]; then
+    echo -e "\tstick-table type ip size 5m expire 10m  # 50 bytes per entry" >> $FILE
+    echo -e "\tstick on src  # tcp must be sticky; use lookup table" >> $FILE
 elif [ "$TYPE" == "l5" ]; then
-    for BACKEND in $BACKENDS; do  # l5 load balancers cannot be direct server return
-        echo "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
-
-        i=((i + 1))
-    done
+    echo -e "\t# non-determinism will cause issues if segmentation occurs from the client" >> $FILE
 fi
 
-haproxy -f $FILE  # run haproxy
+echo "" >> $FILE  # new line
+echo -e "\toption httpchk GET $CHECK" >> $FILE
+echo ""  >> $FILE  # new line
+
+i=0
+for BACKEND in $BACKENDS; do
+    echo -e "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
+    i=$((i + 1))
+done
+
+haproxy -f $FILE &  # run haproxy
 
 # sleep
 trap "exit 0" SIGTERM

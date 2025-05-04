@@ -153,6 +153,8 @@ class Configurator():
 
         # write load balancers
 
+        router_id = 0  # necessary for ECMP advertisements
+
         lbs = []
         if _ServiceType.lb.name in _comps:
             lbs = _comps[_ServiceType.lb.name]
@@ -162,6 +164,9 @@ class Configurator():
             self.__write_service(file, lb)
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
+            
+            file.write(f"{_SPACE * 3}ID: {router_id}\n")
+            router_id += 1
 
             backends = []  # required
             for backend in lb._backends:
@@ -180,12 +185,15 @@ class Configurator():
         if _ServiceType.router.name in _comps:
             routers = _comps[_ServiceType.router.name]
 
-        for i, router in enumerate(routers):
+        for router in routers:
             assert(type(router) == Router)
             self.__write_service(file, router)
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
-            file.write(f"{_SPACE * 3}ID: {i}\n")
+
+            file.write(f"{_SPACE * 3}ID: {router_id}\n")
+            router_id += 1
+
             file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
 
             cidrs = []
