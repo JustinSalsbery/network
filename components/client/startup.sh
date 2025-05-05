@@ -190,7 +190,8 @@ else
 fi
 
 # setup curl
-echo "--insecure" > $HOME/.curlrc
+echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
+echo "--verbose" >> $HOME/.curlrc
 
 # sleep
 trap "exit 0" SIGTERM

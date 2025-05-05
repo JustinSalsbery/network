@@ -190,7 +190,8 @@ else
 fi
 
 # setup curl
-echo "--insecure" > $HOME/.curlrc
+echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
+echo "--verbose" >> $HOME/.curlrc
 
 # setup bird
 # haproxy is not a router; advertise the route, but do not import any routes
@@ -246,6 +247,7 @@ elif [ "$TYPE" == "l5" ]; then
     echo -e "\tmode http" >> $FILE
 fi
 
+echo -e "compression algo gzip" >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\ttimeout connect 10s" >> $FILE
 echo -e "\ttimeout client 30s  # client and server must be equivalent in tcp mode"  >> $FILE
