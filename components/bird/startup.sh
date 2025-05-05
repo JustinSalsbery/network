@@ -246,11 +246,19 @@ fi
 echo -e "\tlearn;" >> $FILE
 echo "}" >> $FILE
 echo "" >> $FILE # new line
+echo "filter martians" >> $FILE
+echo "{" >> $FILE
+echo -e "\t# subset of martians defined in rfc 1918" >> $FILE
+echo -e "\tif net ~ [ 10.0.0.0/8+, 169.254.0.0/16+, 172.16.0.0/12+, 192.168.0.0/16+ ]" >> $FILE
+echo -e "\t\tthen reject;" >> $FILE
+echo -e "\taccept;" >> $FILE
+echo "}" >> $FILE
+echo "" >> $FILE # new line
 echo "ipv4 table t_ospf;" >> $FILE
 echo "protocol ospf v2 {" >> $FILE
 echo -e "\tipv4 {" >> $FILE
 echo -e "\t\ttable t_ospf;" >> $FILE
-echo -e "\t\timport all;" >> $FILE
+echo -e "\t\timport filter martians;" >> $FILE
 echo -e "\t\texport all;" >> $FILE
 echo -e "\t};" >> $FILE
 echo "" >> $FILE # new line
@@ -263,17 +271,9 @@ fi
 echo "" >> $FILE # new line
 echo -e "\tarea 0.0.0.0 {" >> $FILE
 
-# advertise public interfaces
 for IFACE in $IFACES; do
-    VISIBILITY="$(echo $VISIBILITIES | cut -d' ' -f1)"
-    VISIBILITIES="$(echo $VISIBILITIES | cut -d' ' -f2-)"
-
     COST="$(echo $COSTS | cut -d' ' -f1)"
     COSTS="$(echo $COSTS | cut -d' ' -f2-)"
-
-    if [ "$VISIBILITY" = "private" ]; then
-        continue
-    fi
 
     # must be double quote
     echo -e "\t\tinterface \"${IFACE}_0\" {" >> $FILE
@@ -313,23 +313,3 @@ trap "exit 0" SIGTERM
 sleep infinity &
 
 wait $!  # $! is the PID of sleep
-
-
-router id 1;
-log syslog all;
-
-protocol device {}
-
-ipv4 table t_ospf;
-protocol ospf v2 {
-        ipv4 {
-                table t_ospf;
-                import none;
-                export all;
-        };
-
-        area 0.0.0.0 {
-                interface "network-0_0" { type broadcast; };
-                interface "network-2_0" { type broadcast; };
-        };
-}

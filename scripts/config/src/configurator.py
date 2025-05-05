@@ -164,7 +164,7 @@ class Configurator():
             self.__write_service(file, lb)
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
-            
+
             file.write(f"{_SPACE * 3}ID: {router_id}\n")
             router_id += 1
 
@@ -176,7 +176,7 @@ class Configurator():
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
             file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
             file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
-            file.write(f"{_SPACE * 3}ADVERTISE: {lb._advertise._name if lb._advertise else "none"}\n")
+            file.write(f"{_SPACE * 3}ADVERTISE: {str(lb._advertise).lower()}\n")
             file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
 
         # write routers
@@ -197,7 +197,6 @@ class Configurator():
             file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
 
             cidrs = []
-            visibilities = []
             nats = []
             costs = []
 
@@ -205,12 +204,10 @@ class Configurator():
                 assert(type(config) == _IfaceConfig)
 
                 cidrs.append(config._iface._cidr._str)
-                visibilities.append(config._iface._cidr._visibility.name)
                 nats.append(config._nat.name)
                 costs.append(f"{config._cost}")
 
             file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
-            file.write(f"{_SPACE * 3}VISIBILITIES: {" ".join(visibilities)}\n")
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
             file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
 

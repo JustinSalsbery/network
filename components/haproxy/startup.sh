@@ -196,20 +196,29 @@ echo "--insecure" > $HOME/.curlrc
 # haproxy is not a router; advertise the route, but do not import any routes
 FILE="/etc/bird.conf"
 
-if [ "$ADVERTISE" != "none" ]; then
+if [ "$ADVERTISE" = "true" ]; then
     echo "router id $ID;" > $FILE
     echo "log syslog all;" >> $FILE
     echo "" >> $FILE # new line
+    echo "# device is required to query for interface information" >> $FILE
     echo "protocol device {}" >> $FILE
     echo "" >> $FILE # new line
+    echo "ipv4 table t_ospf;" >> $FILE
     echo "protocol ospf v2 {" >> $FILE
     echo -e "\tipv4 {" >> $FILE
+    echo -e "\t\ttable t_ospf;" >> $FILE
     echo -e "\t\timport none;" >> $FILE
     echo -e "\t\texport all;" >> $FILE
     echo -e "\t};" >> $FILE
     echo "" >> $FILE # new line
     echo -e "\tarea 0.0.0.0 {" >> $FILE
-    echo -e "\t\tinterface \"${ADVERTISE}_0\" { type broadcast; };" >> $FILE
+
+    for IFACE in $IFACES; do
+        echo -e "\t\tinterface \"${IFACE}_0\" {" >> $FILE  # must be double quote
+        echo -e "\t\t\ttype broadcast;  # enable automatic router discovery" >> $FILE
+        echo -e "\t\t};" >> $FILE
+    done
+
     echo -e "\t};" >> $FILE
     echo "}" >> $FILE
 
@@ -296,10 +305,17 @@ echo -e "\toption httpchk GET $CHECK" >> $FILE
 echo ""  >> $FILE  # new line
 
 i=0
-for BACKEND in $BACKENDS; do
-    echo -e "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
-    i=$((i + 1))
-done
+if [ "$TYPE" == "l4" ]; then
+    for BACKEND in $BACKENDS; do
+        echo -e "\tserver server_$i $BACKEND:443 check check-ssl verify none" >> $FILE
+        i=$((i + 1))
+    done
+elif [ "$TYPE" == "l5" ]; then
+    for BACKEND in $BACKENDS; do
+        echo -e "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
+        i=$((i + 1))
+    done
+fi
 
 haproxy -f $FILE &  # run haproxy
 

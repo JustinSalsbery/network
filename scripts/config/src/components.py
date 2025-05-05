@@ -830,7 +830,7 @@ class DNSServer(_Service):
 
 
 class LBType(Enum):
-    l4 = auto()
+    l4 = auto()  # neither support DSR
     l5 = auto()
 
 
@@ -844,7 +844,7 @@ class LBAlgorithm(Enum):
 
 class LoadBalancer(_Service):
     def __init__(self, backends: list[str], type: LBType = LBType.l5, 
-                 algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: Iface = None, 
+                 algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: bool = False, 
                  health_check: str = "/", dns_server: str = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
                  syn_cookie: SynCookieType = SynCookieType.enable, 
@@ -855,7 +855,7 @@ class LoadBalancer(_Service):
             - backends: The list of IPv4 addresses to balance between.
             - type: The type of the load balancer.
             - algorithm: The algorithm to use for backend selection.
-            - advertise: The interface to advertise via OSPF.
+            - advertise: Enable or disable route advertising by OSPF.
             - health_check: The server page to request for health checks.
             - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
@@ -889,11 +889,7 @@ class LoadBalancer(_Service):
         
         self._type = type
         self._algorithm = algorithm
-
-        self._advertise = None
-        if advertise:
-            assert(advertise._cidr._visibility == _Visibility.public)
-            self._advertise = advertise
+        self._advertise = advertise
 
         assert(health_check != "")
         self._health_check = health_check
