@@ -200,7 +200,7 @@ if [ "$ADVERTISE" = "true" ]; then
     echo "router id $ID;" > $FILE
     echo "log syslog all;" >> $FILE
     echo "" >> $FILE # new line
-    echo "# device is required to query for interface information" >> $FILE
+    echo "# Device is required by bird to query for interface information." >> $FILE
     echo "protocol device {}" >> $FILE
     echo "" >> $FILE # new line
     echo "ipv4 table t_ospf;" >> $FILE
@@ -214,7 +214,8 @@ if [ "$ADVERTISE" = "true" ]; then
     echo -e "\tarea 0.0.0.0 {" >> $FILE
 
     for IFACE in $IFACES; do
-        echo -e "\t\tinterface \"${IFACE}_0\" {" >> $FILE  # must be double quote
+        # must be double quote
+        echo -e "\t\tinterface \"${IFACE}_0\" {" >> $FILE
         echo -e "\t\t\ttype broadcast;  # enable automatic router discovery" >> $FILE
         echo -e "\t\t};" >> $FILE
     done
@@ -247,7 +248,7 @@ fi
 
 echo "" >> $FILE  # new line
 echo -e "\ttimeout connect 10s" >> $FILE
-echo -e "\ttimeout client 30s # client and server should be equivalent"  >> $FILE
+echo -e "\ttimeout client 30s  # client and server must be equivalent in tcp mode"  >> $FILE
 echo -e "\ttimeout server 30s"  >> $FILE
 echo "" >> $FILE  # new line
 echo "frontend http" >> $FILE
@@ -302,6 +303,7 @@ fi
 
 echo "" >> $FILE  # new line
 echo -e "\toption httpchk GET $CHECK" >> $FILE
+echo -e "\t# health checks must use ssl" >> $FILE
 echo ""  >> $FILE  # new line
 
 i=0
@@ -311,6 +313,10 @@ if [ "$TYPE" == "l4" ]; then
         i=$((i + 1))
     done
 elif [ "$TYPE" == "l5" ]; then
+    echo -e "\t# traffic must be re-encrypted" >> $FILE
+    echo -e "\t# frequently a shorter, less-secure key will be used to increase performance" >> $FILE
+    echo ""  >> $FILE  # new line
+
     for BACKEND in $BACKENDS; do
         echo -e "\tserver server_$i $BACKEND:443 check ssl verify none" >> $FILE
         i=$((i + 1))
