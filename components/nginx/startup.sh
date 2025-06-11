@@ -31,6 +31,14 @@ for IFACE in $IFACES; do
             route add default gateway $GATEWAY ${IFACE}_0
         fi
     fi
+
+    # disable tcp segmentation offloading
+    # the tcp packet never reaches the NIC and therefore will never segment
+    ethtool -K ${IFACE}_0 tso off
+
+    # NIC offloading:
+    #   Display: ethtool –k $IFACE
+    #   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
 done
 
 # setup nameservers

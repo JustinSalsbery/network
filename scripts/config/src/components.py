@@ -488,7 +488,7 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, rate: float = 12, 
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, rate: float = 100, 
                   firewall: FirewallType = FirewallType.none, drop: int = 0, delay: int = 0, 
                   corrupt: int = 0, queue_time: int = 50) -> None:
         """
@@ -708,7 +708,7 @@ class DHCPServer(_Service):
         self._lease_time = lease_time
 
     def add_iface(self, iface: Iface, ip: str, gateway: str = None, lease_start: str = None, 
-                  lease_end: str = None, rate: float = 12, firewall: FirewallType = FirewallType.none, 
+                  lease_end: str = None, rate: float = 100, firewall: FirewallType = FirewallType.none, 
                   drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
         @params:
@@ -942,7 +942,7 @@ class Router(_Service):
         self._ecmp = ecmp
 
     def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, nat: NatType = NatType.none,
-                  cost: int = 10, rate: float = 100, firewall: FirewallType = FirewallType.none,
+                  cost: int = 10, rate: float = 1000, firewall: FirewallType = FirewallType.none,
                   drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
         """
         @params:

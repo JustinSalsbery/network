@@ -50,17 +50,16 @@
 ---
 
 # Todo:
+0. Rework `tc` particularly rate; and add MTU to iface_add
 1. Rework Logging
     - Logging should be enabled by default to STDERR
     - Remove Logging Toggles
-2. Investigate if MTU issues are caused by TCP Segmentation Offload.
-    - References: [Link](https://docs.gz.ro/tuning-network-cards-on-linux.html) and [Link](https://serverfault.com/questions/421995/disable-tcp-offloading-completely-generically-and-easily) and [Link](https://www.baeldung.com/linux/tcp-offload-disable)
-3. CDN for Caching
+2. CDN for Caching
     - I could cache on the L5 LB instead.
     - Vary HTTP Header: Enable or Disable Caching
     - Max-age HTTP Header: TTL for Caching
-4. K8s Deployments
-5. Random restart script
+3. K8s Deployments
+4. Random restart script
 
 ---
 

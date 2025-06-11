@@ -4,7 +4,7 @@ RUN apk upgrade --no-cache
 
 # additional tools
 
-RUN apk add curl tcpdump net-tools bind-tools
+RUN apk add curl tcpdump net-tools bind-tools ethtool
 RUN apk add iptables iproute2 iputils busybox-extras
 
 # busybox-extras includes udhcpd
