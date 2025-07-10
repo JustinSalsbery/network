@@ -11,7 +11,7 @@ WAIT_MIN = 5
 WAIT_MAX = 5
 CONN_RATE = 20
 CONN_MAX = 1000
-CPU_LIMIT = 0.3  # backbone routers double this limit
+CPU_LIMIT = 0.3
 MEM_LIMIT = 256
 
 # NETWORK CONFIGURATION *******************************************************
@@ -70,11 +70,11 @@ DNS_ROOT = ["1.255.255.254"]
 for _ in range(1):  # for scope
     iface_backbone_ext = Iface("2.0.0.0/16")
 
-    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT * 2, mem_limit=MEM_LIMIT)
+    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
     router.add_iface(iface_backbone, ip="1.0.0.1")
     router.add_iface(iface_backbone_ext, ip="2.0.0.1")
 
-    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT * 2, mem_limit=MEM_LIMIT)
+    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
     router.add_iface(iface_backbone, ip="1.0.0.2")
     router.add_iface(iface_backbone_ext, ip="2.0.0.2")
 
@@ -114,11 +114,11 @@ for _ in range(1):  # for scope
 for _ in range(1):  # for scope
     iface_backbone_ext = Iface("2.1.0.0/16")
 
-    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT * 2, mem_limit=MEM_LIMIT)
+    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
     router.add_iface(iface_backbone, ip="1.0.0.3")
     router.add_iface(iface_backbone_ext, ip="2.1.0.1")
 
-    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT * 2, mem_limit=MEM_LIMIT)
+    router = Router(ecmp=ECMPType.l3, cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
     router.add_iface(iface_backbone, ip="1.0.0.4")
     router.add_iface(iface_backbone_ext, ip="2.1.0.2")
 
