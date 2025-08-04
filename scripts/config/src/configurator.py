@@ -232,7 +232,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}- ./shared:/app/shared\n")
         file.write(f"{_SPACE * 3}- /lib/modules:/lib/modules  # mount host kernel modules\n")
 
-        if len(service._iface_configs):  # docker compose throws an error if network map is empty
+        if len(service._iface_configs):  # error if network map is empty
             file.write(f"{_SPACE * 2}networks:\n")
 
             for config in service._iface_configs:

@@ -6,11 +6,10 @@
 ## Requirements:
 - Linux: [Supported on Debian-based Distributions]
     - Add the user to the `docker` group.
-    - While not necessary, the following file should exist: `/boot/config-$(uname -r)`
 - Mac: [Unsupported]
     - Use a recent version of `make`.
     - Currently, neither `dhcp` nor the `routers` will function correctly.
-- Windows: [Unsupported and Untested]
+- Windows: [Untested]
 
 ## Usage:
 - Build docker images with `make build`.
@@ -32,6 +31,7 @@
     - Start container: `docker start <ID>`
     - Stop container: `docker stop <ID>`
     - Kill container: `docker kill <ID>`
+        - The container is shutdown. Ongoing connections are cleanly closed.
     - Restart container: `docker restart <ID>`
 - Remove:
     - Remove container: `docker container rm <ID>`
@@ -39,36 +39,10 @@
     - Remove network: `docker network rm <ID>`
 - Container information:
     - Container logs: `docker logs <ID>`
-        - STDOUT: `docker logs <ID> 2> /dev/null`
-        - STDERR: `docker logs <ID> 1> /dev/null`
+        - Only STDOUT: `docker logs <ID> 2> /dev/null`
+        - Only STDERR: `docker logs <ID> 1> /dev/null`
     - Inspect container: `docker inspect <ID>`
     - Resource usage: `docker stats`
 
 ## Misc:
 - Access the container ID within the container with `$HOSTNAME`.
-
----
-
-# Todo:
-0. Rework `tc` particularly rate; and add MTU to iface_add
-1. Rework Logging
-    - Logging should be enabled by default to STDERR
-    - Remove Logging Toggles
-2. CDN for Caching
-    - I could cache on the L5 LB instead.
-    - Vary HTTP Header: Enable or Disable Caching
-    - Max-age HTTP Header: TTL for Caching
-3. K8s Deployments
-4. Random restart script
-
----
-
-# Considered:
-I want to limit the scope so that future maintanence is easier. I have considered adding many new components, including the following:
-
-1. Tor
-2. VPN
-3. IDS
-4. ... and many more.
-
-I may consider adding such components in the future if I see a need.
