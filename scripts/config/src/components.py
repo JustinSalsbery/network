@@ -215,6 +215,94 @@ class _CIDR():
         return f"{"{"} {self._str}, {self._netmask}, {self._visibility.name} {"}"}"
 
 
+# TC RULE *********************************************************************
+
+
+class TCRule():
+    def __init__(self):
+        """
+        WARNING:
+            - Not implemented. Instantiating will raise NotImplementedError!
+        """
+
+        raise NotImplementedError
+
+
+class TCRate(TCRule):
+    def __init__(self, rate: int, queue_limit: int =  2500):
+        """
+        @params:
+            - rate: Set link bandwidth. In units of kilobits per second.
+            - queue_limit: Maximum number of packets in queue.
+        """
+
+        assert(rate > 0 and queue_limit > 0)
+
+        self._rate = rate
+        self._queue_limit = queue_limit
+
+
+class TCDelay(TCRule):
+    def __init__(self, delay: int, jitter: int = 0, queue_limit: int = 2500):
+        """
+        @params:
+            - delay: Set a delay on traffic. In units of milliseconds.
+            - jitter: Variance on delay, ex. delay +/- jitter. In units of milliseconds.
+            - queue_limit: Maximum number of packets in queue.
+        Note:
+            - Packets will be reordered if the jitter is large enough.
+        """
+        
+        assert(delay >= 0 and jitter >= 0 and queue_limit > 0)
+        # assert(delay - jitter > 0)  # unnecessary
+
+        self._delay = delay
+        self._jitter = jitter
+        self._queue_limit = queue_limit
+
+
+class TCDrop(TCRule):
+    def __init__(self, drop: int, queue_limit: int = 2500):
+        """
+        @params:
+            - drop: Drop random traffic. In unit of percents.
+            - queue_limit: Maximum number of packets in queue.
+        """
+
+        assert(0 <= drop <= 100 and queue_limit > 0)
+
+        self._drop = drop
+        self._queue_limit = queue_limit
+
+
+class TCCorrupt(TCRule):
+    def __init__(self, corrupt: int, queue_limit: int = 2500):
+        """
+        @params:
+            - corrupt: Corrupt random packets. In units of percents.
+            - queue_limit: Maximum number of packets in queue.
+        """
+
+        assert(0 <= corrupt <= 100 and queue_limit > 0)
+
+        self._corrupt = corrupt
+        self._queue_limit = queue_limit
+
+
+class TCDuplicate(TCRule):
+    def __init__(self, duplicate: int, queue_limit: int = 2500):
+        """
+        @params:
+            - duplicate: Duplicate random packets. In units of percents.
+            - queue_limit: Maximum number of packets in queue.
+        """
+
+        assert(0 <= duplicate <= 100 and queue_limit > 0)
+
+        self._duplicate = duplicate
+        self._queue_limit = queue_limit
+
+
 # INTERFACE *******************************************************************
 
 
@@ -258,10 +346,10 @@ class FirewallType(Enum):
 
 class NatType(Enum):
     """
-    snat_input:  For the internal router interface of a customer network. SNATS packets sent
-                 from an IP within the CIDR range of the corresponding interface.
-    snat_output: For the internal router interface of a datacenter network. SNATS packets
-                 output on the corresponding interface.
+    snat_input:  SNATS packets sent from an IP within the CIDR range of the corresponding
+                 interface, ex. for the internal router interface of a home network. 
+    snat_output: SNATS packets output on the corresponding interface, ex. for the internal
+                 router interface of a datacenter network. 
     """
 
     none = auto()
@@ -292,37 +380,20 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, ip: str, gateway: str, rate: float, firewall: FirewallType, 
-                 drop: int, delay: int, corrupt: int, queue_time: int, lease_start: str, 
-                 lease_end: str, nat: NatType, cost: int):
+    def __init__(self, iface: Iface, ip: str, gateway: str, tc_rule: TCRule,
+                 firewall: FirewallType, lease_start: str, lease_end: str, 
+                 nat: NatType, cost: int):
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - rate: The average rate at which data will be sent. In units of megabits per second.
-            - firewall: Configure firewall.
-            - drop: Drop random traffic. In unit of percents.
-            - delay: Set a delay on traffic. In units of milliseconds.
-            - corrupt: Corrupt random packets. In units of percents.
-            - queue_time: Packets are dropped if not sent within this time period. 
-                          In units of milliseconds.
+            - tc_rule: The configured TC rule.
+            - firewall: The configured firewall.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
             - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
             - nat: Configure NAT. Only implemented on routers.
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
-        WARNING:
-            - Rate cannot be less than 0.001 megabits per second.
-            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
-              Additional routers may be added to the path to implement many rules.
-            - The MTU is not handled correctly. All interfaces use the default MTU of 1500 bytes.
-              Despite this, packets may be up to 65,535 bytes in length.
-            - The maximum packet length is determined by the burst. A burst of 12 kilobits is 
-              1500 bytes and, thus, the MTU will be correct. With a CONFIG_HZ of 1000, 
-              12 megabits per second is the maximum rate that will be correct.
-            - I have experimented with dropping packets larger than 1500 bytes with iptables and
-              I have experimented with specifying the MTU with tc using the tbf queueing discipline.
-              Neither worked.
         """
 
         self._iface = iface
@@ -335,23 +406,12 @@ class _IfaceConfig():
         if gateway:
             self._gateway = _IPv4(gateway)
 
-        rate = round(rate, 3)
-        assert(rate >= 0.001)
-        self._rate = rate
+        self._tc_rule = None
+        if tc_rule:
+            assert isinstance(tc_rule, TCRule)
+            self._tc_rule = tc_rule
 
         self._firewall = firewall
-
-        assert(0 <= drop <= 100)
-        self._drop = drop
-
-        assert(0 <= delay)
-        self._delay = delay
-
-        assert(0 <= corrupt <= 100)
-        self._corrupt = corrupt
-
-        assert(queue_time >= 0)
-        self._queue_time = queue_time
 
         self._lease_start = None
         if lease_start:
@@ -488,31 +548,22 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, rate: float = 100, 
-                  firewall: FirewallType = FirewallType.none, drop: int = 0, delay: int = 0, 
-                  corrupt: int = 0, queue_time: int = 50) -> None:
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None,
+                  tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - rate: The average rate at which data will be sent. In units of megabits per second.
-            - firewall: Configure firewall.
-            - drop: Drop random traffic. In unit of percents.
-            - delay: Set a delay on traffic. In units of milliseconds.
-            - corrupt: Corrupt random packets. In units of percents.
-            - queue_time: Packets are dropped if not sent within this time period. 
-                          In units of milliseconds.
+            - tc_rule: The configured TC rule.
+            - firewall: The configured firewall.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
               gateway, and nameservers.
-            - Rate cannot be less than 0.001 megabits per second.
-            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
-              Additional routers may be added to the path to implement many rules.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
-                              queue_time, None, None, NatType.none, 0)
+        config = _IfaceConfig(iface, ip, gateway, tc_rule, firewall,
+                              None, None, NatType.none, 0)
         self._iface_configs.append(config)
 
     def __str__(self):
@@ -694,9 +745,6 @@ class DHCPServer(_Service):
         WARNING:
             - The DHCP server is only configured for a single interface.
               Do not add multiple interfaces!
-        Note:
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
         """
 
         dns_server = [dns_server] if dns_server else None
@@ -708,29 +756,18 @@ class DHCPServer(_Service):
         self._lease_time = lease_time
 
     def add_iface(self, iface: Iface, ip: str, gateway: str = None, lease_start: str = None, 
-                  lease_end: str = None, rate: float = 100, firewall: FirewallType = FirewallType.none, 
-                  drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
+                  lease_end: str = None, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
-            - gateway: The IPv4 address of the gateway. The gateway will be advertised.
-            - lease_start: The IPv4 address at the start of the lease block.
-            - lease_end: The IPv4 address at the end of the lease block.
-            - rate: The average rate at which data will be sent. In units of megabits per second.
-            - firewall: Configure firewall.
-            - drop: Drop random traffic. In unit of percents.
-            - delay: Set a delay on traffic. In units of milliseconds.
-            - corrupt: Corrupt random packets. In units of percents.
-            - queue_time: Packets are dropped if not sent within this time period. 
-                          In units of milliseconds.
+            - gateway: The IPv4 address of the gateway.
+            - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
+            - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
+            - tc_rule: The configured TC rule.
+            - firewall: The configured firewall.
         WARNING:
             - The default lease_start is .10; the default lease_end is .254
-            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
-              gateway, and nameserver.
-            - Rate cannot be less than 0.001 megabits per second.
-            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
-              Additional routers may be added to the path to implement many rules.
         """
 
         # configure default lease_start
@@ -745,8 +782,8 @@ class DHCPServer(_Service):
             lease_end = lease_end._str
         
         _IPv4(ip)  # must have legal ip
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
-                              queue_time, lease_start, lease_end, NatType.none, 0)
+        config = _IfaceConfig(iface, ip, gateway, tc_rule, firewall, 
+                              lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
 
 
@@ -942,32 +979,23 @@ class Router(_Service):
         self._ecmp = ecmp
 
     def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, nat: NatType = NatType.none,
-                  cost: int = 10, rate: float = 1000, firewall: FirewallType = FirewallType.none,
-                  drop: int = 0, delay: int = 0, corrupt: int = 0, queue_time: int = 50) -> None:
+                  cost: int = 10, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
-            - nat: Configure NAT.
-            - cost: The cost of routing traffic by the interface.
-            - rate: The average rate at which data will be sent. In units of megabits per second.
-            - firewall: Configure firewall.
-            - drop: Drop random traffic. In unit of percents.
-            - delay: Set a delay on traffic. In units of milliseconds.
-            - corrupt: Corrupt random packets. In units of percents.
-            - queue_length: Packets are dropped if not sent within this time period. 
-                            In units of milliseconds.
+            - nat: Configure NAT. Only implemented on routers.
+            - cost: The cost of routing traffic by the interface. Only implemented on routers.
+            - tc_rule: The configured TC rule.
+            - firewall: The configured firewall.
         WARNING:
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
               gateway, and nameserver.
-            - Rate cannot be less than 0.001 megabits per second.
-            - Rate, drop, delay, and corrupt are mutually exclusive. Only 1 may be active at once.
-              Additional routers may be added to the path to implement many rules.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, rate, firewall, drop, delay, corrupt,
-                              queue_time, None, None, nat, cost)
+        config = _IfaceConfig(iface, ip, gateway, tc_rule, firewall,
+                              None, None, nat, cost)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:

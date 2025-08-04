@@ -19,8 +19,7 @@ for IFACE in $IFACES; do
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
     # network suffix should be _0
-    if [ "$IP" = "none" ]; then
-        # dhcp
+    if [ "$IP" = "none" ]; then  # dhcp
         umount /etc/resolv.conf  # docker mounts resolv.conf
         udhcpc -i ${IFACE}_0     # unmounting allows dhcp to write resolv.conf
     else
@@ -49,27 +48,20 @@ for NAMESERVER in $NAMESERVERS; do
     fi
 done
 
-# setup iface queue
-# each interface may only have a single tc rule
-# tc rules will overwrite each other so that only the last tc rule will apply
+# setup tc rules
+# each interface may have one tc rule
 for IFACE in $IFACES; do
+    TC_RULE="$(echo $TC_RULES | cut -d' ' -f1)"
+    TC_RULES="$(echo $TC_RULES | cut -d' ' -f2-)"
+
     RATE="$(echo $RATES | cut -d' ' -f1)"
     RATES="$(echo $RATES | cut -d' ' -f2-)"
 
-    QUEUE_TIME="$(echo $QUEUE_TIMES | cut -d' ' -f1)"
-    QUEUE_TIMES="$(echo $QUEUE_TIMES | cut -d' ' -f2-)"
-
-    BURST="$(echo $BURSTS | cut -d' ' -f1)"
-    BURSTS="$(echo $BURSTS | cut -d' ' -f2-)"
-
-    tc qdisc add dev ${IFACE}_0 root tbf rate ${RATE}mbit burst ${BURST}kbit \
-        latency ${QUEUE_TIME}ms
-done
-
-# setup iface behaviors
-for IFACE in $IFACES; do
     DELAY="$(echo $DELAYS | cut -d' ' -f1)"
     DELAYS="$(echo $DELAYS | cut -d' ' -f2-)"
+
+    JITTER="$(echo $JITTERS | cut -d' ' -f1)"
+    JITTERS="$(echo $JITTERS | cut -d' ' -f2-)"
 
     DROP="$(echo $DROPS | cut -d' ' -f1)"
     DROPS="$(echo $DROPS | cut -d' ' -f2-)"
@@ -77,20 +69,22 @@ for IFACE in $IFACES; do
     CORRUPT="$(echo $CORRUPTS | cut -d' ' -f1)"
     CORRUPTS="$(echo $CORRUPTS | cut -d' ' -f2-)"
 
-    if [ "$DELAY" != "0" ]; then
-        # the limit is the number of packets that the queue may hold at once
-        # the default is 1,000 packets, but that is not enough with a large delay
-        LIMIT=$((1000 + (1000 * $DELAYS / 50)))  # seems reasonable
+    DUPLICATE="$(echo $DUPLICATES | cut -d' ' -f1)"
+    DUPLICATES="$(echo $DUPLICATES | cut -d' ' -f2-)"
 
-        tc qdisc add dev ${IFACE}_0 root netem limit $LIMIT delay ${DELAY}ms
-    fi
+    QUEUE_LIMIT="$(echo $QUEUE_LIMITS | cut -d' ' -f1)"
+    QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
-    if [ "$DROP" != "0" ]; then  # line rate
-        tc qdisc add dev ${IFACE}_0 root netem loss random ${DROP}%
-    fi
-
-    if [ "$CORRUPT" != "0" ]; then  # line rate
-        tc qdisc add dev ${IFACE}_0 root netem corrupt ${CORRUPT}%
+    if [ "$TC_RULE" = "rate" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit
+    elif [ "$TC_RULE" = "delay" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} delay ${DELAY}ms ${JITTER}ms
+    elif [ "$TC_RULE" = "drop" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} loss random ${DROP}%
+    elif [ "$TC_RULE" = "corrupt" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} corrupt ${CORRUPT}%
+    elif [ "$TC_RULE" = "duplicate" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} duplicate ${DUPLICATE}%
     fi
 done
 
@@ -177,21 +171,21 @@ elif [ "$SYN_COOKIE" = "force" ]; then
 fi
 
 # setup fast retransmission
-if [ "$FAST_RETRANS" = "true" ]; then
+if [ "$FAST_RETRAN" = "true" ]; then
     sysctl -w net.ipv4.tcp_early_retrans=3  # after 3 packets
 else
     sysctl -w net.ipv4.tcp_early_retrans=0
 fi
 
 # setup selective acknowledgments
-if [ "$SACKS" = "true" ]; then
+if [ "$SACK" = "true" ]; then
     sysctl -w net.ipv4.tcp_sack=1
 else
     sysctl -w net.ipv4.tcp_sack=0
 fi
 
 # setup timestamps
-if [ "$TIMESTAMPS" = "true" ]; then
+if [ "$TIMESTAMP" = "true" ]; then
     sysctl -w net.ipv4.tcp_timestamps=1
 else
     sysctl -w net.ipv4.tcp_timestamps=0
@@ -228,7 +222,7 @@ done
 # setup bird
 FILE="/etc/bird.conf"
 
-echo "router id $ID;" > $FILE
+echo "router id $ROUTER_ID;" > $FILE
 echo "log syslog all;" >> $FILE
 echo "" >> $FILE # new line
 echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $FILE

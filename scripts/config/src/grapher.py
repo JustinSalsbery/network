@@ -28,7 +28,7 @@ class Grapher():
             self.__comps = _comps.copy()  # remove ifaces without affecting external
             self.__ifaces = self.__comps.pop("iface")
         except Exception as _:
-            print("notice: No interfaces found. Stopping...")
+            print("Warning: No interfaces found. Stopping...")
             return
 
         with open("shared/config-graph.gv", "w") as file:
@@ -114,11 +114,7 @@ class Grapher():
                     assert(type(config) == _IfaceConfig)
 
                     name_iface = config._iface._name
-                    rate = config._rate  #mbps
 
                     file.write(f"\t\"{name_service}\" -- \"{name_iface}\" [ ")
-                    if extra:
-                        file.write(f"label=\"{rate}mbps\" ")
-                    
                     file.write("]\n")
                     

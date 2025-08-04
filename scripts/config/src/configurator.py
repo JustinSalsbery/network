@@ -1,11 +1,9 @@
 
 from io import TextIOWrapper
-from subprocess import getstatusoutput
 from traceback import print_stack
-from math import ceil
 
+from src.components import *  # private must be imported manually
 from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
-from src.components import *
 from src.grapher import Grapher
 
 
@@ -39,8 +37,6 @@ class Configurator():
         self.__ip_max = self.__ip + 2 ** suffix_len
 
         self.__prefix_len = prefix_len
-
-        self.__config_hz = self.__get_interrupt_freq()
 
         with open("docker-compose.yml", "w") as file:
 
@@ -165,8 +161,13 @@ class Configurator():
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
 
-            file.write(f"{_SPACE * 3}ID: {router_id}\n")
+            file.write(f"{_SPACE * 3}ROUTER_ID: {router_id}\n")
             router_id += 1
+
+            file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
+            file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
+            file.write(f"{_SPACE * 3}ADVERTISE: {str(lb._advertise).lower()}\n")
+            file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
 
             backends = []  # required
             for backend in lb._backends:
@@ -174,10 +175,6 @@ class Configurator():
                 backends.append(backend._str)
 
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
-            file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
-            file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
-            file.write(f"{_SPACE * 3}ADVERTISE: {str(lb._advertise).lower()}\n")
-            file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
 
         # write routers
 
@@ -191,7 +188,7 @@ class Configurator():
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
 
-            file.write(f"{_SPACE * 3}ID: {router_id}\n")
+            file.write(f"{_SPACE * 3}ROUTER_ID: {router_id}\n")
             router_id += 1
 
             file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
@@ -260,21 +257,15 @@ class Configurator():
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
-        file.write(f"{_SPACE * 3}FAST_RETRANS: {str(service._fast_retrans).lower()}\n")
-        file.write(f"{_SPACE * 3}SACKS: {str(service._sacks).lower()}\n")
-        file.write(f"{_SPACE * 3}TIMESTAMPS: {str(service._timestamps).lower()}\n")
+        file.write(f"{_SPACE * 3}FAST_RETRAN: {str(service._fast_retrans).lower()}\n")
+        file.write(f"{_SPACE * 3}SACK: {str(service._sacks).lower()}\n")
+        file.write(f"{_SPACE * 3}TIMESTAMP: {str(service._timestamps).lower()}\n")
 
         ifaces = []
         ips = []
         net_masks = []
         gateways = []
-        rates = []
         firewalls = []
-        drops = []
-        delays = []
-        corrupts = []
-        queue_times = []
-        bursts = []
 
         for config in service._iface_configs:
             assert(type(config) == _IfaceConfig)
@@ -283,13 +274,7 @@ class Configurator():
             ips.append(config._ip._str if config._ip else "none")
             net_masks.append(config._iface._cidr._netmask._str)
             gateways.append(config._gateway._str if config._gateway else "none")
-            rates.append(f"{config._rate:.3f}")
             firewalls.append(config._firewall.name)
-            drops.append(f"{config._drop}")
-            delays.append(f"{config._delay}")
-            corrupts.append(f"{config._corrupt}")
-            queue_times.append(f"{config._queue_time}")
-            bursts.append(f"{self.__get_iface_burst(config)}")
 
         # if no interfaces have been added, all of these variables will be empty
         
@@ -298,13 +283,69 @@ class Configurator():
         file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
-        file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}  # mbits/s\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
-        file.write(f"{_SPACE * 3}DROPS: {" ".join(drops)}  # %\n")
-        file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}  # ms\n")
-        file.write(f"{_SPACE * 3}CORRUPTS: {" ".join(corrupts)}  # %\n")
-        file.write(f"{_SPACE * 3}QUEUE_TIMES: {" ".join(queue_times)}  # ms\n")
-        file.write(f"{_SPACE * 3}BURSTS: {" ".join(bursts)}  # kbits/s\n")
+
+        self.__write_tc_rules(file, service)
+
+    def __write_tc_rules(self, file: TextIOWrapper, service: _Service):
+        tc_rules = []
+        rates = []
+        delays = []
+        jitters = []
+        drops = []
+        corrupts = []
+        duplicates = []
+        queue_limits = []
+
+        for config in service._iface_configs:
+            assert(type(config) == _IfaceConfig)
+
+            tc_rule = config._tc_rule
+
+            tc_rules.append("none")  # defaults
+            rates.append("none")
+            delays.append("none")
+            jitters.append("none")
+            drops.append("none")
+            corrupts.append("none")
+            duplicates.append("none")
+            queue_limits.append("none")
+
+            if isinstance(tc_rule, TCRate):
+                tc_rules[-1] = "rate"
+                rates[-1] = f"{tc_rule._rate}"
+                queue_limits[-1] = f"{tc_rule._queue_limit}"
+
+            elif isinstance(tc_rule, TCDelay):
+                tc_rules[-1] ="delay" 
+                delays[-1] = f"{tc_rule._delay}"
+                jitters[-1] = f"{tc_rule._jitter}"
+                queue_limits[-1] = f"{tc_rule._queue_limit}"
+
+            elif isinstance(tc_rule, TCDrop):
+                tc_rules[-1] = "drop"
+                drops[-1] = f"{tc_rule._drop}"
+                queue_limits[-1] = f"{tc_rule._queue_limit}"
+
+            elif isinstance(tc_rule, TCCorrupt):
+                tc_rules[-1] = "corrupt"
+                corrupts[-1] = f"{tc_rule._corrupt}"
+                queue_limits[-1] = f"{tc_rule._queue_limit}"
+
+            elif isinstance(tc_rule, TCDuplicate):
+                tc_rules[-1] = "duplicate"
+                duplicates[-1] = f"{tc_rule._duplicate}"
+                queue_limits[-1] = f"{tc_rule._queue_limit}"
+        
+        file.write(f"{_SPACE * 3}# TC Rule configurations:\n")
+        file.write(f"{_SPACE * 3}TC_RULES: {" ".join(tc_rules)}\n")
+        file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}\n")
+        file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}\n")
+        file.write(f"{_SPACE * 3}JITTERS: {" ".join(jitters)}\n")
+        file.write(f"{_SPACE * 3}DROPS: {" ".join(drops)}\n")
+        file.write(f"{_SPACE * 3}CORRUPTS: {" ".join(corrupts)}\n")
+        file.write(f"{_SPACE * 3}DUPLICATES: {" ".join(duplicates)}\n")
+        file.write(f"{_SPACE * 3}QUEUE_LIMITS: {" ".join(queue_limits)}\n")
 
     def __write_inets(self, file: TextIOWrapper):
         """
@@ -349,60 +390,3 @@ class Configurator():
         self.__ip += 2 ** suffix_len  # iterate
 
         return cidr
-
-    def __get_interrupt_freq(self) -> int:
-        """
-        @returns: The CONFIG_HZ.
-        Note:
-            - CONFIG_HZ represents the Kernel's interrupt frequency.
-        WARNING:
-            - Rate may be inaccurate if the CONFIG_HZ is not found.
-              See: `grep CONFIG_HZ= /boot/config-$(uname -r)`
-        """
-
-        config_hz = 0
-
-        s, o = getstatusoutput("grep CONFIG_HZ= /boot/config-$(uname -r)")
-        if s != 0:
-            print("warning: Interrupt frequency not found. Link rate may be inaccurate.")
-            print("notice: Using a default CONFIG_HZ of 250.")
-            config_hz = 250  # https://github.com/torvalds/linux/blob/master/kernel/Kconfig.hz
-
-        else:
-            try:
-                config_hz = o.split("=")[1]
-                config_hz = int(config_hz)
-            except Exception as e:
-                print(f"info: Unexpected output {o} for CONFIG_HZ.")
-                print(f"error: {e}")
-                
-                print_stack()
-                exit(1)
-        
-        return config_hz
-
-    def __get_iface_burst(self, config: _IfaceConfig) -> float:
-        """
-        @params:
-            - config: The _IfaceConfig to calculate the burst for.
-        @returns: The burst in units of kilobits.
-        Note:
-            - The maximum amount of data that can be sent every interrupt (also known
-              as a jiffy). This amount may temporarily exceed the defined rate. 
-            - At a minimum, burst should be large enough to support the rate such
-              that interrupt frequency * burst = rate.
-            - This variable is being hidden to avoid dependencies between rate and burst.
-        """
-
-        burst = config._rate / self.__config_hz
-        burst *= 1000   # convert mbits to kbits
-
-        mtu = 1500 * 8  # convert bytes to bits
-        mtu /= 1000     # convert bits to kbits
-
-        # the network will fail if the burst is too low
-        if burst < mtu:
-            burst = mtu
-        
-        burst = ceil(burst)
-        return burst
