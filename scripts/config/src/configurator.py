@@ -13,17 +13,17 @@ class Configurator():
     def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22, 
                  color: bool = True, extra: bool = False):
         """
-        Write out the configuration as `docker-compose.yml`.
+        Outputs the configuration as `docker-compose.yml`.
         @params:
-            - available_range: The available IP range in CIDR notation for creating Docker subnets.
-            - prefix_len: The size of each subnet.
+            - available_range: The available IP range in CIDR notation for creating temporary subnets.
+            - prefix_len: The size of each temporary subnet.
             - color: Enables or disables color in the graph.
             - extra: Enables or disables extra information in the graph.
-        WARNING:
+        Note:
             - The configurator MUST be called for the configuration to be created.
             - By default, Docker only supports around 30 network interfaces.
-              By writing subnets in the Docker Compose file we can exceed this limitation.
-              The containers do not use the subnet.
+              By writing temporary subnets in the Docker Compose file we can exceed this limitation.
+              The containers do not use these temporary subnets.
             - Docker will create a gateway at the .1 of each subnet; ex. 10.0.0.1 and 10.0.4.1.
               These gateways are internally and externally accessible and may interfere with 
               both container networking and host networking.
@@ -132,7 +132,7 @@ class Configurator():
             self.__write_service(file, dns_server)
 
             file.write(f"{_SPACE * 3}# DNS Server configuration:\n")
-            file.write(f"{_SPACE * 3}TTL: {dns_server._ttl}\n")
+            file.write(f"{_SPACE * 3}CACHE: {dns_server._cache}\n")
             file.write(f"{_SPACE * 3}LOG: {str(dns_server._log).lower()}\n")
 
             names = []
@@ -229,7 +229,7 @@ class Configurator():
         file.write(f"{_SPACE * 2}memswap_limit: {service._swap_limit + service._mem_limit}mb\n")
 
         file.write(f"{_SPACE * 2}volumes:\n")
-        file.write(f"{_SPACE * 3}- ./shared:/app/shared\n")
+        file.write(f"{_SPACE * 3}- ./shared:/app/shared  # shared output\n")
         file.write(f"{_SPACE * 3}- /lib/modules:/lib/modules  # mount host kernel modules\n")
 
         if len(service._iface_configs):  # error if network map is empty
@@ -257,14 +257,16 @@ class Configurator():
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
-        file.write(f"{_SPACE * 3}FAST_RETRAN: {str(service._fast_retrans).lower()}\n")
-        file.write(f"{_SPACE * 3}SACK: {str(service._sacks).lower()}\n")
-        file.write(f"{_SPACE * 3}TIMESTAMP: {str(service._timestamps).lower()}\n")
+        file.write(f"{_SPACE * 3}FAST_RETRAN: {str(service._fast_retran).lower()}\n")
+        file.write(f"{_SPACE * 3}SACK: {str(service._sack).lower()}\n")
+        file.write(f"{_SPACE * 3}TIMESTAMP: {str(service._timestamp).lower()}\n")
+        file.write(f"{_SPACE * 3}TTL: {service._ttl}\n")
 
         ifaces = []
         ips = []
         net_masks = []
         gateways = []
+        mtus = []
         firewalls = []
 
         for config in service._iface_configs:
@@ -274,6 +276,7 @@ class Configurator():
             ips.append(config._ip._str if config._ip else "none")
             net_masks.append(config._iface._cidr._netmask._str)
             gateways.append(config._gateway._str if config._gateway else "none")
+            mtus.append(f"{config._mtu}" if config._mtu else "none")
             firewalls.append(config._firewall.name)
 
         # if no interfaces have been added, all of these variables will be empty
@@ -283,6 +286,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
         file.write(f"{_SPACE * 3}NET_MASKS: {" ".join(net_masks)}\n")
         file.write(f"{_SPACE * 3}GATEWAYS: {" ".join(gateways)}\n")
+        file.write(f"{_SPACE * 3}MTUS: {" ".join(mtus)}\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
 
         self.__write_tc_rules(file, service)

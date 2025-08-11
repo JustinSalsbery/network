@@ -15,36 +15,44 @@ for IFACE in $IFACES; do
     NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
     NET_MASKS="$(echo $NET_MASKS | cut -d' ' -f2-)"
 
+    MTU="$(echo $MTUS | cut -d' ' -f1)"
+    MTUS="$(echo $MTUS | cut -d' ' -f2-)"
+
     GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
     # network suffix should be _0
     if [ "$IP" = "none" ]; then  # dhcp
-        umount /etc/resolv.conf  # docker mounts resolv.conf
-        udhcpc -i ${IFACE}_0     # unmounting allows dhcp to write resolv.conf
-    else
-        # manual
-        ifconfig ${IFACE}_0 $IP netmask $NET_MASK
+        # docker mounts resolv.conf and unmounting is required to write
+        umount /etc/resolv.conf
 
-        if [ "$GATEWAY" != "none" ]; then
-            route add default gateway $GATEWAY ${IFACE}_0
-        fi
+        # if dhcp fails, the interface does not exist
+        udhcpc -i ${IFACE}_0 -t 25 -n || continue
+    else # manual
+        ifconfig ${IFACE}_0 $IP netmask $NET_MASK
     fi
 
-    # disable tcp segmentation offloading
-    # the tcp packet never reaches the NIC and therefore will never segment
-    ethtool -K ${IFACE}_0 tso off
+    if [ "$MTU" != "none" ]; then
+        # the tcp packet never reaches the NIC and therefore will never segment
+        ethtool -K ${IFACE}_0 tso off # disable tcp segmentation offloading
+        
+        ifconfig ${IFACE}_0 mtu $MTU
+    fi
 
-    # NIC offloading:
-    #   Display: ethtool –k $IFACE
-    #   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
+    if [ "$GATEWAY" != "none" ]; then
+        route add default gateway $GATEWAY ${IFACE}_0
+    fi
 done
 
+# NIC offloading:
+#   Display: ethtool –k $IFACE
+#   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
+
 # setup nameservers
-# without dnsmasq, only the first nameserver in resolv.conf will be used
+# only the first nameserver in resolv.conf will be used
 for NAMESERVER in $NAMESERVERS; do
     if [ "$NAMESERVER" != "none" ]; then
-        echo "nameserver $NAMESERVER" >> /etc/resolv.conf
+        echo "nameserver $NAMESERVER" > /etc/resolv.conf  # intentional delete
     fi
 done
 
@@ -151,8 +159,13 @@ done
 #   iptables --table nat --list --verbose
 #   iptables --flush
 
+# kernel options: https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html
+
 # setup congestion control
 sysctl -w net.ipv4.tcp_congestion_control="$CONGESTION_CONTROL"
+
+# setup ttl
+sysctl -w net.ipv4.ip_default_ttl=$TTL
 
 # setup forwarding
 if [ "$FORWARD" = "true" ]; then

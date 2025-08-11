@@ -105,9 +105,8 @@ class _CIDR():
         """
         @params:
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
-        WARNING:
+        Note:
             - Subnets that overlap public and private IP ranges are disallowed.
-            - The maximum allowed prefix length is 28.
         """
 
         if not self.__is_legal(cidr):
@@ -136,7 +135,7 @@ class _CIDR():
             ip = _IPv4(ip)
 
             prefix_len = int(prefix_len)
-            if not 0 <= prefix_len <= 28:  # this limit is for DHCP default lease space
+            if not 0 <= prefix_len <= 32:
                 return False
         
         except Exception:
@@ -221,7 +220,7 @@ class _CIDR():
 class TCRule():
     def __init__(self):
         """
-        WARNING:
+        Note:
             - Not implemented. Instantiating will raise NotImplementedError!
         """
 
@@ -380,14 +379,15 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, ip: str, gateway: str, tc_rule: TCRule,
-                 firewall: FirewallType, lease_start: str, lease_end: str, 
-                 nat: NatType, cost: int):
+    def __init__(self, iface: Iface, ip: str, gateway: str, mtu: int, tc_rule: TCRule,
+                 firewall: FirewallType, lease_start: str, lease_end: str, nat: NatType, 
+                 cost: int):
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
+            - mtu: Configure the MTU. An MTU of none disables TSO.
             - tc_rule: The configured TC rule.
             - firewall: The configured firewall.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
@@ -406,6 +406,11 @@ class _IfaceConfig():
         if gateway:
             self._gateway = _IPv4(gateway)
 
+        self._mtu = None
+        if mtu:
+            assert(100 <= mtu <= 65535)
+            self._mtu = mtu
+
         self._tc_rule = None
         if tc_rule:
             assert isinstance(tc_rule, TCRule)
@@ -420,6 +425,11 @@ class _IfaceConfig():
         self._lease_end = None
         if lease_end:
             self._lease_end = _IPv4(lease_end)
+
+        if self._lease_start and self._lease_end:
+            assert(self._lease_start._int <= self._lease_end._int)
+        else:
+            assert(self._lease_start is None and self._lease_end is None)
         
         self._nat = nat
 
@@ -451,8 +461,7 @@ class CongestionControlType(Enum):
       - List relevant kernel modules: ls /lib/modules/$(uname -r)/kernel/net/ipv4/ | grep tcp_
       - Install (non-persistent) kernel modules:
           - Create dependencies: sudo depmod
-          - Add module: sudo modprobe tcp_bbr
-          - Remove module: sudo modprobe -r tcp_bbr
+          - Add module: sudo modprobe <MODULE>
     """
     
     # default
@@ -485,10 +494,10 @@ class SynCookieType(Enum):
 
 
 class _Service():
-    def __init__(self, type: _ServiceType, image: str, dns_servers: list[str], cpu_limit: float,
-                 mem_limit: int, swap_limit: int, forward: bool, syn_cookie: SynCookieType,
-                 congestion_control: CongestionControlType, fast_retrans: bool, 
-                 sacks: bool, timestamps: bool):
+    def __init__(self, type: _ServiceType, image: str, dns_servers: list[str], 
+                 cpu_limit: float, mem_limit: int, swap_limit: int, forward: bool, 
+                 syn_cookie: SynCookieType, congestion_control: CongestionControlType, 
+                 fast_retran: bool, sack: bool, timestamp: bool, ttl: int):
         """
         @params:
             - type: The type of the service.
@@ -501,12 +510,10 @@ class _Service():
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        Note:
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
+            - fast_retran: Enable or disable fast retransmission.
+            - sack: Enable or disable selective acknowledgments.
+            - timestamp: Enable or disable tcp timestamps.
+            - ttl: Configure the default ttl for packets.
         """
 
         self._type = type
@@ -533,9 +540,12 @@ class _Service():
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
-        self._fast_retrans = fast_retrans
-        self._sacks = sacks
-        self._timestamps = timestamps
+        self._fast_retran = fast_retran
+        self._sack = sack
+        self._timestamp = timestamp
+
+        assert(0 < ttl <= 255)
+        self._ttl = ttl
 
         # add to components
         name = type.name
@@ -548,21 +558,22 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs = []
 
-    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None,
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, mtu: int = 1500, 
                   tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - gateway: The IPv4 address of the gateway.
+            - mtu: Configure the MTU. An MTU of none disables TSO.
             - tc_rule: The configured TC rule.
             - firewall: The configured firewall.
-        WARNING:
+        Note:
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
               gateway, and nameservers.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, tc_rule, firewall,
+        config = _IfaceConfig(iface, ip, gateway, mtu, tc_rule, firewall,
                               None, None, NatType.none, 0)
         self._iface_configs.append(config)
 
@@ -575,9 +586,8 @@ class _Service():
 
 class Client(_Service):
     def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+                 swap_limit: int = 64, congestion_control: CongestionControlType = CongestionControlType.cubic,
+                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
         @params:
             - dns_server: The IPv4 addresses of the DNS server.
@@ -585,21 +595,16 @@ class Client(_Service):
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        Note:
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
+            - fast_retran: Enable or disable fast retransmission.
+            - sack: Enable or disable selective acknowledgments.
+            - ttl: Configure the default ttl for packets.
         """
 
         dns_server = [dns_server] if dns_server else None
         super().__init__(_ServiceType.client, "client", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+                         swap_limit, False, SynCookieType.enable, congestion_control, 
+                         fast_retran, sack, True, ttl)
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -613,11 +618,10 @@ class Protocol(Enum):
 class TrafficGenerator(_Service):
     def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
                  conn_max: int = 50, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
-                 wait_max: float = 15, gzip: bool = True, dns_server: str = None, 
+                 wait_max: float = 15, gzip: bool = False, dns_server: str = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
-                 forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
         @params:
             - target: The IP address, or the domain name, of the target server.
@@ -634,23 +638,18 @@ class TrafficGenerator(_Service):
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        WARNING:
-            - Locust prioritizes creating new connections over successful requests.
+            - fast_retran: Enable or disable fast retransmission.
+            - sack: Enable or disable selective acknowledgments.
+            - ttl: Configure the default ttl for packets.
         Note:
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
+            - Locust prioritizes creating new connections over successful requests.
         """
 
         dns_server = [dns_server] if dns_server else None
         super().__init__(_ServiceType.tgen, "locust", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+                         swap_limit, False, SynCookieType.enable, congestion_control, 
+                         fast_retran, sack, True, ttl)
         
         assert(target != "")
         self._target = target
@@ -686,23 +685,21 @@ class TrafficGenerator(_Service):
 
 
 class HTTPServer(_Service):
-    def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
+    def __init__(self, cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
+                 syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
         @params:
-            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
+            - fast_retran: Enable or disable fast retransmission.
+            - sack: Enable or disable selective acknowledgments.
+            - ttl: Configure the default ttl for packets.
         Note:
             - Both HTTP (80) and HTTPS (443) are enabled.
             - Many encrypted protocols require clock synchronization, such as HTTPS 
@@ -710,14 +707,11 @@ class HTTPServer(_Service):
               as by NTP, is unnecessary.
             - In the real world, HTTPS requires a certificate signed by a trusted
               Certificate Authority (CA).
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
         """
 
-        dns_server = [dns_server] if dns_server else None
-        super().__init__(_ServiceType.http, "nginx", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+        super().__init__(_ServiceType.http, "nginx", None, cpu_limit, mem_limit, 
+                         swap_limit, False, syn_cookie, congestion_control, fast_retran,
+                         sack, True, ttl)
 
 
 # DHCP SERVER *****************************************************************
@@ -725,64 +719,62 @@ class HTTPServer(_Service):
 
 class DHCPServer(_Service):
     def __init__(self, lease_time: int = 600, dns_server: str = None, cpu_limit: float = 0.5, 
-                 mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
-                 syn_cookie: SynCookieType = SynCookieType.enable,
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+                 mem_limit: int = 256, swap_limit: int = 64):
         """
         @params:
-            - dns_server: The IPv4 addresses of the DNS server. The server will be advertised.
+            - lease_time: Configure the duration that IPs are leased for.
+            - dns_server: The IPv4 addresses of the DNS server. The nameserver will be advertised.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
-            - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        WARNING:
-            - The DHCP server is only configured for a single interface.
-              Do not add multiple interfaces!
+        Note:
+            - The DHCP server will configure the client IP, DNS server, interface 
+              gateway, and interface MTU.
         """
 
         dns_server = [dns_server] if dns_server else None
         super().__init__(_ServiceType.dhcp, "udhcpd", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+                         swap_limit, False, SynCookieType.enable, CongestionControlType.cubic, 
+                         True, True, True, 64)
         
         assert(lease_time > 0)
         self._lease_time = lease_time
 
-    def add_iface(self, iface: Iface, ip: str, gateway: str = None, lease_start: str = None, 
-                  lease_end: str = None, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
+    def add_iface(self, iface: Iface, ip: str, gateway: str = None, mtu: int = 1500, 
+                  lease_start: str = None, lease_end: str = None, tc_rule: TCRule = None, 
+                  firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
-            - gateway: The IPv4 address of the gateway.
-            - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
-            - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
+            - gateway: The IPv4 address of the gateway. The gateway will be advertised.
+            - mtu: Configure the MTU. An MTU of none disables TSO. The MTU will be advertised.
+            - lease_start: The IPv4 address at the start of the lease block.
+            - lease_end: The IPv4 address at the end of the lease block.
             - tc_rule: The configured TC rule.
             - firewall: The configured firewall.
-        WARNING:
+        Note:
             - The default lease_start is .10; the default lease_end is .254
+            - The DHCP server is only configured for a single interface.
+              Do not add multiple interfaces!
         """
 
         # configure default lease_start
         if lease_start == None:
+            assert(iface._cidr._prefix_len <= 28)
             lease_start = _IPv4(iface._cidr._ip._int + 10)
             lease_start = lease_start._str  # _IfaceConfig expects a string
 
         # configure default lease_end
         if lease_end == None:
+            assert(iface._cidr._prefix_len <= 28)
             suffix_len = 32 - iface._cidr._prefix_len
             lease_end = _IPv4(iface._cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
         
         _IPv4(ip)  # must have legal ip
-        config = _IfaceConfig(iface, ip, gateway, tc_rule, firewall, 
+        config = _IfaceConfig(iface, ip, gateway, mtu, tc_rule, firewall, 
                               lease_start, lease_end, NatType.none, 0)
         self._iface_configs.append(config)
 
@@ -808,46 +800,54 @@ class _Domain():
     
 
 class DNSServer(_Service):
-    def __init__(self, ttl: int = 600, log: bool = False, dns_servers: list[str] = None, 
+    def __init__(self, cache: int = 600, log: bool = False, dns_servers: list[str] = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
-                 forward: bool = False, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+                 ttl: int = 64):
         """
         @params:
-            - ttl: The time-to-live for the resolved record in seconds.
+            - cache: The cache duration for the resolved record in seconds.
             - log: Enable or disable logging of queries.
             - dns_servers: The IPv4 addresses of the DNS servers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
-            - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        WARNING:
-            - Only Nameservers cache DNS responses. If DNS caching is important, 
-              use a local Nameserver.
+            - ttl: Configure the default ttl for packets.
         Note:
             - resolv.conf only uses the first Nameserver. Most services use resolv.conf
               and are therefore limited to a single nameserver. 
               dnsmasq, on the other hand, is configured to use many nameservers.
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
+            - Only Nameservers cache DNS responses. If DNS caching is important, 
+              use a local Nameserver.
         """
 
         super().__init__(_ServiceType.dns, "dnsmasq", dns_servers, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+                         swap_limit, False, SynCookieType.enable, CongestionControlType.cubic, 
+                         True, True, True, ttl)
         
-        assert(ttl > 0)
-        self._ttl = ttl
+        assert(cache > 0)
+        self._cache = cache
 
         self._log = log
         self._domains = []
+
+    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, tc_rule: TCRule = None, 
+                  firewall: FirewallType = FirewallType.none) -> None:
+        """
+        @params:
+            - iface: The network interface.
+            - ip: The IPv4 address of the service.
+            - gateway: The IPv4 address of the gateway.
+            - tc_rule: The configured TC rule.
+            - firewall: The configured firewall.
+        Note:
+            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
+              gateway, and nameservers.
+        """
+
+        config = _IfaceConfig(iface, ip, gateway, 1500, tc_rule, firewall,
+                              None, None, NatType.none, 0)
+        self._iface_configs.append(config)
 
     def register(self, name: str, ip: str) -> None:
         """
@@ -882,11 +882,10 @@ class LBAlgorithm(Enum):
 class LoadBalancer(_Service):
     def __init__(self, backends: list[str], type: LBType = LBType.l5, 
                  algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: bool = False, 
-                 health_check: str = "/", dns_server: str = None, cpu_limit: float = 0.5, 
-                 mem_limit: int = 256, swap_limit: int = 64, forward: bool = False, 
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
+                 health_check: str = "/", cpu_limit: float = 0.5, mem_limit: int = 256, 
+                 swap_limit: int = 64, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
         @params:
             - backends: The list of IPv4 addresses to balance between.
@@ -894,32 +893,26 @@ class LoadBalancer(_Service):
             - algorithm: The algorithm to use for backend selection.
             - advertise: Enable or disable route advertising by OSPF.
             - health_check: The server page to request for health checks.
-            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        WARNING:
-            - The interface that is being advertised must be added to the load balancer.
+            - fast_retran: Enable or disable fast retransmission.
+            - sack: Enable or disable selective acknowledgments.
+            - ttl: Configure the default ttl for packets.
         Note:
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
+            - The interface that is being advertised must be added to the load balancer.
         """
 
-        dns_server = [dns_server] if dns_server else None
-        super().__init__(_ServiceType.lb, "haproxy", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+        super().__init__(_ServiceType.lb, "haproxy", None, cpu_limit, mem_limit, 
+                         swap_limit, False, syn_cookie, congestion_control, fast_retran,
+                         sack, True, ttl)
 
-        self._backends = []
         assert(len(backends) > 0)
 
+        self._backends = []
         for backend in backends:
             ip = _IPv4(backend)
             self._backends.append(ip)
@@ -942,60 +935,46 @@ class ECMPType(Enum):
 
 
 class Router(_Service):
-    def __init__(self, ecmp: ECMPType = ECMPType.none, dns_server: str = None, 
-                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
-                 forward: bool = True, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retrans: bool = True, sacks: bool = True, timestamps: bool = True):
+    def __init__(self, ecmp: ECMPType = ECMPType.none, cpu_limit: float = 0.5, 
+                 mem_limit: int = 256, swap_limit: int = 64):
         """
         @params:
             - ecmp: Configure ECMP.
-            - dns_server: The IPv4 addresses of the DNS server.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
-            - forward: Enable or disable packet forwarding.
-            - syn_cookie: Configure SYN cookies.
-            - congestion_control: Configure congestion control.
-            - fast_retrans: Enable or disable fast retransmission.
-            - sacks: Enable or disable selective acknowledgments.
-            - timestamps: Enable or disable tcp timestamps.
-        WARNING:
-            - ECMP requires that CONFIG_IP_ROUTE_MULTIPATH is enabled on the host machine.
-              See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
         Note:
             - Uses OSPF for routing. OSPF filters for (1) the longest prefix match, 
               and then selects (2) the route with the lowest cost.
-            - ECN is not supported as the tc queueing discipline used for rate does not
-              support ECN notifications.
+            - ECMP requires that CONFIG_IP_ROUTE_MULTIPATH is enabled on the host machine.
+              See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
         """
 
-        dns_server = [dns_server] if dns_server else None
-        super().__init__(_ServiceType.router, "bird", dns_server, cpu_limit, mem_limit,
-                         swap_limit, forward, syn_cookie, congestion_control, fast_retrans,
-                         sacks, timestamps)
+        super().__init__(_ServiceType.router, "bird", None, cpu_limit, mem_limit,
+                         swap_limit, True, SynCookieType.enable, CongestionControlType.cubic, 
+                         True, True, True, 64)
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, nat: NatType = NatType.none,
+    def add_iface(self, iface: Iface, ip: str = None, mtu: int = 1500, nat: NatType = NatType.none, 
                   cost: int = 10, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
-            - gateway: The IPv4 address of the gateway.
-            - nat: Configure NAT. Only implemented on routers.
-            - cost: The cost of routing traffic by the interface. Only implemented on routers.
+            - mtu: Configure the MTU. An MTU of none disables TSO.
+            - nat: Configure NAT. 
+            - cost: The cost of routing traffic by the interface.
             - tc_rule: The configured TC rule.
             - firewall: The configured firewall.
-        WARNING:
+        Note:
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
               gateway, and nameserver.
         """
 
-        config = _IfaceConfig(iface, ip, gateway, tc_rule, firewall,
-                              None, None, nat, cost)
+        config = _IfaceConfig(iface, ip, None, mtu, tc_rule, firewall, None, 
+                              None, nat, cost)
         self._iface_configs.append(config)
 
     def __str__(self) -> str:
