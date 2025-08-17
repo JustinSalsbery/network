@@ -49,9 +49,18 @@ done
 #   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
 
 # setup nameservers
-FILE="/etc/resolv.conf"
-echo "# use dnsmasq for dns resolution" > $FILE  # intentional delete
-echo "nameserver 127.0.0.1" >> $FILE
+if [ "$NAMESERVERS" != "none" ]; then
+    FILE="/etc/resolv.conf"  # delete in case resolv was configured by dhcp
+    echo "# only the first nameserver will be used" > $FILE
+
+    echo "# if the nameserver is localhost, dnsmasq is used " >> $FILE
+    echo "nameserver 127.0.0.1" >> $FILE
+    echo "" >> $FILE  # new line
+
+    for NAMESERVER in $NAMESERVERS; do
+        echo "nameserver $NAMESERVER" >> $FILE
+    done
+fi
 
 # setup tc rules
 # each interface may have one tc rule

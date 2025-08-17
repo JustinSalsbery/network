@@ -43,7 +43,6 @@ def monitor_stats():
         for line in o[1:]:
             line = line.split()
 
-            container_id = line[0]
             container_name = line[1]
             cpu_perc = line[2]
             mem_usage = to_bytes(line[3])
@@ -55,23 +54,23 @@ def monitor_stats():
             disk_write = to_bytes(line[12])
             pids = line[13]
 
-            if container_id not in CONTAINERS:
-                CONTAINERS[container_id] = []
+            if container_name not in CONTAINERS:
+                CONTAINERS[container_name] = []
 
-            CONTAINERS[container_id].append(f"{time():1f},{container_id},{container_name},"
-                                            + f"{cpu_perc},{mem_usage},{mem_limit},{mem_perc},"
+            CONTAINERS[container_name].append(f"{time():1f},{container_name},{cpu_perc},"
+                                            + f"{mem_usage},{mem_limit},{mem_perc},"
                                             + f"{net_received},{net_transmitted},"
                                             + f"{disk_read},{disk_write},{pids}\n")
-            
+        
         sleep(WAIT)
 
 
 def write_stats():
-    header = "timestamp,container_id,container_name,cpu_perc,mem_usage,mem_limit,mem_perc," \
-             + "net_received,net_transmitted,disk_read,disk_write,pids\n"
+    header = "timestamp, container_name, cpu_perc (%), mem_usage (Bytes), mem_limit (Bytes), mem_perc (%), " \
+             + "net_received (Bytes), net_transmitted (Bytes), disk_read (Bytes), disk_write (Bytes), pids\n"
     
-    for container_id, stats in CONTAINERS.items():
-        with open(f"{OUTPUT}/stats-{container_id}.csv", "w") as file:
+    for container_name, stats in CONTAINERS.items():
+        with open(f"{OUTPUT}/stats-{container_name}.csv", "w") as file:
             file.write(header)
             
             for stat in stats:

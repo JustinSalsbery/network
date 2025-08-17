@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 PYTHON ?= python3
 
-CONFIG ?= main.py
+CONFIG ?= main.py # default configuration for network
 
 
 .ONESHELL:
@@ -20,7 +20,7 @@ options help:
 
 	echo "Helper:"
 	echo -e "\t- config   # write docker-compose only"
-	echo -e "\t- configs  # list available configurations"
+	echo -e "\t- list     # list available configurations"
 	echo -e "\t- graph    # create network graph"
 	echo -e "\t- stats"
 
@@ -73,7 +73,7 @@ config: down
 	mkdir -p shared
 	${PYTHON} scripts/config/${CONFIG}
 
-configs:
+list:
 	echo "Configurations:"
 
 	CONFIGS="$$(ls scripts/config/*.py)"

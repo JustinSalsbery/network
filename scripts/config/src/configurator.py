@@ -216,8 +216,9 @@ class Configurator():
         """
 
         file.write(f"{_SPACE * 1}{service._name}:\n")
-        file.write(f"{_SPACE * 2}container_name: {service._name}\n")
         file.write(f"{_SPACE * 2}image: {service._image}\n")
+        file.write(f"{_SPACE * 2}container_name: {service._name}\n")
+        file.write(f"{_SPACE * 2}hostname: {service._name}\n")
         file.write(f"{_SPACE * 2}restart: unless-stopped\n")
         file.write(f"{_SPACE * 2}deploy:\n")
         file.write(f"{_SPACE * 3}resources:\n")

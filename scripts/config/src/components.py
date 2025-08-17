@@ -891,7 +891,7 @@ class LoadBalancer(_Service):
             - backends: The list of IPv4 addresses to balance between.
             - type: The type of the load balancer.
             - algorithm: The algorithm to use for backend selection.
-            - advertise: Enable or disable route advertising by OSPF.
+            - advertise: If enabled, all interfaces will be advertised by OSPF.
             - health_check: The server page to request for health checks.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
@@ -902,8 +902,6 @@ class LoadBalancer(_Service):
             - fast_retran: Enable or disable fast retransmission.
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
-        Note:
-            - The interface that is being advertised must be added to the load balancer.
         """
 
         super().__init__(_ServiceType.lb, "haproxy", None, cpu_limit, mem_limit, 

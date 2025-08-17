@@ -49,12 +49,14 @@ done
 #   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
 
 # setup nameservers
-# only the first nameserver in resolv.conf will be used
-for NAMESERVER in $NAMESERVERS; do
-    if [ "$NAMESERVER" != "none" ]; then
-        echo "nameserver $NAMESERVER" > /etc/resolv.conf  # intentional delete
-    fi
-done
+if [ "$NAMESERVER" != "none" ]; then
+    FILE="/etc/resolv.conf"  # delete in case resolv was configured by dhcp
+    echo "# only the first nameserver will be used" > $FILE
+
+    for NAMESERVER in $NAMESERVERS; do
+        echo "nameserver $NAMESERVER" >> $FILE
+    done
+fi
 
 # setup tc rules
 # each interface may have one tc rule
