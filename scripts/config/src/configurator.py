@@ -61,7 +61,7 @@ class Configurator():
             clients = _comps[_ServiceType.client.name]
 
         for client in clients:
-            assert(type(client) == Client)
+            assert isinstance(client, Client)
             self.__write_service(file, client)
 
         # write traffic generators
@@ -71,7 +71,7 @@ class Configurator():
             tgens = _comps[_ServiceType.tgen.name]
 
         for tgen in tgens:
-            assert(type(tgen) == TrafficGenerator)
+            assert isinstance(tgen, TrafficGenerator)
             self.__write_service(file, tgen)
 
             file.write(f"{_SPACE * 3}# Locust configuration:\n")
@@ -92,7 +92,7 @@ class Configurator():
             http_servers = _comps[_ServiceType.http.name]
 
         for http_server in http_servers:
-            assert(type(http_server) == HTTPServer)
+            assert isinstance(http_server, HTTPServer)
             self.__write_service(file, http_server)
 
         # write dhcp servers
@@ -102,7 +102,7 @@ class Configurator():
             dhcp_servers = _comps[_ServiceType.dhcp.name]
 
         for dhcp_server in dhcp_servers:
-            assert(type(dhcp_server) == DHCPServer)
+            assert isinstance(dhcp_server, DHCPServer)
             self.__write_service(file, dhcp_server)
 
             file.write(f"{_SPACE * 3}# DHCP Server configuration:\n")
@@ -112,7 +112,7 @@ class Configurator():
             lease_ends = []
 
             for config in dhcp_server._iface_configs:
-                assert(type(config) == _IfaceConfig)
+                assert isinstance(config, _IfaceConfig)
 
                 assert(config._lease_start and config._lease_end)
                 lease_starts.append(config._lease_start._str)
@@ -128,7 +128,7 @@ class Configurator():
             dns_servers = _comps[_ServiceType.dns.name]
 
         for dns_server in dns_servers:
-            assert(type(dns_server) == DNSServer)
+            assert isinstance(dns_server, DNSServer)
             self.__write_service(file, dns_server)
 
             file.write(f"{_SPACE * 3}# DNS Server configuration:\n")
@@ -139,7 +139,7 @@ class Configurator():
             ips = []
 
             for domain in dns_server._domains:
-                assert(type(domain) == _Domain)
+                assert isinstance(domain, _Domain)
 
                 names.append(domain._name)
                 ips.append(domain._ip._str)
@@ -156,7 +156,7 @@ class Configurator():
             lbs = _comps[_ServiceType.lb.name]
 
         for lb in lbs:
-            assert(type(lb) == LoadBalancer)
+            assert isinstance(lb, LoadBalancer)
             self.__write_service(file, lb)
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
@@ -171,7 +171,7 @@ class Configurator():
 
             backends = []  # required
             for backend in lb._backends:
-                assert(type(backend) == _IPv4)
+                assert isinstance(backend, _IPv4)
                 backends.append(backend._str)
 
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
@@ -183,7 +183,7 @@ class Configurator():
             routers = _comps[_ServiceType.router.name]
 
         for router in routers:
-            assert(type(router) == Router)
+            assert isinstance(router, Router)
             self.__write_service(file, router)
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
@@ -198,7 +198,7 @@ class Configurator():
             costs = []
 
             for config in router._iface_configs:
-                assert(type(config) == _IfaceConfig)
+                assert isinstance(config, _IfaceConfig)
 
                 cidrs.append(config._iface._cidr._str)
                 nats.append(config._nat.name)
@@ -237,7 +237,7 @@ class Configurator():
             file.write(f"{_SPACE * 2}networks:\n")
 
             for config in service._iface_configs:
-                assert(type(config) == _IfaceConfig)
+                assert isinstance(config, _IfaceConfig)
                 file.write(f"{_SPACE * 3}- {config._iface._name}\n")
 
         file.write(f"{_SPACE * 2}cap_add:\n")
@@ -249,7 +249,7 @@ class Configurator():
         dns_servers = []
         if service._dns_servers:
             for dns_server in service._dns_servers:
-                assert(type(dns_server) == _IPv4)
+                assert isinstance(dns_server, _IPv4)
                 dns_servers.append(dns_server._str)
         else:
             dns_servers.append("none")
@@ -271,7 +271,7 @@ class Configurator():
         firewalls = []
 
         for config in service._iface_configs:
-            assert(type(config) == _IfaceConfig)
+            assert isinstance(config, _IfaceConfig)
 
             ifaces.append(config._iface._name)
             ips.append(config._ip._str if config._ip else "none")
@@ -293,7 +293,6 @@ class Configurator():
         self.__write_tc_rules(file, service)
 
     def __write_tc_rules(self, file: TextIOWrapper, service: _Service):
-        tc_rules = []
         rates = []
         delays = []
         jitters = []
@@ -303,47 +302,19 @@ class Configurator():
         queue_limits = []
 
         for config in service._iface_configs:
-            assert(type(config) == _IfaceConfig)
+            assert isinstance(config, _IfaceConfig)
 
             tc_rule = config._tc_rule
 
-            tc_rules.append("none")  # defaults
-            rates.append("none")
-            delays.append("none")
-            jitters.append("none")
-            drops.append("none")
-            corrupts.append("none")
-            duplicates.append("none")
-            queue_limits.append("none")
-
-            if isinstance(tc_rule, TCRate):
-                tc_rules[-1] = "rate"
-                rates[-1] = f"{tc_rule._rate}"
-                queue_limits[-1] = f"{tc_rule._queue_limit}"
-
-            elif isinstance(tc_rule, TCDelay):
-                tc_rules[-1] ="delay" 
-                delays[-1] = f"{tc_rule._delay}"
-                jitters[-1] = f"{tc_rule._jitter}"
-                queue_limits[-1] = f"{tc_rule._queue_limit}"
-
-            elif isinstance(tc_rule, TCDrop):
-                tc_rules[-1] = "drop"
-                drops[-1] = f"{tc_rule._drop}"
-                queue_limits[-1] = f"{tc_rule._queue_limit}"
-
-            elif isinstance(tc_rule, TCCorrupt):
-                tc_rules[-1] = "corrupt"
-                corrupts[-1] = f"{tc_rule._corrupt}"
-                queue_limits[-1] = f"{tc_rule._queue_limit}"
-
-            elif isinstance(tc_rule, TCDuplicate):
-                tc_rules[-1] = "duplicate"
-                duplicates[-1] = f"{tc_rule._duplicate}"
-                queue_limits[-1] = f"{tc_rule._queue_limit}"
+            rates.append(tc_rule._rate if tc_rule else "none")
+            delays.append(tc_rule._delay if tc_rule else "none")
+            jitters.append(tc_rule._jitter if tc_rule else "none")
+            drops.append(tc_rule._drop if tc_rule else "none")
+            corrupts.append(tc_rule._corrupt if tc_rule else "none")
+            duplicates.append(tc_rule._duplicate if tc_rule else "none")
+            queue_limits.append(tc_rule._queue_limit if tc_rule else "none")
         
         file.write(f"{_SPACE * 3}# TC Rule configurations:\n")
-        file.write(f"{_SPACE * 3}TC_RULES: {" ".join(tc_rules)}\n")
         file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}\n")
         file.write(f"{_SPACE * 3}DELAYS: {" ".join(delays)}\n")
         file.write(f"{_SPACE * 3}JITTERS: {" ".join(jitters)}\n")
@@ -364,7 +335,7 @@ class Configurator():
             file.write("networks:\n")
 
         for iface in ifaces:
-            assert(type(iface) == Iface)
+            assert isinstance(iface, Iface)
 
             file.write(f"{_SPACE * 1}{iface._name}:\n")
             file.write(f"{_SPACE * 2}name: {iface._name}\n")

@@ -218,87 +218,42 @@ class _CIDR():
 
 
 class TCRule():
-    def __init__(self):
-        """
-        Note:
-            - Not implemented. Instantiating will raise NotImplementedError!
-        """
-
-        raise NotImplementedError
-
-
-class TCRate(TCRule):
-    def __init__(self, rate: int, queue_limit: int =  2500):
+    def __init__(self, rate: int = 0, drop: int = 0, corrupt: int = 0, duplicate: int = 0,
+                 delay: int = 0, jitter: int = 0, queue_limit: int =  2500):
         """
         @params:
-            - rate: Set link bandwidth. In units of kilobits per second.
-            - queue_limit: Maximum number of packets in queue.
-        """
-
-        assert(rate > 0 and queue_limit > 0)
-
-        self._rate = rate
-        self._queue_limit = queue_limit
-
-
-class TCDelay(TCRule):
-    def __init__(self, delay: int, jitter: int = 0, queue_limit: int = 2500):
-        """
-        @params:
+            - rate: Set link bandwidth. A rate of 0 is unlimited. In units of kilobits per second.
+            - drop: Drop random traffic. In unit of percents.
+            - corrupt: Corrupt random packets. In units of percents.
+            - duplicate: Duplicate random packets. In units of percents.
             - delay: Set a delay on traffic. In units of milliseconds.
             - jitter: Variance on delay, ex. delay +/- jitter. In units of milliseconds.
             - queue_limit: Maximum number of packets in queue.
         Note:
-            - Packets will be reordered if the jitter is large enough.
+            - jitter requires that a delay is configured. If jitter is large enough, 
+              packets will be reordered.
         """
-        
-        assert(delay >= 0 and jitter >= 0 and queue_limit > 0)
+
+        assert(rate >= 0)
+        self._rate = rate
+
+        assert(0 <= drop <= 100)
+        self._drop = drop
+
+        assert(0 <= corrupt <= 100)
+        self._corrupt = corrupt
+
+        assert(0 <= duplicate <= 100)
+        self._duplicate = duplicate
+
+        assert(delay >= 0 and jitter >= 0 and \
+               delay > 0 if jitter > 0 else False)
         # assert(delay - jitter > 0)  # unnecessary
 
         self._delay = delay
         self._jitter = jitter
-        self._queue_limit = queue_limit
 
-
-class TCDrop(TCRule):
-    def __init__(self, drop: int, queue_limit: int = 2500):
-        """
-        @params:
-            - drop: Drop random traffic. In unit of percents.
-            - queue_limit: Maximum number of packets in queue.
-        """
-
-        assert(0 <= drop <= 100 and queue_limit > 0)
-
-        self._drop = drop
-        self._queue_limit = queue_limit
-
-
-class TCCorrupt(TCRule):
-    def __init__(self, corrupt: int, queue_limit: int = 2500):
-        """
-        @params:
-            - corrupt: Corrupt random packets. In units of percents.
-            - queue_limit: Maximum number of packets in queue.
-        """
-
-        assert(0 <= corrupt <= 100 and queue_limit > 0)
-
-        self._corrupt = corrupt
-        self._queue_limit = queue_limit
-
-
-class TCDuplicate(TCRule):
-    def __init__(self, duplicate: int, queue_limit: int = 2500):
-        """
-        @params:
-            - duplicate: Duplicate random packets. In units of percents.
-            - queue_limit: Maximum number of packets in queue.
-        """
-
-        assert(0 <= duplicate <= 100 and queue_limit > 0)
-
-        self._duplicate = duplicate
+        assert(queue_limit > 0)
         self._queue_limit = queue_limit
 
 
@@ -396,6 +351,7 @@ class _IfaceConfig():
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
         """
 
+        assert isinstance(iface, Iface)
         self._iface = iface
 
         self._ip = None

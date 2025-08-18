@@ -57,9 +57,6 @@ fi
 # setup tc rules
 # each interface may have one tc rule
 for IFACE in $IFACES; do
-    TC_RULE="$(echo $TC_RULES | cut -d' ' -f1)"
-    TC_RULES="$(echo $TC_RULES | cut -d' ' -f2-)"
-
     RATE="$(echo $RATES | cut -d' ' -f1)"
     RATES="$(echo $RATES | cut -d' ' -f2-)"
 
@@ -81,17 +78,9 @@ for IFACE in $IFACES; do
     QUEUE_LIMIT="$(echo $QUEUE_LIMITS | cut -d' ' -f1)"
     QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
-    if [ "$TC_RULE" = "rate" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit
-    elif [ "$TC_RULE" = "delay" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} delay ${DELAY}ms ${JITTER}ms
-    elif [ "$TC_RULE" = "drop" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} loss random ${DROP}%
-    elif [ "$TC_RULE" = "corrupt" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} corrupt ${CORRUPT}%
-    elif [ "$TC_RULE" = "duplicate" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} duplicate ${DUPLICATE}%
-    fi
+    # tc ignores arguments of 0
+    tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
+    delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
 done
 
 # Useful tc commands:
@@ -214,6 +203,9 @@ for IFACE in $IFACES; do
     GATEWAY="$(echo $GATEWAYS | cut -d' ' -f1)"
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
+    MTU="$(echo $MTUS | cut -d' ' -f1)"
+    MTUS="$(echo $MTUS | cut -d' ' -f2-)"
+
     LEASE_START="$(echo $LEASE_STARTS | cut -d' ' -f1)"
     LEASE_STARTS="$(echo $LEASE_STARTS | cut -d' ' -f2-)"
 
@@ -223,11 +215,21 @@ for IFACE in $IFACES; do
     FILE="/etc/udhcpd.conf"
 
     echo "interface ${IFACE}_0" > $FILE
-    echo "opt subnet $NET_MASK" >> $FILE
     echo "" >> $FILE  # new line
+    echo "# IP lease block" >> $FILE
+    echo "start $LEASE_START" >> $FILE
+    echo "end $LEASE_END" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "opt subnet $NET_MASK" >> $FILE
+    echo "opt lease $LEASE_TIME  # seconds" >> $FILE
 
     if [ "$GATEWAY" != "none" ]; then
         echo "opt router $GATEWAY" >> $FILE
+    fi
+
+    if [ "$MTU" != "none" ]; then
+        # dhcp clients do not disable TSO currently
+        echo "opt mtu $MTU" >> $FILE
     fi
 
     for NAMESERVER in $NAMESERVERS; do
@@ -235,21 +237,6 @@ for IFACE in $IFACES; do
             echo "opt dns $NAMESERVER" >> $FILE
         fi
     done
-
-    for MTU in $MTUS; do
-        if [ "$MTU" != "none" ]; then
-            echo "opt mtu $MTU" >> $FILE
-        fi
-    done
-
-    echo "" >> $FILE  # new line
-    echo "# IP lease block" >> $FILE
-    echo "start  $LEASE_START" >> $FILE
-    echo "end    $LEASE_END" >> $FILE
-    echo "" >> $FILE  # new line
-    echo "opt lease $LEASE_TIME" >> $FILE
-    echo "lease_file /app/udhcpd.leases" >> $FILE
-    echo "auto_time 600" >> $FILE  # write out leases
 done
 
 udhcpd  # run

@@ -26,8 +26,8 @@ for IFACE in $IFACES; do
         # docker mounts resolv.conf and unmounting is required to write
         umount /etc/resolv.conf
 
-        # if dhcp fails, the interface does not exist
-        udhcpc -i ${IFACE}_0 -t 25 -n || continue
+        # if dhcp fails, the interface is not configured
+        udhcpc -i ${IFACE}_0 -t 25 -n
     else # manual
         ifconfig ${IFACE}_0 $IP netmask $NET_MASK
     fi
@@ -61,9 +61,6 @@ fi
 # setup tc rules
 # each interface may have one tc rule
 for IFACE in $IFACES; do
-    TC_RULE="$(echo $TC_RULES | cut -d' ' -f1)"
-    TC_RULES="$(echo $TC_RULES | cut -d' ' -f2-)"
-
     RATE="$(echo $RATES | cut -d' ' -f1)"
     RATES="$(echo $RATES | cut -d' ' -f2-)"
 
@@ -85,17 +82,9 @@ for IFACE in $IFACES; do
     QUEUE_LIMIT="$(echo $QUEUE_LIMITS | cut -d' ' -f1)"
     QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
-    if [ "$TC_RULE" = "rate" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit
-    elif [ "$TC_RULE" = "delay" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} delay ${DELAY}ms ${JITTER}ms
-    elif [ "$TC_RULE" = "drop" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} loss random ${DROP}%
-    elif [ "$TC_RULE" = "corrupt" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} corrupt ${CORRUPT}%
-    elif [ "$TC_RULE" = "duplicate" ]; then
-        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} duplicate ${DUPLICATE}%
-    fi
+    # tc ignores arguments of 0
+    tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
+    delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
 done
 
 # Useful tc commands:

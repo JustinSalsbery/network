@@ -84,7 +84,7 @@ class Grapher():
         file.write("\n")  # new line
         file.write("\t# IFACES\n")
         for iface in self.__ifaces:
-            assert(type(iface) == Iface)
+            assert isinstance(iface, Iface)
 
             name = iface._name
             file.write(f"\t\"{name}\" [ ")
@@ -111,7 +111,7 @@ class Grapher():
                 name_service = service._name
 
                 for config in service._iface_configs:
-                    assert(type(config) == _IfaceConfig)
+                    assert isinstance(config, _IfaceConfig)
 
                     name_iface = config._iface._name
 
