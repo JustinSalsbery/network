@@ -43,7 +43,7 @@ certs:
 	# combine the public and private keys
 	cat ${CERTS_LB}/public.crt ${CERTS_LB}/private.key > ${CERTS_LB}/cert.pem
 
-build: down certs
+build: certs
 	FILES=$$(find components -name "Dockerfile")
 	for FILE in $$FILES; do
 		NAME=$$(basename $$(dirname $$FILE))

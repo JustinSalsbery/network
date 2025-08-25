@@ -247,8 +247,7 @@ class TCRule():
         self._duplicate = duplicate
 
         assert(delay >= 0 and jitter >= 0 and \
-               delay > 0 if jitter > 0 else False)
-        # assert(delay - jitter > 0)  # unnecessary
+               delay - jitter >= 0)
 
         self._delay = delay
         self._jitter = jitter
@@ -599,7 +598,9 @@ class TrafficGenerator(_Service):
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
         Note:
-            - Locust prioritizes creating new connections over successful requests.
+            - The traffic generator waits for 60 seconds before starting.
+              This delay allows time for routes to settle on any routers.
+            - The traffic generator prioritizes creating new connections over successful requests.
         """
 
         dns_server = [dns_server] if dns_server else None
@@ -658,11 +659,11 @@ class HTTPServer(_Service):
             - ttl: Configure the default ttl for packets.
         Note:
             - Both HTTP (80) and HTTPS (443) are enabled.
+            - In the real world, HTTPS requires a certificate signed by a trusted
+              Certificate Authority (CA).
             - Many encrypted protocols require clock synchronization, such as HTTPS 
               and Tor. Docker uses the host clock so explicit synchronization, such
               as by NTP, is unnecessary.
-            - In the real world, HTTPS requires a certificate signed by a trusted
-              Certificate Authority (CA).
         """
 
         super().__init__(_ServiceType.http, "nginx", None, cpu_limit, mem_limit, 
