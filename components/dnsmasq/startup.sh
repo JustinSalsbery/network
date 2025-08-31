@@ -86,9 +86,11 @@ for IFACE in $IFACES; do
     QUEUE_LIMIT="$(echo $QUEUE_LIMITS | cut -d' ' -f1)"
     QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
-    # tc ignores arguments of 0
-    tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
-    delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
+    # tc ignores arguments of 0, except for QUEUE_LIMIT
+    if [ "$QUEUE_LIMIT" != "0" ]; then
+        tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
+        delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
+    fi
 done
 
 # Useful tc commands:

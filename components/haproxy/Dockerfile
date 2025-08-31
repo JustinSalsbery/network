@@ -13,12 +13,13 @@ RUN apk add bird haproxy
 
 WORKDIR /app
 
-COPY ./ssl ./ssl
-
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
 
 RUN mkdir ./shared
+
+COPY ./ssl ./ssl
+COPY ./scripts ./scripts
 
 COPY ./startup.sh .
 RUN chmod +x ./startup.sh

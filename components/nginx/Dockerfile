@@ -12,16 +12,17 @@ RUN apk add nginx
 
 WORKDIR /app
 
-COPY ./ssl ./ssl
-COPY ./www ./www
-
-COPY ./conf/nginx.conf /etc/nginx/nginx.conf
-COPY ./conf/default.conf /etc/nginx/http.d/default.conf
-
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
 
 RUN mkdir ./shared
+
+COPY ./conf/nginx.conf /etc/nginx/nginx.conf
+COPY ./conf/default.conf /etc/nginx/http.d/default.conf
+
+COPY ./ssl ./ssl
+COPY ./www ./www
+COPY ./scripts ./scripts
 
 COPY ./startup.sh .
 RUN chmod +x ./startup.sh

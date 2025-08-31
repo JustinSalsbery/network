@@ -18,6 +18,8 @@ WORKDIR /app
 
 RUN mkdir ./shared
 
+COPY ./scripts ./scripts
+
 COPY ./startup.sh .
 RUN chmod +x ./startup.sh
 
