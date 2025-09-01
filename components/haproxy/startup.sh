@@ -49,7 +49,7 @@ done
 #   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
 
 # setup nameservers
-if [ "$NAMESERVER" != "none" ]; then
+if [ "$NAMESERVERS" != "none" ]; then
     FILE="/etc/resolv.conf"  # delete in case resolv was configured by dhcp
     echo "# only the first nameserver will be used" > $FILE
 

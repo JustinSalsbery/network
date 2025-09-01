@@ -148,7 +148,7 @@ class Configurator():
 
         # write load balancers
 
-        router_id = 0  # necessary for ECMP advertisements
+        router_id = 1  # necessary for ECMP advertisements; 0 is illegal
 
         lbs = []
         if _ServiceType.lb.name in _comps:

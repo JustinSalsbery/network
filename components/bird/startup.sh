@@ -49,7 +49,7 @@ done
 #   Enable/Disable: ethtool –K $IFACE <setting> <on/off>
 
 # setup nameservers
-if [ "$NAMESERVER" != "none" ]; then
+if [ "$NAMESERVERS" != "none" ]; then
     FILE="/etc/resolv.conf"  # delete in case resolv was configured by dhcp
     echo "# only the first nameserver will be used" > $FILE
 
@@ -229,7 +229,7 @@ done
 FILE="/etc/bird.conf"
 
 echo "router id $ROUTER_ID;" > $FILE
-echo "log syslog all;" >> $FILE
+echo "log \"shared/${HOSTNAME}/bird.log\" all;" >> $FILE
 echo "" >> $FILE # new line
 echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $FILE
 echo "# routes and it only serves as a module for getting information about network" >> $FILE
@@ -305,8 +305,11 @@ echo -e "\timport none;" >> $FILE
 echo -e "\texport all;" >> $FILE
 echo "}" >> $FILE
 
+mkdir -p shared/$HOSTNAME/
+chmod 777 shared/$HOSTNAME/
+
 # run
-trap "exit 0" SIGTERM
+trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     bird -f &

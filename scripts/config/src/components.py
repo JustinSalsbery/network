@@ -486,9 +486,10 @@ class _Service():
         assert(swap_limit >= 0)
         self._swap_limit = swap_limit
         
-        self._dns_servers = []
         if dns_servers:
-            assert(len(dns_servers) <= 64)
+            assert(0 < len(dns_servers) <= 64)
+
+            self._dns_servers = []
             for dns_server in dns_servers:
                 ip = _IPv4(dns_server)
                 self._dns_servers.append(ip)
