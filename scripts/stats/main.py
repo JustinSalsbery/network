@@ -1,4 +1,5 @@
 
+from signal import signal, SIGINT
 from subprocess import getstatusoutput
 from time import time, sleep
 
@@ -59,20 +60,24 @@ def write_stats():
 
                 file = open(f"{OUTPUT}/{container_name}/hardware_stats.csv", "w")
                 containers[container_name] = file
-                file.write("timestamp, container_name, cpu_perc (%), mem_usage (Bytes), " \
-                           + "mem_limit (Bytes), mem_perc (%), net_received (Bytes), " \
-                           + "net_transmitted (Bytes), disk_read (Bytes), " \
-                           + "disk_write (Bytes), pids\n")
+                file.write("timestamp,container_name,cpu_perc (%),mem_usage (Bytes)," \
+                           + "mem_limit (Bytes),mem_perc (%),net_received (Bytes)," \
+                           + "net_transmitted (Bytes),disk_read (Bytes)," \
+                           + "disk_write (Bytes),pids\n")
 
             file = containers[container_name]
-            file.write(f"{time():1f}, {container_name}, {cpu_perc}, {mem_usage}, {mem_limit}, " \
-                       + f"{mem_perc}, {net_received}, {net_transmitted}, {disk_read}, "\
-                       + f"{disk_write}, {pids}\n")
-            
+            file.write(f"{time():1f},{container_name},{cpu_perc},{mem_usage},{mem_limit}," \
+                       + f"{mem_perc},{net_received},{net_transmitted},{disk_read},"\
+                       + f"{disk_write},{pids}\n")
             file.flush()
         
         sleep(WAIT)
 
 
+def signal_handler(sig, frame):
+    exit(0)
+
+
 if __name__ == "__main__":
+    signal(SIGINT, signal_handler)
     write_stats()

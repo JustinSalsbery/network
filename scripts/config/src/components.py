@@ -912,7 +912,7 @@ class Router(_Service):
         
         self._ecmp = ecmp
 
-    def add_iface(self, iface: Iface, ip: str = None, mtu: int = 1500, nat: NatType = NatType.none, 
+    def add_iface(self, iface: Iface, ip: str = None, mtu: int = None, nat: NatType = NatType.none, 
                   cost: int = 10, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
         """
         @params:
