@@ -233,14 +233,14 @@ if [ "$LOG" = "true" ]; then
     echo "log-facility=/app/dns.log" >> $FILE
 fi
 
-dnsmasq  # run
+# run
+if [ "$AUTO_RESTART" = "true" ]; then
+    dnsmasq -k
+else
+    dnsmasq
+    sleep infinity
+fi
 
 # Useful commands:
 #   Query A    record (IPv4): dig <DOMAIN NAME>
 #   Query AAAA record (IPv6): dig aaaa <DOMAIN NAME>
-
-# sleep
-trap "exit 0" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep

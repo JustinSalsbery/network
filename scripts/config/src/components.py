@@ -449,14 +449,16 @@ class SynCookieType(Enum):
 
 
 class _Service():
-    def __init__(self, type: _ServiceType, image: str, dns_servers: list[str], 
-                 cpu_limit: float, mem_limit: int, swap_limit: int, forward: bool, 
-                 syn_cookie: SynCookieType, congestion_control: CongestionControlType, 
+    def __init__(self, type: _ServiceType, image: str, auto_restart: bool, 
+                 dns_servers: list[str], cpu_limit: float, mem_limit: int, swap_limit: int, 
+                 forward: bool, syn_cookie: SynCookieType, congestion_control: CongestionControlType, 
                  fast_retran: bool, sack: bool, timestamp: bool, ttl: int):
         """
         @params:
             - type: The type of the service.
             - image: The name of the Docker image.
+            - auto_restart: If disabled, allows manually editing the configurations. 
+                            Useful for development.
             - dns_servers: The IPv4 addresses of the DNS servers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
@@ -473,6 +475,7 @@ class _Service():
 
         self._type = type
         self._image = image
+        self._auto_restart = auto_restart
 
         assert(cpu_limit > 0)
         self._cpu_limit = cpu_limit
@@ -557,9 +560,9 @@ class Client(_Service):
         """
 
         dns_server = [dns_server] if dns_server else None
-        super().__init__(_ServiceType.client, "client", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, False, SynCookieType.enable, congestion_control, 
-                         fast_retran, sack, True, ttl)
+        super().__init__(_ServiceType.client, "client", True, dns_server, cpu_limit, 
+                         mem_limit, swap_limit, False, SynCookieType.enable, 
+                         congestion_control, fast_retran, sack, True, ttl)
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -604,9 +607,9 @@ class TrafficGenerator(_Service):
         """
 
         dns_server = [dns_server] if dns_server else None
-        super().__init__(_ServiceType.tgen, "locust", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, False, SynCookieType.enable, congestion_control, 
-                         fast_retran, sack, True, ttl)
+        super().__init__(_ServiceType.tgen, "locust", True, dns_server, cpu_limit, 
+                         mem_limit, swap_limit, False, SynCookieType.enable, 
+                         congestion_control, fast_retran, sack, True, ttl)
         
         assert(target != "")
         self._target = target
@@ -666,7 +669,7 @@ class HTTPServer(_Service):
               as by NTP, is unnecessary.
         """
 
-        super().__init__(_ServiceType.http, "nginx", None, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.http, "nginx", True, None, cpu_limit, mem_limit, 
                          swap_limit, False, syn_cookie, congestion_control, fast_retran,
                          sack, True, ttl)
 
@@ -691,9 +694,9 @@ class DHCPServer(_Service):
         """
 
         dns_server = [dns_server] if dns_server else None
-        super().__init__(_ServiceType.dhcp, "udhcpd", dns_server, cpu_limit, mem_limit, 
-                         swap_limit, False, SynCookieType.enable, CongestionControlType.cubic, 
-                         True, True, True, 64)
+        super().__init__(_ServiceType.dhcp, "udhcpd", True, dns_server, cpu_limit, 
+                         mem_limit, swap_limit, False, SynCookieType.enable, 
+                         CongestionControlType.cubic, True, True, True, 64)
         
         assert(lease_time > 0)
         self._lease_time = lease_time
@@ -778,9 +781,9 @@ class DNSServer(_Service):
               use a local Nameserver.
         """
 
-        super().__init__(_ServiceType.dns, "dnsmasq", dns_servers, cpu_limit, mem_limit, 
-                         swap_limit, False, SynCookieType.enable, CongestionControlType.cubic, 
-                         True, True, True, ttl)
+        super().__init__(_ServiceType.dns, "dnsmasq", True, dns_servers, cpu_limit, 
+                         mem_limit, swap_limit, False, SynCookieType.enable, 
+                         CongestionControlType.cubic, True, True, True, ttl)
         
         assert(cache > 0)
         self._cache = cache
@@ -861,7 +864,7 @@ class LoadBalancer(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        super().__init__(_ServiceType.lb, "haproxy", None, cpu_limit, mem_limit, 
+        super().__init__(_ServiceType.lb, "haproxy", True, None, cpu_limit, mem_limit, 
                          swap_limit, False, syn_cookie, congestion_control, fast_retran,
                          sack, True, ttl)
 
@@ -906,7 +909,7 @@ class Router(_Service):
               See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
         """
 
-        super().__init__(_ServiceType.router, "bird", None, cpu_limit, mem_limit,
+        super().__init__(_ServiceType.router, "bird", True, None, cpu_limit, mem_limit,
                          swap_limit, True, SynCookieType.enable, CongestionControlType.cubic, 
                          True, True, True, 64)
         

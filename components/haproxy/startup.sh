@@ -334,10 +334,10 @@ elif [ "$TYPE" == "l5" ]; then
     done
 fi
 
-haproxy -f $FILE &  # run haproxy
-
-# sleep
-trap "exit 0" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep
+# run
+if [ "$AUTO_RESTART" = "true" ]; then
+    haproxy -f $FILE
+else
+    haproxy -f $FILE &
+    sleep infinity
+fi

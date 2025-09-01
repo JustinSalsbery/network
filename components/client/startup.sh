@@ -201,8 +201,5 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# sleep
-trap "exit 0" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep
+# run
+sleep infinity

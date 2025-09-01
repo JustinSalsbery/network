@@ -305,9 +305,13 @@ echo -e "\timport none;" >> $FILE
 echo -e "\texport all;" >> $FILE
 echo "}" >> $FILE
 
-# run bird
-bird
-birdc configure
+# run
+if [ "$AUTO_RESTART" = "true" ]; then
+    bird -f
+else
+    bird
+    sleep infinity
+fi
 
 # Useful birdc commands:
 #   show protocols
@@ -316,9 +320,3 @@ birdc configure
 #   show ospf interface
 # Useful ip command:
 #   ip route
-
-# sleep
-trap "exit 0" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep

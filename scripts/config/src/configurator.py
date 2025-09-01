@@ -244,7 +244,6 @@ class Configurator():
         file.write(f"{_SPACE * 3}- NET_ADMIN  # enables ifconfig, route\n")
         file.write(f"{_SPACE * 2}privileged: true  # enables sysctl, kernel modules\n")
         file.write(f"{_SPACE * 2}environment:\n")
-        file.write(f"{_SPACE * 3}# Host configurations:\n")
 
         dns_servers = []
         if service._dns_servers:
@@ -254,6 +253,7 @@ class Configurator():
         else:
             dns_servers.append("none")
 
+        file.write(f"{_SPACE * 3}# Host configuration:\n")
         file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}  # alternative name for dns server\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
@@ -261,6 +261,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}FAST_RETRAN: {str(service._fast_retran).lower()}\n")
         file.write(f"{_SPACE * 3}SACK: {str(service._sack).lower()}\n")
         file.write(f"{_SPACE * 3}TIMESTAMP: {str(service._timestamp).lower()}\n")
+        file.write(f"{_SPACE * 3}AUTO_RESTART: {str(service._auto_restart).lower()}\n")
         file.write(f"{_SPACE * 3}TTL: {service._ttl}\n")
 
         ifaces = []

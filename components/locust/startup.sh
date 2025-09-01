@@ -234,14 +234,12 @@ echo -e "\t@task(1)" >> $FILE
 echo -e "\tdef close(self):" >> $FILE
 echo -e "\t\tself.client.client.close()" >> $FILE
 
-# run locust
-locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-    --csv csv/results 2> /dev/null &  # locust outputs traffic details to stderr
-
-# sleep
-trap "pkill locust" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep
-
-cp csv/results_stats_history.csv $CSV
+# run
+if [ "$AUTO_RESTART" = "true" ]; then
+    locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
+        --csv csv/results 2> /dev/null  # locust outputs traffic details to stderr
+else
+    locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
+        --csv csv/results 2> /dev/null &
+    sleep infinity
+fi

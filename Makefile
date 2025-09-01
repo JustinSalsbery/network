@@ -55,7 +55,7 @@ up: config
 
 down:
 	if [ -f "docker-compose.yml" ]; then
-		docker compose down
+		docker compose down --timeout 0
 	else
 		echo "info: No docker compose file found."
 	fi

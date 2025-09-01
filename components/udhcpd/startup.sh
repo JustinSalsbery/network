@@ -241,10 +241,10 @@ for IFACE in $IFACES; do
     done
 done
 
-udhcpd  # run
-
-# sleep
-trap "exit 0" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep
+# run
+if [ "$AUTO_RESTART" = "true" ]; then
+    udhcpd -f
+else
+    udhcpd
+    sleep infinity
+fi

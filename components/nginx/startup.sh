@@ -215,11 +215,10 @@ echo "</body>" >> $FILE
 echo "" >> $FILE  # new line
 echo "</html>" >> $FILE
 
-# run nginx
-nginx
-
-# sleep
-trap "exit 0" SIGTERM
-sleep infinity &
-
-wait $!  # $! is the PID of sleep
+# run
+if [ "$AUTO_RESTART" = "true" ]; then
+    nginx -g 'daemon off;'
+else
+    nginx
+    sleep infinity
+fi
