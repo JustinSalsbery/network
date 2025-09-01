@@ -55,7 +55,7 @@ up: config
 
 down:
 	if [ -f "docker-compose.yml" ]; then
-		docker compose down --timeout 0
+		docker compose down --timeout 2
 	else
 		echo "info: No docker compose file found."
 	fi
@@ -64,11 +64,8 @@ down:
 # before we generate a new configuration, we must bring down the current network
 
 config: down
-	# may be undesired
-	# remove output from previous runs
-	rm -f shared/*.csv || true
-	rm -f shared/*.pcap || true
-	rm -f shared/*.png || true
+	echo "(Optional) sudo rm -rf shared"
+	sudo rm -rf shared || true
 	
 	mkdir -p shared
 	${PYTHON} scripts/config/${CONFIG}
@@ -103,9 +100,8 @@ stats:
 	${PYTHON} scripts/stats/main.py
 
 clean:
-	rm -f shared/*.csv || true
-	rm -f shared/*.pcap || true
-	rm -f shared/*.png || true
+	echo "(Optional) sudo rm -rf shared"
+	sudo rm -rf shared || true
 	
 	rm -r ${CERTS_SERVER}
 	rm -r ${CERTS_LB}

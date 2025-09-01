@@ -234,12 +234,19 @@ echo -e "\t@task(1)" >> $FILE
 echo -e "\tdef close(self):" >> $FILE
 echo -e "\t\tself.client.client.close()" >> $FILE
 
+mkdir -p shared/$HOSTNAME/
+chmod 777 shared/$HOSTNAME/
+
 # run
+trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+
 if [ "$AUTO_RESTART" = "true" ]; then
     locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-        --csv csv/results 2> /dev/null  # locust outputs traffic details to stderr
+        --csv shared/$HOSTNAME/locust 2> /dev/null &  # locust outputs traffic details to stderr
 else
     locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-        --csv csv/results 2> /dev/null &
-    sleep infinity
+        --csv shared/$HOSTNAME/locust 2> /dev/null &
+    sleep infinity &
 fi
+
+wait $!

@@ -202,4 +202,7 @@ echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
 # run
-sleep infinity
+trap "exit 0" SIGTERM
+
+sleep infinity &
+wait $!

@@ -216,9 +216,13 @@ echo "" >> $FILE  # new line
 echo "</html>" >> $FILE
 
 # run
+trap "exit 0" SIGTERM
+
 if [ "$AUTO_RESTART" = "true" ]; then
-    nginx -g 'daemon off;'
+    nginx -g 'daemon off;' &
 else
     nginx
-    sleep infinity
+    sleep infinity &
 fi
+
+wait $!

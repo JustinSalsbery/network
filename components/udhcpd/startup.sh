@@ -242,9 +242,13 @@ for IFACE in $IFACES; do
 done
 
 # run
+trap "exit 0" SIGTERM
+
 if [ "$AUTO_RESTART" = "true" ]; then
-    udhcpd -f
+    udhcpd -f &
 else
     udhcpd
-    sleep infinity
+    sleep infinity &
 fi
+
+wait $!

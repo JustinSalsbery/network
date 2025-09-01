@@ -228,18 +228,23 @@ echo "# various utilities, such as socket.getaddrinfo, will throw a gaierror in 
 echo "filter-AAAA  # return a FILTERED response" >> $FILE
 echo "" >> $FILE  # new line
 
-if [ "$LOG" = "true" ]; then
-    echo "log-queries" >> $FILE
-    echo "log-facility=/app/dns.log" >> $FILE
-fi
+mkdir -p shared/$HOSTNAME/
+chmod 777 shared/$HOSTNAME/
+
+echo "log-queries" >> $FILE
+echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
 
 # run
+trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+
 if [ "$AUTO_RESTART" = "true" ]; then
-    dnsmasq -k
+    dnsmasq -k &
 else
     dnsmasq
-    sleep infinity
+    sleep infinity &
 fi
+
+wait $!
 
 # Useful commands:
 #   Query A    record (IPv4): dig <DOMAIN NAME>

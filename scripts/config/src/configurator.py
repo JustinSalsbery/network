@@ -133,7 +133,6 @@ class Configurator():
 
             file.write(f"{_SPACE * 3}# DNS Server configuration:\n")
             file.write(f"{_SPACE * 3}CACHE: {dns_server._cache}\n")
-            file.write(f"{_SPACE * 3}LOG: {str(dns_server._log).lower()}\n")
 
             names = []
             ips = []

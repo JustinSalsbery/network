@@ -306,12 +306,16 @@ echo -e "\texport all;" >> $FILE
 echo "}" >> $FILE
 
 # run
+trap "exit 0" SIGTERM
+
 if [ "$AUTO_RESTART" = "true" ]; then
-    bird -f
+    bird -f &
 else
     bird
-    sleep infinity
+    sleep infinity &
 fi
+
+wait $!
 
 # Useful birdc commands:
 #   show protocols

@@ -760,13 +760,11 @@ class _Domain():
     
 
 class DNSServer(_Service):
-    def __init__(self, cache: int = 600, log: bool = False, dns_servers: list[str] = None, 
-                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
-                 ttl: int = 64):
+    def __init__(self, cache: int = 600, dns_servers: list[str] = None, cpu_limit: float = 0.5, 
+                 mem_limit: int = 256, swap_limit: int = 64, ttl: int = 64):
         """
         @params:
             - cache: The cache duration for the resolved record in seconds.
-            - log: Enable or disable logging of queries.
             - dns_servers: The IPv4 addresses of the DNS servers.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
@@ -787,8 +785,7 @@ class DNSServer(_Service):
         
         assert(cache > 0)
         self._cache = cache
-
-        self._log = log
+        
         self._domains = []
 
     def add_iface(self, iface: Iface, ip: str = None, gateway: str = None, tc_rule: TCRule = None, 

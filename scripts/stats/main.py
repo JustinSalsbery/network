@@ -1,12 +1,10 @@
 
-from signal import signal, SIGINT
 from subprocess import getstatusoutput
 from time import time, sleep
 
 
 OUTPUT = "shared"
-CONTAINERS = {} # container_id: [stats]
-WAIT = 5
+WAIT = 5  # seconds; polls hardware every <WAIT> seconds
 
 
 def to_bytes(value: str) -> str:
@@ -28,7 +26,9 @@ def to_bytes(value: str) -> str:
         return value
 
 
-def monitor_stats():
+def write_stats():
+    containers = {} # container_id: file
+
     while True:
         s, o = getstatusoutput("docker stats --no-stream | tr -s ' '")
         if s != 0:
@@ -54,34 +54,25 @@ def monitor_stats():
             disk_write = to_bytes(line[12])
             pids = line[13]
 
-            if container_name not in CONTAINERS:
-                CONTAINERS[container_name] = []
+            if container_name not in containers:
+                getstatusoutput(f"mkdir -p {OUTPUT}/{container_name}/")
 
-            CONTAINERS[container_name].append(f"{time():1f},{container_name},{cpu_perc},"
-                                            + f"{mem_usage},{mem_limit},{mem_perc},"
-                                            + f"{net_received},{net_transmitted},"
-                                            + f"{disk_read},{disk_write},{pids}\n")
+                file = open(f"{OUTPUT}/{container_name}/hardware_stats.csv", "w")
+                containers[container_name] = file
+                file.write("timestamp, container_name, cpu_perc (%), mem_usage (Bytes), " \
+                           + "mem_limit (Bytes), mem_perc (%), net_received (Bytes), " \
+                           + "net_transmitted (Bytes), disk_read (Bytes), " \
+                           + "disk_write (Bytes), pids\n")
+
+            file = containers[container_name]
+            file.write(f"{time():1f}, {container_name}, {cpu_perc}, {mem_usage}, {mem_limit}, " \
+                       + f"{mem_perc}, {net_received}, {net_transmitted}, {disk_read}, "\
+                       + f"{disk_write}, {pids}\n")
+            
+            file.flush()
         
         sleep(WAIT)
 
 
-def write_stats():
-    header = "timestamp, container_name, cpu_perc (%), mem_usage (Bytes), mem_limit (Bytes), mem_perc (%), " \
-             + "net_received (Bytes), net_transmitted (Bytes), disk_read (Bytes), disk_write (Bytes), pids\n"
-    
-    for container_name, stats in CONTAINERS.items():
-        with open(f"{OUTPUT}/stats-{container_name}.csv", "w") as file:
-            file.write(header)
-            
-            for stat in stats:
-                file.write(stat)
-
-
-def signal_handler(sig, frame):
-    write_stats()
-    exit(0)
-
-
 if __name__ == "__main__":
-    signal(SIGINT, signal_handler)
-    monitor_stats()
+    write_stats()

@@ -335,9 +335,13 @@ elif [ "$TYPE" == "l5" ]; then
 fi
 
 # run
+trap "exit 0" SIGTERM
+
 if [ "$AUTO_RESTART" = "true" ]; then
-    haproxy -f $FILE
+    haproxy -f $FILE &
 else
     haproxy -f $FILE &
-    sleep infinity
+    sleep infinity &
 fi
+
+wait $!
