@@ -215,8 +215,99 @@ echo "</body>" >> $FILE
 echo "" >> $FILE  # new line
 echo "</html>" >> $FILE
 
+# setup nginx
+FILE="/etc/nginx/nginx.conf"
+
+echo "include /etc/nginx/modules/*.conf;" > $FILE
+echo "include /etc/nginx/conf.d/*.conf;" >> $FILE
+echo "" >> $FILE  # new line
+echo "error_log /app/shared/$HOSTNAME/nginx-error.log warn; # requires absolute path" >> $FILE
+echo "" >> $FILE  # new line
+echo "worker_processes auto;" >> $FILE
+echo "events {" >> $FILE
+echo -e "\tworker_connections 1024;" >> $FILE
+echo "}" >> $FILE
+echo "" >> $FILE  # new line
+echo "http {" >> $FILE
+echo -e "\t# Includes mapping of file name extensions to MIME types of responses" >> $FILE
+echo -e "\t# and defines the default type." >> $FILE
+echo -e "\tinclude /etc/nginx/mime.types;" >> $FILE
+echo -e "\tdefault_type application/octet-stream;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Don't tell nginx version to the clients." >> $FILE
+echo -e "\tserver_tokens off; # Default is 'on'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Sendfile copies data between one FD and other from within the kernel," >> $FILE
+echo -e "\t# which is more efficient than read() + write()." >> $FILE
+echo -e "\tsendfile on; # Default is off." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Causes nginx to attempt to send its HTTP response head in one packet," >> $FILE
+echo -e "\t# instead of using partial frames." >> $FILE
+echo -e "\ttcp_nopush on; # Default is 'off'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\tssl_protocols TLSv1.2 TLSv1.3;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Specifies that our cipher suits should be preferred over client ciphers." >> $FILE
+echo -e "\tssl_prefer_server_ciphers on; # Default is 'off'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Enables a shared SSL cache with size that can hold around 8000 sessions." >> $FILE
+echo -e "\tssl_session_cache shared:SSL:2m; # Default is 'none'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Specifies a time during which a client may reuse the session parameters." >> $FILE
+echo -e "\tssl_session_timeout 20m; # Default is '5m'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Disable TLS session tickets (they are insecure)." >> $FILE
+echo -e "\tssl_session_tickets off; # Default is 'on'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Enables gzip compression if requested by client." >> $FILE
+echo -e "\tgzip on; # Default is 'off'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Set the Vary HTTP header as defined in the RFC 2616." >> $FILE
+echo -e "\tgzip_vary on; # Default is 'off'." >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Specifies the main log format." >> $FILE
+echo -e "\tlog_format main '\$remote_addr - \$remote_user [\$time_local] \"\$request\" '" >> $FILE
+echo -e "\t\t\t'\$status \$body_bytes_sent \"\$http_referer\" '" >> $FILE
+echo -e "\t\t\t'\"\$http_user_agent\" \"\$http_x_forwarded_for\"';" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Sets the path, format, and configuration for a buffered log write." >> $FILE
+echo -e "\taccess_log /app/shared/$HOSTNAME/nginx-access.log main; # requires absolute path" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Includes virtual hosts configs." >> $FILE
+echo -e "\tinclude /etc/nginx/http.d/*.conf;" >> $FILE
+echo "}" >> $FILE
+
+mkdir -p shared/$HOSTNAME/
+chmod 777 shared/$HOSTNAME/
+
+# setup server
+FILE="/etc/nginx/http.d/default.conf"
+
+echo "server {" > $FILE
+echo -e "\t# HTTP" >> $FILE
+echo -e "\tlisten 80 default_server;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# HTTPS" >> $FILE
+echo -e "\tlisten 443 ssl default_server;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\tssl_certificate /app/ssl/public.crt;" >> $FILE
+echo -e "\tssl_certificate_key /app/ssl/private.key;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\t# Pages" >> $FILE
+echo -e "\troot /app/www;" >> $FILE
+echo -e "\tindex index.html;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\tkeepalive_timeout 60;" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\tlocation / {" >> $FILE
+echo -e "\t\t# First attempt to serve request as file, then" >> $FILE
+echo -e "\t\t# as directory, then fall back to displaying a 404." >> $FILE
+echo -e "\t\ttry_files \$uri \$uri/ =404;" >> $FILE
+echo -e "\t}" >> $FILE
+echo "}" >> $FILE
+
 # run
-trap "exit 0" SIGTERM
+trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     nginx -g 'daemon off;' &
