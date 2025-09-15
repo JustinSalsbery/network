@@ -79,7 +79,7 @@ for IFACE in $IFACES; do
     QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
     # tc ignores arguments of 0, except for QUEUE_LIMIT
-    if [ "$QUEUE_LIMIT" != "0" ]; then
+    if [ "$QUEUE_LIMIT" != "none" ]; then
         tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
         delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
     fi
@@ -241,13 +241,17 @@ for IFACE in $IFACES; do
     done
 done
 
-# run
-trap "exit 0" SIGTERM
+mkdir -p shared/$HOSTNAME/
+chmod 777 shared/$HOSTNAME/
 
+# run
+trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+
+LOGFILE="shared/$HOSTNAME/udhcpd.log"
 if [ "$AUTO_RESTART" = "true" ]; then
-    udhcpd -f &
+    udhcpd -f 2> $LOGFILE &
 else
-    udhcpd
+    udhcpd -f 2> $LOGFILE &
     sleep infinity &
 fi
 

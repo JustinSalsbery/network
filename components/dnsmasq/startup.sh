@@ -87,7 +87,7 @@ for IFACE in $IFACES; do
     QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
     # tc ignores arguments of 0, except for QUEUE_LIMIT
-    if [ "$QUEUE_LIMIT" != "0" ]; then
+    if [ "$QUEUE_LIMIT" != "none" ]; then
         tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
         delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
     fi
@@ -227,12 +227,11 @@ echo "# without filtering, AAAA requests will return a REFUSED error" >> $FILE
 echo "# various utilities, such as socket.getaddrinfo, will throw a gaierror in response" >> $FILE
 echo "filter-AAAA  # return a FILTERED response" >> $FILE
 echo "" >> $FILE  # new line
+echo "log-queries" >> $FILE
+echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
 
 mkdir -p shared/$HOSTNAME/
 chmod 777 shared/$HOSTNAME/
-
-echo "log-queries" >> $FILE
-echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
 
 # run
 trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM

@@ -391,6 +391,12 @@ class _IfaceConfig():
         assert(0 <= cost <= 65535)
         self._cost = cost
 
+    def __eq__(self, other) -> bool:
+        assert isinstance(other, _IfaceConfig)
+        if self._iface._name != other._iface._name:
+            return False
+        return True
+
     def __str__(self) -> str:
         return f"{"{"} {self._iface}, {self._ip}, {self._gateway}, {self._rate} {"}"}"
 
@@ -534,6 +540,7 @@ class _Service():
 
         config = _IfaceConfig(iface, ip, gateway, mtu, tc_rule, firewall,
                               None, None, NatType.none, 0)
+        assert(config not in self._iface_configs)
         self._iface_configs.append(config)
 
     def __str__(self):

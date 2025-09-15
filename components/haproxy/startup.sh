@@ -83,7 +83,7 @@ for IFACE in $IFACES; do
     QUEUE_LIMITS="$(echo $QUEUE_LIMITS | cut -d' ' -f2-)"
 
     # tc ignores arguments of 0, except for QUEUE_LIMIT
-    if [ "$QUEUE_LIMIT" != "0" ]; then
+    if [ "$QUEUE_LIMIT" != "none" ]; then
         tc qdisc add dev ${IFACE}_0 root netem limit ${QUEUE_LIMIT} rate ${RATE}kbit \
         delay ${DELAY}ms ${JITTER}ms loss random ${DROP}% corrupt ${CORRUPT}% duplicate ${DUPLICATE}%
     fi
@@ -254,11 +254,14 @@ elif [ "$TYPE" == "l5" ]; then
     echo -e "\tmode http" >> $FILE
 fi
 
-echo -e "compression algo gzip" >> $FILE
+echo -e "\tlog stdout local0" >> $FILE
+echo -e "\toption httplog" >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\ttimeout connect 10s" >> $FILE
 echo -e "\ttimeout client 30s  # client and server must be equivalent in tcp mode"  >> $FILE
 echo -e "\ttimeout server 30s"  >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\tcompression algo gzip" >> $FILE
 echo "" >> $FILE  # new line
 echo "frontend http" >> $FILE
 echo -e "\tbind *:80" >> $FILE
@@ -334,13 +337,17 @@ elif [ "$TYPE" == "l5" ]; then
     done
 fi
 
-# run
-trap "exit 0" SIGTERM
+mkdir -p shared/$HOSTNAME/
+chmod 777 shared/$HOSTNAME/
 
+# run
+trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+
+LOGFILE="shared/$HOSTNAME/haproxy.log"
 if [ "$AUTO_RESTART" = "true" ]; then
-    haproxy -f $FILE &
+    haproxy -f $FILE > $LOGFILE &
 else
-    haproxy -f $FILE &
+    haproxy -f $FILE > $LOGFILE &
     sleep infinity &
 fi
 

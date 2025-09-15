@@ -305,13 +305,13 @@ class Configurator():
             assert isinstance(config, _IfaceConfig)
 
             tc_rule = config._tc_rule
-            rates.append(f"{tc_rule._rate}" if tc_rule else "0")
-            delays.append(f"{tc_rule._delay}" if tc_rule else "0")
-            jitters.append(f"{tc_rule._jitter}" if tc_rule else "0")
-            drops.append(f"{tc_rule._drop}" if tc_rule else "0")
-            corrupts.append(f"{tc_rule._corrupt}" if tc_rule else "0")
-            duplicates.append(f"{tc_rule._duplicate}" if tc_rule else "0")
-            queue_limits.append(f"{tc_rule._queue_limit}" if tc_rule else "0")
+            rates.append(f"{tc_rule._rate}" if tc_rule else "none")
+            delays.append(f"{tc_rule._delay}" if tc_rule else "none")
+            jitters.append(f"{tc_rule._jitter}" if tc_rule else "none")
+            drops.append(f"{tc_rule._drop}" if tc_rule else "none")
+            corrupts.append(f"{tc_rule._corrupt}" if tc_rule else "none")
+            duplicates.append(f"{tc_rule._duplicate}" if tc_rule else "none")
+            queue_limits.append(f"{tc_rule._queue_limit}" if tc_rule else "none")
         
         file.write(f"{_SPACE * 3}# TC Rule configurations:\n")
         file.write(f"{_SPACE * 3}RATES: {" ".join(rates)}\n")
