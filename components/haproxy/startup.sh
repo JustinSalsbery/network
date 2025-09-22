@@ -254,6 +254,7 @@ elif [ "$TYPE" == "l5" ]; then
     echo -e "\tmode http" >> $FILE
 fi
 
+echo "" >> $FILE  # new line
 echo -e "\tlog stdout local0" >> $FILE
 echo -e "\toption httplog" >> $FILE
 echo "" >> $FILE  # new line
@@ -263,9 +264,17 @@ echo -e "\ttimeout server 30s"  >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\tcompression algo gzip" >> $FILE
 echo "" >> $FILE  # new line
+echo "cache www-cache" >> $FILE
+echo -e "\ttotal-max-size  16      # 16 mB" >> $FILE
+echo -e "\tmax-object-size 1000000 # 1 mB" >> $FILE
+echo -e "\tprocess-vary on" >> $FILE
+echo "" >> $FILE  # new line
 echo "frontend http" >> $FILE
 echo -e "\tbind *:80" >> $FILE
 echo -e "\tdefault_backend http_servers" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
+echo -e "\thttp-response cache-store www-cache" >> $FILE
 echo "" >> $FILE  # new line
 echo "frontend https" >> $FILE
 
@@ -277,6 +286,9 @@ elif [ "$TYPE" == "l5" ]; then
 fi
 
 echo -e "\tdefault_backend https_servers" >> $FILE
+echo "" >> $FILE  # new line
+echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
+echo -e "\thttp-response cache-store www-cache" >> $FILE
 echo "" >> $FILE  # new line
 echo "backend http_servers" >> $FILE
 echo -e "\tbalance $ALGORITHM" >> $FILE

@@ -869,6 +869,7 @@ class LoadBalancer(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
+        assert(mem_limit >= 32)  # necessary for cache
         super().__init__(_ServiceType.lb, "haproxy", True, None, cpu_limit, mem_limit, 
                          swap_limit, False, syn_cookie, congestion_control, fast_retran,
                          sack, True, ttl)
