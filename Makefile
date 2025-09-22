@@ -22,12 +22,12 @@ options help:
 	echo -e "\t- config   # write docker-compose only"
 	echo -e "\t- list     # list available configurations"
 	echo -e "\t- graph    # create network graph"
-	echo -e "\t- stats"
+	echo -e "\t- stats    # record hardware utilization"
 
 	echo "" # New line
 
 	echo "Notes:"
-	echo -e "\t- Compose specific config: 'make config CONFIG=NAME'"
+	echo -e "\t- Choose a specific config: 'make {config, up} CONFIG=NAME'"
 
 CERTS_SERVER := components/nginx/ssl
 CERTS_LB := components/haproxy/ssl

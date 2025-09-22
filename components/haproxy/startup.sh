@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # delete docker configurations
-echo "localhost 127.0.0.1" > /etc/hosts
+echo "127.0.0.1 localhost" > /etc/hosts
 echo "" > /etc/resolv.conf
 
 # disable ipv6
