@@ -4,7 +4,7 @@ from src.configurator import *
 
 
 # Most datacenters use a 2-tier load balancing architecture.
-# Layer 1 consists of L4 load balancers; Layer 2 consists of L5 load balancers.
+# Layer 1 uses ECMP; Layer 2 uses load balancers.
 
 iface_0 = Iface("192.168.0.0/16")  # Client network.
 iface_1 = Iface("174.0.0.0/8")
@@ -19,8 +19,8 @@ router_0.add_iface(iface_0, ip="192.168.0.1", nat=NatType.snat_input)
 router_0.add_iface(iface_1, ip="174.0.0.1")
 
 # Instead of configuring static gateways, datacenters may use NAT.
-# An extra benefit of using NAT is that traffic is load balanced between routers
-# when exiting the network.
+# With NAT, traffic exiting the network is load balanced between routers.
+# Note that NAT is stateful which creates another point of failure.
 
 router_1 = Router(ecmp=ECMPType.l4)
 router_1.add_iface(iface_1, ip="174.0.0.2")
@@ -30,8 +30,8 @@ router_2 = Router(ecmp=ECMPType.l4)
 router_2.add_iface(iface_1, ip="174.0.0.3")
 router_2.add_iface(iface_2, ip="175.0.0.2", nat=NatType.snat_output)
 
-# Many load balancers may claim an IP by advertising identical an address space.
-# Note that this requires an ECMP capable router.
+# Many load balancers may claim an IP by advertising an identical address space.
+# Note that this requires an ECMP router.
 
 lb_0 = LoadBalancer(backends=["175.0.0.5", "175.0.0.6", "175.0.0.7", "175.0.0.8"], 
                     type=LBType.l4, advertise=True)

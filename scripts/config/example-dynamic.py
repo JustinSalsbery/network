@@ -10,6 +10,7 @@ from src.configurator import *
 #
 # The primary purpose of this script is to benchmark large network configurations.
 
+
 # COMPONENT CONFIGURATION *****************************************************
 
 PROTOCOL = Protocol.http
@@ -20,6 +21,7 @@ CONN_RATE = 20
 CONN_MAX = 1000
 CPU_LIMIT = 0.3
 MEM_LIMIT = 256
+
 
 # NETWORK CONFIGURATION *******************************************************
 
@@ -32,14 +34,17 @@ BALANCE_BY = ["NONE", "DNS", "ANYCAST", "LB-L4-random", "LB-L4-roundrobin", "LB-
               "LB-L4-leastconn", "LB-L5-random", "LB-L5-roundrobin", "LB-L5-source", \
               "LB-L5-leastconn"]
 
-GROUP_BY = 4
+GROUP_BY = 4  # HOMES and SERVERS are grouped together; graph the network for details
 COMPS_PER = 3
+
+# requirements:
 
 assert(HOMES % SERVERS == 0)  # assumed when assigning targets to traffic generators
 assert(len(BALANCE_BY) == SERVERS)
 
 # limited due to ip address space
 assert(0 < HOMES <= 251 and 0 < SERVERS <= 253 and 0 < COMPS_PER <= 250)
+
 
 # SELECT TARGETS **************************************************************
 
@@ -123,6 +128,7 @@ for _ in range(1):  # setup backbone routers
                                         dns_server="172.16.0.2",  # dns server may not exist
                                         cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
                 tgen.add_iface(iface, ip=f"172.16.0.{n + 3}", gateway="172.16.0.1")
+
 
 # SERVERS *********************************************************************
 

@@ -31,7 +31,7 @@ client_1 = Client()
 client_1.add_iface(iface_2)
 
 tgen_0 = TrafficGenerator("170.0.0.2")
-tgen_0.add_iface(iface_3, "169.254.3.2", "169.254.3.1")
+tgen_0.add_iface(iface_3, ip="169.254.3.2", gateway="169.254.3.1")
 
 
 conf = Configurator()
