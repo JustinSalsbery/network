@@ -15,6 +15,8 @@ COLOR_MAP = {
     _ServiceType.lb.name: "plum",
 }
 
+FILE_NAME = "config-graph"
+
 
 class Grapher():
     def __init__(self, color: bool, extra: bool):
@@ -33,7 +35,7 @@ class Grapher():
 
         with open("shared/config-graph.gv", "w") as file:
             file.write("\n")  # new line
-            file.write("# neato -Tjpeg input.gv -o output.jpeg\n")
+            file.write(f"# neato -Tjpeg {FILE_NAME}.gv -o {FILE_NAME}.jpeg\n")
             file.write("strict graph Network_Configuration {\n")
             file.write("\tfontname=\"Helvetica,Arial,sans-serif\"\n")
             file.write("\tnode [ fontname=\"Helvetica,Arial,sans-serif\" ]\n")
@@ -79,7 +81,17 @@ class Grapher():
                 if color and service._type.name in COLOR_MAP:
                     color_fill = COLOR_MAP[service._type.name]
 
-                file.write(f"\t\"{name}\" [ style=\"filled\" fillcolor=\"{color_fill}\" ]\n")
+                file.write(f"\t\"{name}\" [ ")
+                if extra:
+                    file.write(f"label=\"{name}")
+
+                    for iface in service._iface_configs:
+                        assert isinstance(iface, _IfaceConfig)
+                        file.write(f"\\n{iface._ip._str}")
+
+                    file.write("\" ")
+
+                file.write(f"style=\"filled\" fillcolor=\"{color_fill}\" ]\n")
         
         file.write("\n")  # new line
         file.write("\t# IFACES\n")
@@ -91,7 +103,7 @@ class Grapher():
 
             if extra:
                 cidr = iface._cidr._str
-                file.write(f"label=\"{name}\\n{cidr}\" shape=plaintext ")
+                file.write(f"label=\"{name}\\n{cidr}\" shape=box ")
             else:
                 file.write(f"label=\"\" shape=none height=0 width=0 ")
 
@@ -110,11 +122,10 @@ class Grapher():
 
                 name_service = service._name
 
-                for config in service._iface_configs:
-                    assert isinstance(config, _IfaceConfig)
+                for iface in service._iface_configs:
+                    assert isinstance(iface, _IfaceConfig)
 
-                    name_iface = config._iface._name
+                    name_iface = iface._iface._name
 
-                    file.write(f"\t\"{name_service}\" -- \"{name_iface}\" [ ")
-                    file.write("]\n")
+                    file.write(f"\t\"{name_service}\" -- \"{name_iface}\" [ ]\n")
                     
