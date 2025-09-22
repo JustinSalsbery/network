@@ -27,6 +27,9 @@ RUN apk upgrade --no-cache
 RUN apk add curl tcpdump net-tools bind-tools ethtool
 RUN apk add nmap iptables iproute2 iputils busybox-extras
 
+# hping3 is only in the testing repository
+RUN apk add hping3 --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
+
 # recreate environment
 
 RUN apk add python3
