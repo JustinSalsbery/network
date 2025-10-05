@@ -29,7 +29,11 @@ for IFACE in $IFACES; do
         # if dhcp fails, the interface is not configured
         udhcpc -i ${IFACE}_0 -t 25 -n
     else # manual
-        ifconfig ${IFACE}_0 $IP netmask $NET_MASK
+        ifconfig ${IFACE}_0 $IP
+    fi
+
+    if [ "$NET_MASK" != "none" ]; then
+        ifconfig ${IFACE}_0 netmask $NET_MASK
     fi
 
     if [ "$MTU" != "none" ]; then

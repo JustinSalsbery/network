@@ -102,8 +102,7 @@ class Grapher():
             file.write(f"\t\"{name}\" [ ")
 
             if extra:
-                cidr = iface._cidr._str
-                file.write(f"label=\"{name}\\n{cidr}\" shape=box ")
+                file.write("shape=box ")
             else:
                 file.write(f"label=\"\" shape=none height=0 width=0 ")
 

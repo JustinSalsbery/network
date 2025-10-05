@@ -30,6 +30,8 @@ class Configurator():
             - The available range MUST NOT overlap with any IPs in the configuration.
         """
         
+        # create a temporary subnet
+
         self.__cidr = _CIDR(available_range)
         self.__ip = self.__cidr._ip._int
 
@@ -38,9 +40,8 @@ class Configurator():
 
         self.__prefix_len = prefix_len
 
+        # docker compose down will fail unless networks follow after services
         with open("docker-compose.yml", "w") as file:
-
-            # docker compose down will fail unless networks follow after services
             self.__write_services(file)
             self.__write_inets(file)
 
@@ -105,21 +106,13 @@ class Configurator():
             assert isinstance(dhcp_server, DHCPServer)
             self.__write_service(file, dhcp_server)
 
+            config = dhcp_server._iface_configs[0]
+            assert isinstance(config, _IfaceConfig)
+
             file.write(f"{_SPACE * 3}# DHCP Server configuration:\n")
-            file.write(f"{_SPACE * 3}LEASE_TIME: {dhcp_server._lease_time}\n")
-
-            lease_starts = []
-            lease_ends = []
-
-            for config in dhcp_server._iface_configs:
-                assert isinstance(config, _IfaceConfig)
-
-                assert(config._lease_start and config._lease_end)
-                lease_starts.append(config._lease_start._str)
-                lease_ends.append(config._lease_end._str)
-
-            file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
-            file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
+            file.write(f"{_SPACE * 3}LEASE_TIME: {config._lease_time}\n")
+            file.write(f"{_SPACE * 3}LEASE_STARTS: {config._lease_start._str}\n")
+            file.write(f"{_SPACE * 3}LEASE_ENDS: {config._lease_end._str}\n")
 
         # write dns servers
 
@@ -131,9 +124,6 @@ class Configurator():
             assert isinstance(dns_server, DNSServer)
             self.__write_service(file, dns_server)
 
-            file.write(f"{_SPACE * 3}# DNS Server configuration:\n")
-            file.write(f"{_SPACE * 3}CACHE: {dns_server._cache}\n")
-
             names = []
             ips = []
 
@@ -143,12 +133,12 @@ class Configurator():
                 names.append(domain._name)
                 ips.append(domain._ip._str)
 
+            file.write(f"{_SPACE * 3}# DNS Server configuration:\n")
+            file.write(f"{_SPACE * 3}CACHE: {dns_server._cache}\n")
             file.write(f"{_SPACE * 3}HOST_NAMES: {" ".join(names)}\n")
             file.write(f"{_SPACE * 3}HOST_IPS: {" ".join(ips)}\n")
 
         # write load balancers
-
-        router_id = 1  # necessary for ECMP advertisements; 0 is illegal
 
         lbs = []
         if _ServiceType.lb.name in _comps:
@@ -158,21 +148,17 @@ class Configurator():
             assert isinstance(lb, LoadBalancer)
             self.__write_service(file, lb)
 
-            file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
-
-            file.write(f"{_SPACE * 3}ROUTER_ID: {router_id}\n")
-            router_id += 1
-
-            file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
-            file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
-            file.write(f"{_SPACE * 3}ADVERTISE: {str(lb._advertise).lower()}\n")
-            file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
-
             backends = []  # required
             for backend in lb._backends:
                 assert isinstance(backend, _IPv4)
                 backends.append(backend._str)
 
+            file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
+            file.write(f"{_SPACE * 3}ROUTER_ID: {lb._router_id}\n")
+            file.write(f"{_SPACE * 3}TYPE: {lb._type.name}\n")
+            file.write(f"{_SPACE * 3}ALGORITHM: {lb._algorithm.name}\n")
+            file.write(f"{_SPACE * 3}ADVERTISE: {str(lb._advertise).lower()}\n")
+            file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
 
         # write routers
@@ -185,13 +171,6 @@ class Configurator():
             assert isinstance(router, Router)
             self.__write_service(file, router)
 
-            file.write(f"{_SPACE * 3}# Router configuration:\n")
-
-            file.write(f"{_SPACE * 3}ROUTER_ID: {router_id}\n")
-            router_id += 1
-
-            file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
-
             cidrs = []
             nats = []
             costs = []
@@ -199,10 +178,13 @@ class Configurator():
             for config in router._iface_configs:
                 assert isinstance(config, _IfaceConfig)
 
-                cidrs.append(config._iface._cidr._str)
+                cidrs.append(config._cidr._str)
                 nats.append(config._nat.name)
                 costs.append(f"{config._cost}")
 
+            file.write(f"{_SPACE * 3}# Router configuration:\n")
+            file.write(f"{_SPACE * 3}ROUTER_ID: {router._router_id}\n")
+            file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
             file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
             file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
@@ -214,11 +196,16 @@ class Configurator():
             - service: Service configuration to write.
         """
 
+        # write component
+
         file.write(f"{_SPACE * 1}{service._name}:\n")
         file.write(f"{_SPACE * 2}image: {service._image}\n")
         file.write(f"{_SPACE * 2}container_name: {service._name}\n")
         file.write(f"{_SPACE * 2}hostname: {service._name}\n")
         file.write(f"{_SPACE * 2}restart: unless-stopped\n")
+
+        # write limits
+
         file.write(f"{_SPACE * 2}deploy:\n")
         file.write(f"{_SPACE * 3}resources:\n")
         file.write(f"{_SPACE * 4}limits:\n")
@@ -228,9 +215,13 @@ class Configurator():
         # memory swap represents the total amount of memory and swap that can be used.
         file.write(f"{_SPACE * 2}memswap_limit: {service._swap_limit + service._mem_limit}mb\n")
 
+        # write volumes
+
         file.write(f"{_SPACE * 2}volumes:\n")
         file.write(f"{_SPACE * 3}- ./shared:/app/shared  # shared output\n")
         file.write(f"{_SPACE * 3}- /lib/modules:/lib/modules  # mount host kernel modules\n")
+
+        # write networks
 
         if len(service._iface_configs):  # error if network map is empty
             file.write(f"{_SPACE * 2}networks:\n")
@@ -239,10 +230,15 @@ class Configurator():
                 assert isinstance(config, _IfaceConfig)
                 file.write(f"{_SPACE * 3}- {config._iface._name}\n")
 
+        # write permissions
+
         file.write(f"{_SPACE * 2}cap_add:\n")
         file.write(f"{_SPACE * 3}- NET_ADMIN  # enables ifconfig, route\n")
         file.write(f"{_SPACE * 2}privileged: true  # enables sysctl, kernel modules\n")
+
         file.write(f"{_SPACE * 2}environment:\n")
+
+        # write host configurations
 
         dns_servers = []
         if service._dns_servers:
@@ -263,6 +259,8 @@ class Configurator():
         file.write(f"{_SPACE * 3}AUTO_RESTART: {str(service._auto_restart).lower()}\n")
         file.write(f"{_SPACE * 3}TTL: {service._ttl}\n")
 
+        # write interface configurations
+
         ifaces = []
         ips = []
         net_masks = []
@@ -275,13 +273,12 @@ class Configurator():
 
             ifaces.append(config._iface._name)
             ips.append(config._ip._str if config._ip else "none")
-            net_masks.append(config._iface._cidr._netmask._str)
+            net_masks.append(config._cidr._netmask._str if config._cidr else "none")
             gateways.append(config._gateway._str if config._gateway else "none")
             mtus.append(f"{config._mtu}" if config._mtu else "none")
             firewalls.append(config._firewall.name)
 
         # if no interfaces have been added, all of these variables will be empty
-        
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
         file.write(f"{_SPACE * 3}IFACES: {" ".join(ifaces)}\n")
         file.write(f"{_SPACE * 3}IPS: {" ".join(ips)}\n")
@@ -290,9 +287,8 @@ class Configurator():
         file.write(f"{_SPACE * 3}MTUS: {" ".join(mtus)}\n")
         file.write(f"{_SPACE * 3}FIREWALLS: {" ".join(firewalls)}\n")
 
-        self.__write_tc_rules(file, service)
+        # write tc_rules
 
-    def __write_tc_rules(self, file: TextIOWrapper, service: _Service):
         rates = []
         delays = []
         jitters = []

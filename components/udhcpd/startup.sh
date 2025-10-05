@@ -25,7 +25,11 @@ for IFACE in $IFACES; do
     if [ "$IP" = "none" ]; then
         continue # do nothing
     else # manual
-        ifconfig ${IFACE}_0 $IP netmask $NET_MASK
+        ifconfig ${IFACE}_0 $IP
+    fi
+
+    if [ "$NET_MASK" != "none" ]; then
+        ifconfig ${IFACE}_0 netmask $NET_MASK
     fi
 
     if [ "$MTU" != "none" ]; then
@@ -222,8 +226,11 @@ for IFACE in $IFACES; do
     echo "start $LEASE_START" >> $FILE
     echo "end $LEASE_END" >> $FILE
     echo "" >> $FILE  # new line
-    echo "opt subnet $NET_MASK" >> $FILE
     echo "opt lease $LEASE_TIME  # seconds" >> $FILE
+
+    if [ "$NET_MASK" != "none" ]; then
+        echo "opt subnet $NET_MASK" >> $FILE
+    fi
 
     if [ "$GATEWAY" != "none" ]; then
         echo "opt router $GATEWAY" >> $FILE
@@ -234,11 +241,11 @@ for IFACE in $IFACES; do
         echo "opt mtu $MTU" >> $FILE
     fi
 
-    for NAMESERVER in $NAMESERVERS; do
-        if [ "$NAMESERVER" != "none" ]; then
+    if [ "$NAMESERVERS" != "none" ]; then
+        for NAMESERVER in $NAMESERVERS; do
             echo "opt dns $NAMESERVER" >> $FILE
-        fi
-    done
+        done
+    fi
 done
 
 mkdir -p shared/$HOSTNAME/
