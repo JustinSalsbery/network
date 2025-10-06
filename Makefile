@@ -33,11 +33,11 @@ CERTS_SERVER := components/nginx/ssl
 CERTS_LB := components/haproxy/ssl
 certs:
 	mkdir -p ${CERTS_SERVER}
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${CERTS_SERVER}/private.key -out ${CERTS_SERVER}/public.crt \
+	openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout ${CERTS_SERVER}/private.key -out ${CERTS_SERVER}/public.crt \
 		-subj "/C=US/ST=Washington/L=Spokane/O=Eastern Washington University/OU=Department of Computer Science/CN=Nil" 2> /dev/null
 
 	mkdir -p ${CERTS_LB}
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${CERTS_LB}/private.key -out ${CERTS_LB}/public.crt \
+	openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout ${CERTS_LB}/private.key -out ${CERTS_LB}/public.crt \
 		-subj "/C=US/ST=Washington/L=Spokane/O=Eastern Washington University/OU=Department of Computer Science/CN=Nil" 2> /dev/null
 
 	# combine the public and private keys
