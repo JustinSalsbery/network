@@ -106,13 +106,22 @@ class Configurator():
             assert isinstance(dhcp_server, DHCPServer)
             self.__write_service(file, dhcp_server)
 
-            config = dhcp_server._iface_configs[0]
-            assert isinstance(config, _IfaceConfig)
+            lease_times = []
+            lease_starts = []
+            lease_ends = []
+
+            for config in dhcp_server._iface_configs:
+                assert isinstance(config, _IfaceConfig)
+                assert(config._lease_time and config._lease_start and config._lease_end)
+                
+                lease_times.append(f"{config._lease_time}")
+                lease_starts.append(config._lease_start._str)
+                lease_ends.append(config._lease_end._str)
 
             file.write(f"{_SPACE * 3}# DHCP Server configuration:\n")
-            file.write(f"{_SPACE * 3}LEASE_TIME: {config._lease_time}\n")
-            file.write(f"{_SPACE * 3}LEASE_STARTS: {config._lease_start._str}\n")
-            file.write(f"{_SPACE * 3}LEASE_ENDS: {config._lease_end._str}\n")
+            file.write(f"{_SPACE * 3}LEASE_TIMES: {" ".join(lease_times)}\n")
+            file.write(f"{_SPACE * 3}LEASE_STARTS: {" ".join(lease_starts)}\n")
+            file.write(f"{_SPACE * 3}LEASE_ENDS: {" ".join(lease_ends)}\n")
 
         # write dns servers
 
@@ -148,9 +157,11 @@ class Configurator():
             assert isinstance(lb, LoadBalancer)
             self.__write_service(file, lb)
 
-            backends = []  # required
+            backends = []
+
             for backend in lb._backends:
                 assert isinstance(backend, _IPv4)
+
                 backends.append(backend._str)
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")

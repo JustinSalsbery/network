@@ -202,6 +202,7 @@ echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
 # setup dhcp
+# configured for a single interface
 for IFACE in $IFACES; do
     NET_MASK="$(echo $NET_MASKS | cut -d' ' -f1)"
     NET_MASKS="$(echo $NET_MASKS | cut -d' ' -f2-)"
@@ -211,6 +212,9 @@ for IFACE in $IFACES; do
 
     MTU="$(echo $MTUS | cut -d' ' -f1)"
     MTUS="$(echo $MTUS | cut -d' ' -f2-)"
+
+    LEASE_TIME="$(echo $LEASE_TIMES | cut -d' ' -f1)"
+    LEASE_TIMES="$(echo $LEASE_TIMES | cut -d' ' -f2-)"
 
     LEASE_START="$(echo $LEASE_STARTS | cut -d' ' -f1)"
     LEASE_STARTS="$(echo $LEASE_STARTS | cut -d' ' -f2-)"
