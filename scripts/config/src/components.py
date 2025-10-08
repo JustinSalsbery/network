@@ -3,15 +3,7 @@ from enum import Enum, auto
 from traceback import print_stack
 
 
-_comps = {}  # created components are registered here
-
-
 # IPv4 ************************************************************************
-
-
-class _Visibility(Enum):
-    public = auto()
-    private = auto()
 
 
 class _IPv4():
@@ -95,6 +87,14 @@ class _IPv4():
         
         octets = [*map(str, octets)]
         return ".".join(octets)
+
+
+# CIDR ************************************************************************
+
+
+class _Visibility(Enum):
+    public = auto()
+    private = auto()
 
 
 class _CIDR():
@@ -281,7 +281,6 @@ class FirewallType(Enum):
                                  Use on the external interface of routers.
     """
 
-    none = auto()
     block_new_conn_input = auto()
     block_new_conn_input_strict = auto()
     block_new_conn_output = auto()
@@ -298,7 +297,6 @@ class NatType(Enum):
                  router interface of a datacenter network. 
     """
 
-    none = auto()
     snat_input = auto()
     snat_output = auto()
 
@@ -315,10 +313,10 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, ip: str, cidr: str, gateway: str, mtu: int, 
-                 tc_rule: TCRule, firewall: FirewallType, lease_time: int = 0, 
-                 lease_start: str = None, lease_end: str = None, nat: NatType = NatType.none, 
-                 cost: int = 0):
+    def __init__(self, iface: Iface, ip: str | None, cidr: str | None, gateway: str | None, 
+                 mtu: int | None, tc_rule: TCRule | None, firewall: FirewallType | None, 
+                 lease_time: int | None = None, lease_start: str | None = None, 
+                 lease_end: str | None = None, nat: NatType | None = None, cost: int | None = None):
         """
         @params:
             - iface: The network interface.
@@ -335,7 +333,6 @@ class _IfaceConfig():
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
         """
 
-        assert isinstance(iface, Iface)
         self._iface = iface
 
         self._ip = None
@@ -375,15 +372,16 @@ class _IfaceConfig():
         if lease_end:
             self._lease_end = _IPv4(lease_end)
 
-        if self._lease_start and self._lease_end:
+        if self._lease_start or self._lease_end:
+            assert(self._lease_start and self._lease_end)
             assert(self._lease_start._int <= self._lease_end._int)
-        else:
-            assert(self._lease_start is None and self._lease_end is None)
-        
+
         self._nat = nat
 
-        assert(0 <= cost <= 65535)
-        self._cost = cost
+        self._cost = None
+        if cost:
+            assert(0 < cost <= 65535)
+            self._cost = cost
 
     def __eq__(self, other) -> bool:
         assert isinstance(other, _IfaceConfig)
@@ -447,9 +445,10 @@ class SynCookieType(Enum):
 
 class _Service():
     def __init__(self, type: _ServiceType, image: str, auto_restart: bool, 
-                 dns_servers: list[str], cpu_limit: float, mem_limit: int, swap_limit: int, 
-                 forward: bool, syn_cookie: SynCookieType, congestion_control: CongestionControlType, 
-                 fast_retran: bool, sack: bool, timestamp: bool, ttl: int):
+                 dns_servers: list[str] | str | None, cpu_limit: float, mem_limit: int, 
+                 swap_limit: int, forward: bool, syn_cookie: SynCookieType, 
+                 congestion_control: CongestionControlType, fast_retran: bool, 
+                 sack: bool, timestamp: bool, ttl: int):
         """
         @params:
             - type: The type of the service.
@@ -471,7 +470,10 @@ class _Service():
         """
 
         self._type = type
+
+        assert(image != "")
         self._image = image
+
         self._auto_restart = auto_restart
 
         assert(cpu_limit > 0)
@@ -485,9 +487,12 @@ class _Service():
         
         self._dns_servers = None
         if dns_servers:
-            assert(0 < len(dns_servers) <= 64)
+            self._dns_servers: list[_IPv4] = []
 
-            self._dns_servers = []
+            if isinstance(dns_servers, str):
+                dns_servers = [dns_servers]
+
+            assert(0 < len(dns_servers) <= 64)
             for dns_server in dns_servers:
                 ip = _IPv4(dns_server)
                 self._dns_servers.append(ip)
@@ -511,10 +516,11 @@ class _Service():
         _comps[name].append(self)
 
         self._name = f"{name}-{count}"
-        self._iface_configs = []
+        self._iface_configs: list[_IfaceConfig] = []
 
-    def add_iface(self, iface: Iface, ip: str = None, cidr: str = None, gateway: str = None, 
-                  mtu: int = 1500, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
+    def add_iface(self, iface: Iface, ip: str | None = None, cidr: str | None = None, 
+                  gateway: str | None = None, mtu: int | None = 1500, tc_rule: TCRule | None = None, 
+                  firewall: FirewallType | None = None):
         """
         @params:
             - iface: The network interface.
@@ -535,11 +541,14 @@ class _Service():
         self._iface_configs.append(config)
 
 
+_comps: dict[str, list[Iface | _Service]] = {}  # created components are registered here
+
+
 # CLIENT **********************************************************************
 
 
 class Client(_Service):
-    def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
+    def __init__(self, dns_server: str | None = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64, congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
@@ -555,7 +564,6 @@ class Client(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        dns_server = [dns_server] if dns_server else None
         super().__init__(_ServiceType.client, "client", True, dns_server, cpu_limit, 
                          mem_limit, swap_limit, False, SynCookieType.enable, 
                          congestion_control, fast_retran, sack, True, ttl)
@@ -572,7 +580,7 @@ class Protocol(Enum):
 class TrafficGenerator(_Service):
     def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
                  conn_max: int = 50, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
-                 wait_max: float = 15, gzip: bool = False, dns_server: str = None, 
+                 wait_max: float = 15, gzip: bool = False, dns_server: str | None = None, 
                  cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retran: bool = True, sack: bool = True, ttl: int = 64):
@@ -602,7 +610,6 @@ class TrafficGenerator(_Service):
             - The traffic generator prioritizes creating new connections over successful requests.
         """
 
-        dns_server = [dns_server] if dns_server else None
         super().__init__(_ServiceType.tgen, "locust", True, dns_server, cpu_limit, 
                          mem_limit, swap_limit, False, SynCookieType.enable, 
                          congestion_control, fast_retran, sack, True, ttl)
@@ -670,7 +677,7 @@ class HTTPServer(_Service):
 
 
 class DHCPServer(_Service):
-    def __init__(self, dns_server: str = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
+    def __init__(self, dns_server: str | None = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
                  swap_limit: int = 64):
         """
         @params:
@@ -683,14 +690,13 @@ class DHCPServer(_Service):
             - The DHCP server will configure the DNS server, IP, CIDR, gateway, and MTU.
         """
 
-        dns_server = [dns_server] if dns_server else None
         super().__init__(_ServiceType.dhcp, "udhcpd", True, dns_server, cpu_limit, 
                          mem_limit, swap_limit, False, SynCookieType.enable, 
                          CongestionControlType.cubic, True, True, True, 64)
         
-    def add_iface(self, iface: Iface, ip: str, cidr: str = None, lease_time: int = 600, 
-                  lease_start: str = None, lease_end: str = None, gateway: str = None, 
-                  mtu: int = 1500, tc_rule: TCRule = None, firewall: FirewallType = FirewallType.none) -> None:
+    def add_iface(self, iface: Iface, ip: str, cidr: str | None = None, lease_time: int = 600, 
+                  lease_start: str | None = None, lease_end: str | None = None, gateway: str | None = None, 
+                  mtu: int | None = 1500, tc_rule: TCRule | None = None, firewall: FirewallType | None = None):
         """
         @params:
             - iface: The network interface.
@@ -708,8 +714,8 @@ class DHCPServer(_Service):
             - The DHCP server may only have one interface.
         """
 
-        _IPv4(ip)                          # required
-        _cidr = self.__get_cidr(ip, cidr)  # for lease range defaults
+        _IPv4(ip)                                     # required
+        _cidr = self.__get_cidr_or_default(ip, cidr)  # for lease range defaults
 
         # configure default lease_start
         if lease_start == None:
@@ -723,14 +729,15 @@ class DHCPServer(_Service):
             suffix_len = 32 - _cidr._prefix_len
             lease_end = _IPv4(_cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
-        
-        config = _IfaceConfig(iface, ip, cidr, gateway, mtu, tc_rule, firewall, lease_time = lease_time,
-                              lease_start = lease_start, lease_end = lease_end)
-        
+
+        config = _IfaceConfig(iface, ip, cidr, gateway, mtu, tc_rule, firewall, 
+                              lease_time = lease_time, lease_start = lease_start, 
+                              lease_end = lease_end)
+
         assert(len(self._iface_configs) == 0)  # only one interface
         self._iface_configs.append(config)
 
-    def __get_cidr(self, ip: str, cidr: str) -> _CIDR:
+    def __get_cidr_or_default(self, ip: str, cidr: str | None) -> _CIDR:
         """
         @params:
             - ip: The IPv4 address of the service.
@@ -763,8 +770,9 @@ class _Domain():
     
 
 class DNSServer(_Service):
-    def __init__(self, cache: int = 600, dns_servers: list[str] = None, cpu_limit: float = 0.5, 
-                 mem_limit: int = 256, swap_limit: int = 64, ttl: int = 64):
+    def __init__(self, cache: int = 600, dns_servers: list[str] | str | None = None, 
+                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
+                 ttl: int = 64):
         """
         @params:
             - cache: The cache duration for the resolved record in seconds.
@@ -789,9 +797,9 @@ class DNSServer(_Service):
         assert(cache > 0)
         self._cache = cache
         
-        self._domains = []
+        self._domains: list[_Domain] = []
 
-    def register(self, name: str, ip: str) -> None:
+    def register(self, name: str, ip: str):
         """
         @params:
             - name: The domain name.
@@ -848,8 +856,7 @@ class LoadBalancer(_Service):
                          sack, True, ttl)
 
         assert(len(backends) > 0)
-
-        self._backends = []
+        self._backends: list[_IPv4] = []
         for backend in backends:
             ip = _IPv4(backend)
             self._backends.append(ip)
@@ -868,13 +875,12 @@ class LoadBalancer(_Service):
 
 
 class ECMPType(Enum):
-    none = auto()
     l3 = auto()  # (Source IP, Destination IP, IP Protocol)
     l4 = auto()  # (Source IP, Destination IP, Source Port, Destination Port, IP Protocol)
 
 
 class Router(_Service):
-    def __init__(self, ecmp: ECMPType = ECMPType.none, cpu_limit: float = 0.5, 
+    def __init__(self, ecmp: ECMPType | None = None, cpu_limit: float = 0.5, 
                  mem_limit: int = 256, swap_limit: int = 64):
         """
         @params:
@@ -897,16 +903,16 @@ class Router(_Service):
         self._ecmp = ecmp
         self._router_id = __get_router_id()
 
-    def add_iface(self, iface: Iface, ip: str = None, cidr: str = None, mtu: int = None, 
-                  nat: NatType = NatType.none, cost: int = 10, tc_rule: TCRule = None, 
-                  firewall: FirewallType = FirewallType.none) -> None:
+    def add_iface(self, iface: Iface, ip: str | None = None, cidr: str | None = None, 
+                  mtu: int | None = None, nat: NatType | None = None, cost: int = 10,
+                  tc_rule: TCRule | None = None, firewall: FirewallType | None = None):
         """
         @params:
             - iface: The network interface.
             - ip: The IPv4 address of the service.
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - mtu: Configure the MTU. An MTU of none disables TSO.
-            - nat: Configure NAT. 
+            - nat: Configure NAT. Requires cidr to be configured.
             - cost: The cost of routing traffic by the interface.
             - tc_rule: The configured TC rule.
             - firewall: The configured firewall.
@@ -915,6 +921,7 @@ class Router(_Service):
               gateway, and nameserver.
         """
 
+        assert(cidr) if nat else True
         config = _IfaceConfig(iface, ip, cidr, None, mtu, tc_rule, firewall, 
                               nat = nat, cost = cost)
         

@@ -6,6 +6,8 @@ from src.components import _comps, Iface, _ServiceType, _Service, _IfaceConfig
 
 # supported colors: https://graphviz.org/doc/info/colors.html
 COLOR_MAP = {
+    "default": "gainsboro",
+
     _ServiceType.client.name: "bisque",
     _ServiceType.tgen.name: "tan",
     _ServiceType.dhcp.name: "aquamarine",
@@ -69,7 +71,6 @@ class Grapher():
         """
 
         file.write("\t# COMPONENTS\n")
-        color_default = "gainsboro"
 
         for comps in self.__comps.values():
             for service in comps:  # comps is a list
@@ -77,7 +78,7 @@ class Grapher():
 
                 name = service._name
 
-                color_fill = color_default
+                color_fill = COLOR_MAP["default"]
                 if color and service._type.name in COLOR_MAP:
                     color_fill = COLOR_MAP[service._type.name]
 
@@ -120,11 +121,9 @@ class Grapher():
                 assert isinstance(service, _Service)
 
                 name_service = service._name
-
                 for iface in service._iface_configs:
                     assert isinstance(iface, _IfaceConfig)
 
                     name_iface = iface._iface._name
-
                     file.write(f"\t\"{name_service}\" -- \"{name_iface}\" [ ]\n")
                     

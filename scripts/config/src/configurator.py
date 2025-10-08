@@ -112,7 +112,6 @@ class Configurator():
 
             for config in dhcp_server._iface_configs:
                 assert isinstance(config, _IfaceConfig)
-                assert(config._lease_time and config._lease_start and config._lease_end)
                 
                 lease_times.append(f"{config._lease_time}")
                 lease_starts.append(config._lease_start._str)
@@ -182,6 +181,8 @@ class Configurator():
             assert isinstance(router, Router)
             self.__write_service(file, router)
 
+            ecmp = router._ecmp.name if router._ecmp else "none"
+
             cidrs = []
             nats = []
             costs = []
@@ -189,13 +190,13 @@ class Configurator():
             for config in router._iface_configs:
                 assert isinstance(config, _IfaceConfig)
 
-                cidrs.append(config._cidr._str)
-                nats.append(config._nat.name)
+                cidrs.append(config._cidr._str if config._cidr else "none")
+                nats.append(config._nat.name if config._nat else "none")
                 costs.append(f"{config._cost}")
 
             file.write(f"{_SPACE * 3}# Router configuration:\n")
             file.write(f"{_SPACE * 3}ROUTER_ID: {router._router_id}\n")
-            file.write(f"{_SPACE * 3}ECMP: {router._ecmp.name}\n")
+            file.write(f"{_SPACE * 3}ECMP: {ecmp}\n")
             file.write(f"{_SPACE * 3}CIDRS: {" ".join(cidrs)}\n")
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
             file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
@@ -252,15 +253,15 @@ class Configurator():
         # write host configurations
 
         dns_servers = []
-        if service._dns_servers:
+        if not service._dns_servers:
+            dns_servers.append("none")
+        else:
             for dns_server in service._dns_servers:
                 assert isinstance(dns_server, _IPv4)
                 dns_servers.append(dns_server._str)
-        else:
-            dns_servers.append("none")
 
         file.write(f"{_SPACE * 3}# Host configuration:\n")
-        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}  # alternative name for dns server\n")
+        file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")
@@ -287,7 +288,7 @@ class Configurator():
             net_masks.append(config._cidr._netmask._str if config._cidr else "none")
             gateways.append(config._gateway._str if config._gateway else "none")
             mtus.append(f"{config._mtu}" if config._mtu else "none")
-            firewalls.append(config._firewall.name)
+            firewalls.append(config._firewall.name if config._firewall else "none")
 
         # if no interfaces have been added, all of these variables will be empty
         file.write(f"{_SPACE * 3}# Interface configurations:\n")
