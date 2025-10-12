@@ -57,6 +57,7 @@ def write_stats():
 
             if container_name not in containers:
                 getstatusoutput(f"mkdir -p {OUTPUT}/{container_name}/")
+                getstatusoutput(f"chmod 666 {OUTPUT}/{container_name}/ || True")
 
                 file = open(f"{OUTPUT}/{container_name}/hardware_stats.csv", "w")
                 containers[container_name] = file

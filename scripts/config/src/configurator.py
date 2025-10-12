@@ -262,6 +262,7 @@ class Configurator():
 
         file.write(f"{_SPACE * 3}# Host configuration:\n")
         file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}\n")
+        file.write(f"{_SPACE * 3}LOG_QUERIES: {str(service._log_queries).lower()}\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")

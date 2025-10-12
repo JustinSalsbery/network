@@ -231,15 +231,18 @@ echo "" >> $FILE  # new line
 echo "# without filtering, AAAA requests will return a REFUSED error" >> $FILE
 echo "# various utilities, such as socket.getaddrinfo, will throw a gaierror in response" >> $FILE
 echo "filter-AAAA  # return a FILTERED response" >> $FILE
-echo "" >> $FILE  # new line
-echo "log-queries" >> $FILE
-echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
+
+if [ "$LOG_QUERIES" = "true" ]; then
+    echo "" >> $FILE  # new line
+    echo "log-queries" >> $FILE
+    echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
+fi
 
 mkdir -p shared/$HOSTNAME/
-chmod 777 shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
 
 # run
-trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     dnsmasq -k &

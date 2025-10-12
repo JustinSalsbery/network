@@ -220,7 +220,6 @@ class _CIDR():
         return False
 
 
-
 # TC RULE *********************************************************************
 
 
@@ -462,8 +461,8 @@ class SynCookieType(Enum):
 
 class _Service():
     def __init__(self, type: _ServiceType, image: str, auto_restart: bool, 
-                 dns_servers: list[str] | str | None, cpu_limit: float, mem_limit: int, 
-                 swap_limit: int, forward: bool, syn_cookie: SynCookieType, 
+                 dns_servers: list[str] | str | None, log_queries: bool, cpu_limit: float, 
+                 mem_limit: int, swap_limit: int, forward: bool, syn_cookie: SynCookieType, 
                  congestion_control: CongestionControlType, fast_retran: bool, 
                  sack: bool, timestamp: bool, ttl: int):
         """
@@ -473,6 +472,7 @@ class _Service():
             - auto_restart: If disabled, allows manually editing the configurations. 
                             Useful for development.
             - dns_servers: The IPv4 addresses of the DNS servers.
+            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -514,6 +514,7 @@ class _Service():
                 ip = _IPv4(dns_server)
                 self._dns_servers.append(ip)
 
+        self._log_queries = log_queries
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
@@ -581,8 +582,8 @@ class Client(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        super().__init__(_ServiceType.client, "client", True, dns_server, cpu_limit, 
-                         mem_limit, swap_limit, False, SynCookieType.enable, 
+        super().__init__(_ServiceType.client, "client", True, dns_server, False, 
+                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
                          congestion_control, fast_retran, sack, True, ttl)
 
 
@@ -627,8 +628,8 @@ class TrafficGenerator(_Service):
             - The traffic generator prioritizes creating new connections over successful requests.
         """
 
-        super().__init__(_ServiceType.tgen, "locust", True, dns_server, cpu_limit, 
-                         mem_limit, swap_limit, False, SynCookieType.enable, 
+        super().__init__(_ServiceType.tgen, "locust", True, dns_server, False, 
+                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
                          congestion_control, fast_retran, sack, True, ttl)
         
         assert(target != "")
@@ -661,12 +662,13 @@ class TrafficGenerator(_Service):
 
 
 class HTTPServer(_Service):
-    def __init__(self, cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
-                 syn_cookie: SynCookieType = SynCookieType.enable, 
+    def __init__(self, log_queries: bool = True, cpu_limit: float = 0.5, mem_limit: int = 256, 
+                 swap_limit: int = 64, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
         @params:
+            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -685,9 +687,9 @@ class HTTPServer(_Service):
               as by NTP, is unnecessary.
         """
 
-        super().__init__(_ServiceType.http, "nginx", True, None, cpu_limit, mem_limit, 
-                         swap_limit, False, syn_cookie, congestion_control, fast_retran,
-                         sack, True, ttl)
+        super().__init__(_ServiceType.http, "nginx", True, None, log_queries, cpu_limit, 
+                         mem_limit, swap_limit, False, syn_cookie, congestion_control, 
+                         fast_retran, sack, True, ttl)
 
 
 # DHCP SERVER *****************************************************************
@@ -707,8 +709,8 @@ class DHCPServer(_Service):
             - The DHCP server will configure the DNS server, IP, CIDR, gateway, and MTU.
         """
 
-        super().__init__(_ServiceType.dhcp, "udhcpd", True, dns_server, cpu_limit, 
-                         mem_limit, swap_limit, False, SynCookieType.enable, 
+        super().__init__(_ServiceType.dhcp, "udhcpd", True, dns_server, False, 
+                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
                          CongestionControlType.cubic, True, True, True, 64)
         
     def add_iface(self, iface: Iface, cidr: str, ip: str, lease_time: int = 600, 
@@ -772,12 +774,13 @@ class _Domain():
 
 class DNSServer(_Service):
     def __init__(self, cache: int = 600, dns_servers: list[str] | str | None = None, 
-                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64, 
-                 ttl: int = 64):
+                 log_queries: bool = True, cpu_limit: float = 0.5, mem_limit: int = 256, 
+                 swap_limit: int = 64, ttl: int = 64):
         """
         @params:
             - cache: The cache duration for the resolved record in seconds.
             - dns_servers: The IPv4 addresses of the DNS servers.
+            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -791,8 +794,8 @@ class DNSServer(_Service):
               use a local Nameserver.
         """
 
-        super().__init__(_ServiceType.dns, "dnsmasq", True, dns_servers, cpu_limit, 
-                         mem_limit, swap_limit, False, SynCookieType.enable, 
+        super().__init__(_ServiceType.dns, "dnsmasq", True, dns_servers, log_queries, 
+                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
                          CongestionControlType.cubic, True, True, True, ttl)
         
         assert(cache > 0)
@@ -830,8 +833,8 @@ class LBAlgorithm(Enum):
 class LoadBalancer(_Service):
     def __init__(self, backends: list[str], type: LBType = LBType.l5, 
                  algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: bool = False, 
-                 health_check: str = "/", cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, syn_cookie: SynCookieType = SynCookieType.enable, 
+                 health_check: str = "/", log_queries: bool = True, cpu_limit: float = 0.5, 
+                 mem_limit: int = 256, swap_limit: int = 64, syn_cookie: SynCookieType = SynCookieType.enable, 
                  congestion_control: CongestionControlType = CongestionControlType.cubic,
                  fast_retran: bool = True, sack: bool = True, ttl: int = 64):
         """
@@ -841,6 +844,7 @@ class LoadBalancer(_Service):
             - algorithm: The algorithm to use for backend selection.
             - advertise: If enabled, all interfaces will be advertised by OSPF.
             - health_check: The server page to request for health checks.
+            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -852,9 +856,9 @@ class LoadBalancer(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        super().__init__(_ServiceType.lb, "haproxy", True, None, cpu_limit, mem_limit, 
-                         swap_limit, False, syn_cookie, congestion_control, fast_retran,
-                         sack, True, ttl)
+        super().__init__(_ServiceType.lb, "haproxy", True, None, log_queries, 
+                         cpu_limit, mem_limit, swap_limit, False, syn_cookie, 
+                         congestion_control, fast_retran, sack, True, ttl)
 
         assert(len(backends) > 0)
         self._backends: list[_IPv4] = []
@@ -897,9 +901,9 @@ class Router(_Service):
               See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
         """
 
-        super().__init__(_ServiceType.router, "bird", True, None, cpu_limit, mem_limit,
-                         swap_limit, True, SynCookieType.enable, CongestionControlType.cubic, 
-                         True, True, True, 64)
+        super().__init__(_ServiceType.router, "bird", True, None, False, cpu_limit, 
+                         mem_limit, swap_limit, True, SynCookieType.enable, 
+                         CongestionControlType.cubic, True, True, True, 64)
         
         self._ecmp = ecmp
         self._router_id = __get_router_id()

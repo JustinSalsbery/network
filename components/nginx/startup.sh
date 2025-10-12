@@ -270,20 +270,26 @@ echo "" >> $FILE  # new line
 echo -e "\t# Set the Vary HTTP header as defined in the RFC 2616." >> $FILE
 echo -e "\tgzip_vary on; # Default is 'off'." >> $FILE
 echo "" >> $FILE  # new line
-echo -e "\t# Specifies the main log format." >> $FILE
-echo -e "\tlog_format main '\$remote_addr - \$remote_user [\$time_local] \"\$request\" '" >> $FILE
-echo -e "\t\t\t'\$status \$body_bytes_sent \"\$http_referer\" '" >> $FILE
-echo -e "\t\t\t'\"\$http_user_agent\" \"\$http_x_forwarded_for\"';" >> $FILE
-echo "" >> $FILE  # new line
-echo -e "\t# Sets the path, format, and configuration for a buffered log write." >> $FILE
-echo -e "\taccess_log /app/shared/$HOSTNAME/nginx-access.log main; # requires absolute path" >> $FILE
+
+if [ "$LOG_QUERIES" = "true" ]; then
+    echo -e "\t# Specifies the main log format." >> $FILE
+    echo -e "\tlog_format main '\$remote_addr - \$remote_user [\$time_local] \"\$request\" '" >> $FILE
+    echo -e "\t\t\t'\$status \$body_bytes_sent \"\$http_referer\" '" >> $FILE
+    echo -e "\t\t\t'\"\$http_user_agent\" \"\$http_x_forwarded_for\"';" >> $FILE
+    echo "" >> $FILE  # new line
+    echo -e "\t# Sets the path, format, and configuration for a buffered log write." >> $FILE
+    echo -e "\taccess_log /app/shared/$HOSTNAME/nginx-access.log main; # requires absolute path" >> $FILE
+else
+    echo -e "\taccess_log off;"
+fi
+
 echo "" >> $FILE  # new line
 echo -e "\t# Includes virtual hosts configs." >> $FILE
 echo -e "\tinclude /etc/nginx/http.d/*.conf;" >> $FILE
 echo "}" >> $FILE
 
 mkdir -p shared/$HOSTNAME/
-chmod 777 shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
 
 # setup server
 FILE="/etc/nginx/http.d/default.conf"
@@ -312,7 +318,7 @@ echo -e "\t}" >> $FILE
 echo "}" >> $FILE
 
 # run
-trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     nginx -g 'daemon off;' &

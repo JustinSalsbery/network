@@ -266,18 +266,21 @@ echo -e "\ttimeout server 30s"  >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\tcompression algo gzip" >> $FILE
 echo "" >> $FILE  # new line
-echo -e "\tlog stdout local0" >> $FILE
-echo -e "\toption httplog" >> $FILE
-echo "" >> $FILE  # new line
+
+if [ "$LOG_QUERIES" = "true" ]; then
+    echo -e "\tlog stdout local0" >> $FILE
+    echo -e "\toption httplog" >> $FILE
+    echo "" >> $FILE  # new line
+fi
 
 if [ "$TYPE" = "l5" ]; then
     echo "cache www-cache" >> $FILE
     echo -e "\ttotal-max-size  16      # 16 mB" >> $FILE
     echo -e "\tmax-object-size 1000000 # 1 mB" >> $FILE
     echo -e "\tprocess-vary on" >> $FILE
+    echo "" >> $FILE  # new line
 fi
 
-echo "" >> $FILE  # new line
 echo "frontend http" >> $FILE
 echo -e "\tbind *:80" >> $FILE
 echo -e "\tdefault_backend http_servers" >> $FILE
@@ -371,10 +374,10 @@ elif [ "$TYPE" = "l5" ]; then
 fi
 
 mkdir -p shared/$HOSTNAME/
-chmod 777 shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
 
 # run
-trap "chmod -R 777 shared/$HOSTNAME; exit 0" SIGTERM
+trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
 
 LOGFILE="shared/$HOSTNAME/haproxy.log"
 if [ "$AUTO_RESTART" = "true" ]; then
