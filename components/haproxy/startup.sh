@@ -253,15 +253,12 @@ FILE="/etc/haproxy/haproxy.cfg"
 
 echo "defaults" > $FILE
 
-if [ "$TYPE" == "l4" ]; then
+if [ "$TYPE" = "l4" ]; then
     echo -e "\tmode tcp" >> $FILE
-elif [ "$TYPE" == "l5" ]; then
+elif [ "$TYPE" = "l5" ]; then
     echo -e "\tmode http" >> $FILE
 fi
 
-echo "" >> $FILE  # new line
-echo -e "\tlog stdout local0" >> $FILE
-echo -e "\toption httplog" >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\ttimeout connect 10s" >> $FILE
 echo -e "\ttimeout client 30s  # client and server must be equivalent in tcp mode"  >> $FILE
@@ -269,41 +266,60 @@ echo -e "\ttimeout server 30s"  >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\tcompression algo gzip" >> $FILE
 echo "" >> $FILE  # new line
-echo "cache www-cache" >> $FILE
-echo -e "\ttotal-max-size  16      # 16 mB" >> $FILE
-echo -e "\tmax-object-size 1000000 # 1 mB" >> $FILE
-echo -e "\tprocess-vary on" >> $FILE
+echo -e "\tlog stdout local0" >> $FILE
+echo -e "\toption httplog" >> $FILE
+echo "" >> $FILE  # new line
+
+if [ "$TYPE" = "l5" ]; then
+    echo "cache www-cache" >> $FILE
+    echo -e "\ttotal-max-size  16      # 16 mB" >> $FILE
+    echo -e "\tmax-object-size 1000000 # 1 mB" >> $FILE
+    echo -e "\tprocess-vary on" >> $FILE
+fi
+
 echo "" >> $FILE  # new line
 echo "frontend http" >> $FILE
 echo -e "\tbind *:80" >> $FILE
 echo -e "\tdefault_backend http_servers" >> $FILE
 echo "" >> $FILE  # new line
-echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
-echo -e "\thttp-response cache-store www-cache" >> $FILE
+
+if [ "$TYPE" = "l5" ]; then
+    echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
+    echo -e "\thttp-response cache-store www-cache" >> $FILE
+else
+    echo -e "\t# caching requires l5"
+fi
+
 echo "" >> $FILE  # new line
 echo "frontend https" >> $FILE
 
-if [ "$TYPE" == "l4" ]; then
+if [ "$TYPE" = "l4" ]; then
     echo -e "\tbind *:443" >> $FILE
-elif [ "$TYPE" == "l5" ]; then
+elif [ "$TYPE" = "l5" ]; then
     echo -e "\t# enable ssl termination" >> $FILE
     echo -e "\tbind *:443 ssl crt /app/ssl/cert.pem ssl-min-ver TLSv1.2 no-tls-tickets" >> $FILE
 fi
 
 echo -e "\tdefault_backend https_servers" >> $FILE
 echo "" >> $FILE  # new line
-echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
-echo -e "\thttp-response cache-store www-cache" >> $FILE
+
+if [ "$TYPE" = "l5" ]; then
+    echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
+    echo -e "\thttp-response cache-store www-cache" >> $FILE
+else
+    echo -e "\t# caching requires l5"
+fi
+
 echo "" >> $FILE  # new line
 echo "backend http_servers" >> $FILE
 echo -e "\tbalance $ALGORITHM" >> $FILE
 
-if [ "$ALGORITHM" == "source" ]; then
+if [ "$ALGORITHM" = "source" ]; then
     echo -e "\thash-type consistent  # deterministic routing" >> $FILE
-elif [ "$TYPE" == "l4" ]; then
+elif [ "$TYPE" = "l4" ]; then
     echo -e "\tstick-table type ip size 5m expire 10m  # 50 bytes per entry" >> $FILE
     echo -e "\tstick on src  # tcp must be sticky; use lookup table" >> $FILE
-elif [ "$TYPE" == "l5" ]; then
+elif [ "$TYPE" = "l5" ]; then
     echo -e "\t# non-deterministic algorithms may route a request to any backend server" >> $FILE
     echo -e "\t# if the server is stateful, this will cause problems" >> $FILE
 fi
@@ -322,12 +338,12 @@ echo "" >> $FILE  # new line
 echo "backend https_servers" >> $FILE
 echo -e "\tbalance $ALGORITHM" >> $FILE
 
-if [ "$ALGORITHM" == "source" ]; then
+if [ "$ALGORITHM" = "source" ]; then
     echo -e "\thash-type consistent  # deterministic routing" >> $FILE
-elif [ "$TYPE" == "l4" ]; then
+elif [ "$TYPE" = "l4" ]; then
     echo -e "\tstick-table type ip size 5m expire 10m  # 50 bytes per entry" >> $FILE
     echo -e "\tstick on src  # tcp must be sticky; use lookup table" >> $FILE
-elif [ "$TYPE" == "l5" ]; then
+elif [ "$TYPE" = "l5" ]; then
     echo -e "\t# non-deterministic algorithms may route a request to any backend server" >> $FILE
     echo -e "\t# if the server is stateful, this will cause problems" >> $FILE
 fi
@@ -338,12 +354,12 @@ echo -e "\t# health checks must use ssl, though we will not verify the certifica
 echo ""  >> $FILE  # new line
 
 i=0
-if [ "$TYPE" == "l4" ]; then
+if [ "$TYPE" = "l4" ]; then
     for BACKEND in $BACKENDS; do
         echo -e "\tserver server_$i $BACKEND:443 check check-ssl verify none" >> $FILE
         i=$((i + 1))
     done
-elif [ "$TYPE" == "l5" ]; then
+elif [ "$TYPE" = "l5" ]; then
     echo -e "\t# traffic must be re-encrypted" >> $FILE
     echo -e "\t# frequently a shorter, less-secure key will be used to increase performance" >> $FILE
     echo ""  >> $FILE  # new line
