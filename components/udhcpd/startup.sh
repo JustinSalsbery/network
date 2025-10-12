@@ -22,8 +22,13 @@ for IFACE in $IFACES; do
     GATEWAYS="$(echo $GATEWAYS | cut -d' ' -f2-)"
 
     # network suffix should be _0
-    if [ "$IP" = "none" ]; then
-        continue # do nothing
+    if [ "$IP" = "none" ]; then  # dhcp
+        # docker mounts resolv.conf and unmounting is required to write
+        umount /etc/resolv.conf
+
+        # if dhcp fails, the interface is not configured
+        udhcpc -i ${IFACE}_0 -t 25 -n || \
+            ifconfig ${IFACE}_0 down && continue
     else # manual
         ifconfig ${IFACE}_0 $IP
     fi

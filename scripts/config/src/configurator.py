@@ -235,7 +235,7 @@ class Configurator():
 
         # write networks
 
-        if len(service._iface_configs):  # error if network map is empty
+        if len(service._iface_configs):  # avoids an error if the network map is empty
             file.write(f"{_SPACE * 2}networks:\n")
 
             for config in service._iface_configs:

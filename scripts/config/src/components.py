@@ -320,7 +320,7 @@ class _IfaceConfig():
         """
         @params:
             - iface: The network interface.
-            - ip: The IPv4 address of the service.
+            - ip: The IPv4 address of the service. Required for DHCP.
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - gateway: The IPv4 address of the gateway.
             - mtu: Configure the MTU. An MTU of none disables TSO.
@@ -329,7 +329,7 @@ class _IfaceConfig():
             - lease_time: Configure the duration that IPs are leased for.
             - lease_start: The IPv4 address at the start of the lease block. Only implemented on DHCP.
             - lease_end: The IPv4 address at the end of the lease block. Only implemented on DHCP.
-            - nat: Configure NAT. Only implemented on routers.
+            - nat: Configure NAT. Requires cidr to be configured. Only implemented on routers.
             - cost: The cost of routing traffic by the interface. Only implemented on routers.
         """
 
@@ -354,7 +354,6 @@ class _IfaceConfig():
 
         self._tc_rule = None
         if tc_rule:
-            assert isinstance(tc_rule, TCRule)
             self._tc_rule = tc_rule
 
         self._firewall = firewall
@@ -376,6 +375,7 @@ class _IfaceConfig():
             assert(self._lease_start and self._lease_end)
             assert(self._lease_start._int <= self._lease_end._int)
 
+        assert(cidr) if nat else True
         self._nat = nat
 
         self._cost = None
@@ -700,7 +700,7 @@ class DHCPServer(_Service):
         """
         @params:
             - iface: The network interface.
-            - ip: The IPv4 address of the service.
+            - ip: The IPv4 address of the service. Required for DHCP.
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16". CIDR will be advertised.
             - lease_time: Configure the duration that IPs are leased for.
             - lease_start: The IPv4 address at the start of the lease block.
@@ -714,20 +714,18 @@ class DHCPServer(_Service):
             - The DHCP server may only have one interface.
         """
 
-        _IPv4(ip)                                     # required
-        _cidr = self.__get_cidr_or_default(ip, cidr)  # for lease range defaults
+        _IPv4(ip)  # required for default cidr
+        cidr_or_default = self.__get_cidr_or_default(ip, cidr)  # required for lease range defaults
 
-        # configure default lease_start
-        if lease_start == None:
-            assert(_cidr._prefix_len <= 28)
-            lease_start = _IPv4(_cidr._ip._int + 10)
+        if lease_start == None:  # default lease_start
+            assert(cidr_or_default._prefix_len <= 28)
+            lease_start = _IPv4(cidr_or_default._ip._int + 10)
             lease_start = lease_start._str
 
-        # configure default lease_end
-        if lease_end == None:
-            assert(_cidr._prefix_len <= 28)
-            suffix_len = 32 - _cidr._prefix_len
-            lease_end = _IPv4(_cidr._ip._int + 2 ** suffix_len - 2)
+        if lease_end == None:  # default lease_end
+            assert(cidr_or_default._prefix_len <= 28)
+            suffix_len = 32 - cidr_or_default._prefix_len
+            lease_end = _IPv4(cidr_or_default._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
 
         config = _IfaceConfig(iface, ip, cidr, gateway, mtu, tc_rule, firewall, 
@@ -921,7 +919,6 @@ class Router(_Service):
               gateway, and nameserver.
         """
 
-        assert(cidr) if nat else True
         config = _IfaceConfig(iface, ip, cidr, None, mtu, tc_rule, firewall, 
                               nat = nat, cost = cost)
         

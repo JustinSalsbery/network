@@ -27,7 +27,8 @@ for IFACE in $IFACES; do
         umount /etc/resolv.conf
 
         # if dhcp fails, the interface is not configured
-        udhcpc -i ${IFACE}_0 -t 25 -n
+        udhcpc -i ${IFACE}_0 -t 25 -n || \
+            ifconfig ${IFACE}_0 down && continue
     else # manual
         ifconfig ${IFACE}_0 $IP
     fi
