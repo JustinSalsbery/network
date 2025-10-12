@@ -118,7 +118,7 @@ class _CIDR():
         self._prefix_len = int(prefix_len)
 
         self._netmask = self.__netmask(self._prefix_len)
-        self._visibility = self.__visibility(cidr, self._ip, self._prefix_len)
+        self._visibility = self.__visibility(self._ip, self._prefix_len)
 
     def __is_legal(self, cidr: str) -> bool:
         """
@@ -148,45 +148,43 @@ class _CIDR():
         """
 
         suffix_len = 32 - prefix_len
-        netmask = 0xffffffff ^ (2 ** suffix_len - 1)
+        netmask: int = 0xffffffff ^ (2 ** suffix_len - 1)
         return _IPv4(netmask)
     
-    def __visibility(self, cidr: str, ip: _IPv4, prefix_len: int) -> _Visibility:
+    def __visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
         """
         @params:
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - ip: The IPv4 object.
             - prefix_len: The prefix length.
         @returns: Whether the CIDR address is private or public.
         """
         
         ip_private = _IPv4("10.0.0.0")
-        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 8)
+        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 8)
         if visibility == _Visibility.private:
             return visibility
 
         ip_private = _IPv4("169.254.0.0")
-        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 16)
+        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         ip_private = _IPv4("172.16.0.0")
-        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 12)
+        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 12)
         if visibility == _Visibility.private:
             return visibility
         
         ip_private = _IPv4("192.168.0.0")
-        visibility = self.__visibility_internal(cidr, ip, prefix_len, ip_private, 16)
+        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         return _Visibility.public
     
-    def __visibility_internal(self, cidr: str, ip: _IPv4, prefix_len: int, ip_private: _IPv4,
-                              prefix_len_private: int) -> _Visibility:    
+    def __visibility_internal(self, ip: _IPv4, prefix_len: int, ip_private: _IPv4,
+                              prefix_len_private: int) -> _Visibility:
         """
         @params:
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - ip: The IPv4 object.
             - prefix_len: The prefix length.
             - ip_private: The private IPv4 address.
@@ -199,13 +197,28 @@ class _CIDR():
 
         if ip._int & netmask_min._int == ip_private._int & netmask_min._int:
             if prefix_len < prefix_len_private:
+                cidr_public = f"{ip._str}/{prefix_len}"
                 cidr_private = f"{ip_private._str}/{prefix_len_private}"
-                print(f"error: Public subnet {cidr} overlaps private subnet {cidr_private}.")
+                print(f"error: Public subnet {cidr_public} overlaps private subnet {cidr_private}.")
                 print_stack()
+
                 exit(1)
 
             return _Visibility.private
-        return _Visibility.public    
+        return _Visibility.public
+    
+    def contains(self, ip: str) -> bool:
+        """
+        @params:
+            - ip: The IPv4 address.
+        @return: Whether the IPv4 address is within the CIDR range.
+        """
+
+        _ip = _IPv4(ip)
+        if self.__visibility_internal(_ip, 32, self._ip, self._prefix_len) == _Visibility.private:
+            return True
+        return False
+
 
 
 # TC RULE *********************************************************************
@@ -313,15 +326,15 @@ class Iface():
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, ip: str | None, cidr: str | None, gateway: str | None, 
+    def __init__(self, iface: Iface, cidr: str | None, ip: str | None, gateway: str | None, 
                  mtu: int | None, tc_rule: TCRule | None, firewall: FirewallType | None, 
                  lease_time: int | None = None, lease_start: str | None = None, 
                  lease_end: str | None = None, nat: NatType | None = None, cost: int | None = None):
         """
         @params:
             - iface: The network interface.
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16". Required for DHCP.
             - ip: The IPv4 address of the service. Required for DHCP.
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - gateway: The IPv4 address of the gateway.
             - mtu: Configure the MTU. An MTU of none disables TSO.
             - tc_rule: The configured TC rule.
@@ -335,16 +348,18 @@ class _IfaceConfig():
 
         self._iface = iface
 
-        self._ip = None
-        if ip:
-            self._ip = _IPv4(ip)
-
         self._cidr = None
         if cidr:
             self._cidr = _CIDR(cidr)
 
+        self._ip = None
+        if ip:
+            assert(self._cidr.contains(ip)) if self._cidr else True
+            self._ip = _IPv4(ip)
+
         self._gateway = None
         if gateway:
+            assert(self._cidr.contains(gateway)) if self._cidr else True
             self._gateway = _IPv4(gateway)
 
         self._mtu = None
@@ -365,10 +380,12 @@ class _IfaceConfig():
 
         self._lease_start = None
         if lease_start:
+            assert(self._cidr.contains(lease_start)) if self._cidr else True
             self._lease_start = _IPv4(lease_start)
 
         self._lease_end = None
         if lease_end:
+            assert(self._cidr.contains(lease_end)) if self._cidr else True
             self._lease_end = _IPv4(lease_end)
 
         if self._lease_start or self._lease_end:
@@ -518,14 +535,14 @@ class _Service():
         self._name = f"{name}-{count}"
         self._iface_configs: list[_IfaceConfig] = []
 
-    def add_iface(self, iface: Iface, ip: str | None = None, cidr: str | None = None, 
+    def add_iface(self, iface: Iface, cidr: str | None = None, ip: str | None = None, 
                   gateway: str | None = None, mtu: int | None = 1500, tc_rule: TCRule | None = None, 
                   firewall: FirewallType | None = None):
         """
         @params:
             - iface: The network interface.
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16".
             - ip: The IPv4 address of the service.
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - gateway: The IPv4 address of the gateway.
             - mtu: Configure the MTU. An MTU of none disables TSO.
             - tc_rule: The configured TC rule.
@@ -535,7 +552,7 @@ class _Service():
               gateway, and nameservers.
         """
 
-        config = _IfaceConfig(iface, ip, cidr, gateway, mtu, tc_rule, firewall)
+        config = _IfaceConfig(iface, cidr, ip, gateway, mtu, tc_rule, firewall)
 
         assert(config not in self._iface_configs)
         self._iface_configs.append(config)
@@ -694,14 +711,15 @@ class DHCPServer(_Service):
                          mem_limit, swap_limit, False, SynCookieType.enable, 
                          CongestionControlType.cubic, True, True, True, 64)
         
-    def add_iface(self, iface: Iface, ip: str, cidr: str | None = None, lease_time: int = 600, 
-                  lease_start: str | None = None, lease_end: str | None = None, gateway: str | None = None, 
-                  mtu: int | None = 1500, tc_rule: TCRule | None = None, firewall: FirewallType | None = None):
+    def add_iface(self, iface: Iface, cidr: str, ip: str, lease_time: int = 600, 
+                  lease_start: str | None = None, lease_end: str | None = None, 
+                  gateway: str | None = None, mtu: int | None = 1500, tc_rule: TCRule | None = None, 
+                  firewall: FirewallType | None = None):
         """
         @params:
             - iface: The network interface.
-            - ip: The IPv4 address of the service. Required for DHCP.
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16". CIDR will be advertised.
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16". CIDR will be advertised. Required.
+            - ip: The IPv4 address of the service. Required.
             - lease_time: Configure the duration that IPs are leased for.
             - lease_start: The IPv4 address at the start of the lease block.
             - lease_end: The IPv4 address at the end of the lease block.
@@ -714,40 +732,25 @@ class DHCPServer(_Service):
             - The DHCP server may only have one interface.
         """
 
-        _IPv4(ip)  # required for default cidr
-        cidr_or_default = self.__get_cidr_or_default(ip, cidr)  # required for lease range defaults
+        _cidr = _CIDR(cidr)
 
-        if lease_start == None:  # default lease_start
-            assert(cidr_or_default._prefix_len <= 28)
-            lease_start = _IPv4(cidr_or_default._ip._int + 10)
+        if not lease_start:  # default lease_start
+            assert(_cidr._prefix_len <= 28)
+            lease_start = _IPv4(_cidr._ip._int + 10)
             lease_start = lease_start._str
 
-        if lease_end == None:  # default lease_end
-            assert(cidr_or_default._prefix_len <= 28)
-            suffix_len = 32 - cidr_or_default._prefix_len
-            lease_end = _IPv4(cidr_or_default._ip._int + 2 ** suffix_len - 2)
+        if not lease_end:  # default lease_end
+            assert(_cidr._prefix_len <= 28)
+            suffix_len = 32 - _cidr._prefix_len
+            lease_end = _IPv4(_cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
 
-        config = _IfaceConfig(iface, ip, cidr, gateway, mtu, tc_rule, firewall, 
+        config = _IfaceConfig(iface, cidr, ip, gateway, mtu, tc_rule, firewall, 
                               lease_time = lease_time, lease_start = lease_start, 
                               lease_end = lease_end)
 
         assert(len(self._iface_configs) == 0)  # only one interface
         self._iface_configs.append(config)
-
-    def __get_cidr_or_default(self, ip: str, cidr: str | None) -> _CIDR:
-        """
-        @params:
-            - ip: The IPv4 address of the service.
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16".
-        @returns: If configured, returns the cidr else the default cidr.
-        """
-
-        if cidr:
-            return _CIDR(cidr)
-
-        octet = ip.split(".")[0]
-        return _CIDR(f"{octet}.0.0.0/8")
 
 
 # DNS SERVER ******************************************************************
@@ -901,14 +904,14 @@ class Router(_Service):
         self._ecmp = ecmp
         self._router_id = __get_router_id()
 
-    def add_iface(self, iface: Iface, ip: str | None = None, cidr: str | None = None, 
+    def add_iface(self, iface: Iface, cidr: str | None = None, ip: str | None = None, 
                   mtu: int | None = None, nat: NatType | None = None, cost: int = 10,
                   tc_rule: TCRule | None = None, firewall: FirewallType | None = None):
         """
         @params:
             - iface: The network interface.
+            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16".
             - ip: The IPv4 address of the service.
-            - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
             - mtu: Configure the MTU. An MTU of none disables TSO.
             - nat: Configure NAT. Requires cidr to be configured.
             - cost: The cost of routing traffic by the interface.
@@ -919,7 +922,7 @@ class Router(_Service):
               gateway, and nameserver.
         """
 
-        config = _IfaceConfig(iface, ip, cidr, None, mtu, tc_rule, firewall, 
+        config = _IfaceConfig(iface, cidr, ip, None, mtu, tc_rule, firewall, 
                               nat = nat, cost = cost)
         
         assert(config not in self._iface_configs)
