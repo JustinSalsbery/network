@@ -238,7 +238,6 @@ if [ "$ADVERTISE" = "true" ]; then
 
     # run bird
     bird
-    birdc configure
 fi
 
 # Useful birdc commands:
