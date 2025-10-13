@@ -207,7 +207,7 @@ echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
 # setup bird
-# haproxy is not a router; advertise all known routes, but do not import any routes
+# advertise all known routes, but do not import any routes
 FILE="/etc/bird.conf"
 
 if [ "$ADVERTISE" = "true" ]; then
@@ -248,6 +248,7 @@ fi
 # Useful ip command:
 #   ip route
 
+# setup haproxy
 FILE="/etc/haproxy/haproxy.cfg"
 
 echo "defaults" > $FILE
