@@ -238,11 +238,11 @@ echo -e "\t@task(1)" >> $FILE
 echo -e "\tdef close(self):" >> $FILE
 echo -e "\t\tself.client.client.close()" >> $FILE
 
+# run
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
-# run
-trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
+trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \

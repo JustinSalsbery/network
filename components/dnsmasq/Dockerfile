@@ -11,16 +11,16 @@ RUN apk add iptables iproute2 iputils busybox-extras
 
 RUN apk add dnsmasq
 
-WORKDIR /app
+WORKDIR /app/
 
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
 
-RUN mkdir ./shared
+RUN mkdir shared/
 
-COPY ./scripts ./scripts
+COPY scripts/ scripts/
 
-COPY ./startup.sh .
-RUN chmod +x ./startup.sh
+COPY startup.sh startup.sh
+RUN chmod +x startup.sh
 
 CMD ["./startup.sh"]

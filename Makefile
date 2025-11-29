@@ -9,12 +9,13 @@ CONFIG ?= main.py # default configuration for network
 .SILENT:
 
 
+.PHONY: options help
 options help:
 	echo "Options:"
 	echo -e "\t- build"
 	echo -e "\t- up       # write docker-compose and launch"
 	echo -e "\t- down"
-	echo -e "\t- clean    # stops all containers and deletes all images"
+	echo -e "\t- clean    # deletes shared; stops all containers and deletes any dangling images"
 	
 	echo "" # New line
 
@@ -29,8 +30,10 @@ options help:
 	echo "Notes:"
 	echo -e "\t- Choose a specific config: 'make {config, up} CONFIG=NAME'"
 
-CERTS_SERVER := components/nginx/ssl
-CERTS_LB := components/haproxy/ssl
+CERTS_SERVER := components/nginx/ssl/
+CERTS_LB := components/haproxy/ssl/
+
+.PHONY: certs
 certs:
 	mkdir -p ${CERTS_SERVER}
 	openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout ${CERTS_SERVER}/private.key -out ${CERTS_SERVER}/public.crt \
@@ -43,6 +46,7 @@ certs:
 	# combine the public and private keys
 	cat ${CERTS_LB}/public.crt ${CERTS_LB}/private.key > ${CERTS_LB}/cert.pem
 
+.PHONY: build
 build: certs
 	FILES=$$(find components -name "Dockerfile")
 	for FILE in $$FILES; do
@@ -50,26 +54,29 @@ build: certs
 		docker build -t $$NAME $$(dirname $$FILE)
 	done
 
+.PHONY: up
 up: config
 	docker compose up -d
 
+.PHONY: down
 down:
-	if [ -f "docker-compose.yml" ]; then
-		docker compose down --timeout 2
-	else
+	if ! [ -f "docker-compose.yml" ]; then
 		echo "info: No docker compose file found."
+		exit 1
 	fi
+
+	docker compose down --timeout 2
+	sudo chmod -R 666 shared/
 
 # down depends upon the docker-compose file
 # before we generate a new configuration, we must bring down the current network
 
-config: down
-	echo "(Optional) sudo rm -rf shared"
-	sudo rm -rf shared || true
-	
-	mkdir -p shared
+.PHONY: config
+config: down .WAIT clean-shared
+	mkdir -p shared/
 	${PYTHON} scripts/config/${CONFIG}
 
+.PHONY: list
 list:
 	echo "Configurations:"
 
@@ -86,26 +93,36 @@ list:
 
 GRAPH := shared/config-graph
 GRAPH_FORMAT := png  # options: jpeg, png, pdf, svg
+
+.PHONY: graph
 graph:
 	if ! [ -f ${GRAPH}.gv ]; then
 		echo "error: ${GRAPH}.gv not found. No network configured."
 		exit 1
 	fi
 
-	neato -T${GRAPH_FORMAT} ${GRAPH}.gv -o ${GRAPH}.${GRAPH_FORMAT}
 	# dot -Ksfdp produces a similar image
+	neato -T${GRAPH_FORMAT} ${GRAPH}.gv -o ${GRAPH}.${GRAPH_FORMAT}
 
+.PHONY: stats
 stats:
 	echo "Exit with ctrl + c ..."
 	${PYTHON} scripts/stats/main.py
 
-clean:
-	echo "(Optional) sudo rm -rf shared"
-	sudo rm -rf shared || true
-	
+.PHONY: clean
+clean: clean-shared clean-certs clean-docker
+
+.PHONY: clean-shared
+clean-shared:
+	sudo rm -rf shared/
+
+.PHONY: clean-certs
+clean-certs:
 	rm -r ${CERTS_SERVER}
 	rm -r ${CERTS_LB}
-	
+
+.PHONY: clean-docker
+clean-docker:
 	docker container stop $$(docker container ls -a -q)
 	docker image rm $$(docker image ls -a -q)
-	docker system prune -f
+	docker system prune --force

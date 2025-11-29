@@ -257,11 +257,11 @@ for IFACE in $IFACES; do
     fi
 done
 
+# run
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
-# run
-trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
+trap "exit 0" SIGTERM
 
 LOGFILE="shared/$HOSTNAME/udhcpd.log"
 if [ "$AUTO_RESTART" = "true" ]; then

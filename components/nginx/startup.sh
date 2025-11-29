@@ -288,9 +288,6 @@ echo -e "\t# Includes virtual hosts configs." >> $FILE
 echo -e "\tinclude /etc/nginx/http.d/*.conf;" >> $FILE
 echo "}" >> $FILE
 
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 # setup server
 FILE="/etc/nginx/http.d/default.conf"
 
@@ -318,7 +315,10 @@ echo -e "\t}" >> $FILE
 echo "}" >> $FILE
 
 # run
-trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
+trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     nginx -g 'daemon off;' &

@@ -373,11 +373,11 @@ elif [ "$TYPE" = "l5" ]; then
     done
 fi
 
+# run
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
-# run
-trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
+trap "exit 0" SIGTERM
 
 LOGFILE="shared/$HOSTNAME/haproxy.log"
 if [ "$AUTO_RESTART" = "true" ]; then

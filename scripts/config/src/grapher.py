@@ -29,8 +29,8 @@ class Grapher():
         """
 
         try:
-            self.__comps = _comps.copy()  # remove ifaces without affecting external
-            self.__ifaces = self.__comps.pop("iface")
+            self._comps = _comps.copy()  # remove ifaces without affecting external
+            self._ifaces = self._comps.pop("iface")
         except Exception as _:
             print("Warning: No interfaces found. Stopping...")
             return
@@ -54,15 +54,15 @@ class Grapher():
 
             file.write("\n")  # new line
             file.write("\t# NODES\n")
-            self.__write_nodes(file, color, extra)
+            self._write_nodes(file, color, extra)
 
             file.write("\n")  # new line
             file.write("\t# CONNECTIONS\n")
-            self.__write_connections(file, extra)
+            self._write_connections(file, extra)
 
             file.write("}\n")
 
-    def __write_nodes(self, file: TextIOWrapper, color: bool, extra: bool):
+    def _write_nodes(self, file: TextIOWrapper, color: bool, extra: bool):
         """
         @params:
             - file: File to write to.
@@ -72,7 +72,7 @@ class Grapher():
 
         file.write("\t# COMPONENTS\n")
 
-        for comps in self.__comps.values():
+        for comps in self._comps.values():
             for service in comps:  # comps is a list
                 assert isinstance(service, _Service)
 
@@ -96,7 +96,7 @@ class Grapher():
         
         file.write("\n")  # new line
         file.write("\t# IFACES\n")
-        for iface in self.__ifaces:
+        for iface in self._ifaces:
             assert isinstance(iface, Iface)
 
             name = iface._name
@@ -109,14 +109,14 @@ class Grapher():
 
             file.write("]\n")
 
-    def __write_connections(self, file: TextIOWrapper, extra: bool):
+    def _write_connections(self, file: TextIOWrapper, extra: bool):
         """
         @params:
             - file: File to write to.
             - extra: Enable or disable extra information.
         """
 
-        for comps in self.__comps.values():
+        for comps in self._comps.values():
             for service in comps:
                 assert isinstance(service, _Service)
 

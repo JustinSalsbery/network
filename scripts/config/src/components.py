@@ -14,13 +14,13 @@ class _IPv4():
         """
 
         if type(ip) == str:
-            if not self.__is_legal(ip):
+            if not self._is_legal(ip):
                 print(f"error: Illegal IPv4 address {ip}")
                 print_stack()
                 exit(1)
         
             self._str = ip
-            self._int = self.__str_to_int(ip)
+            self._int = self._str_to_int(ip)
         elif type(ip) == int:
             if ip < 0 or ip > 0xffffffff:
                 print(f"error: Illegal IPv4 address {ip}")
@@ -28,13 +28,13 @@ class _IPv4():
                 exit(1)
 
             self._int = ip
-            self._str = self.__int_to_str(ip)
+            self._str = self._int_to_str(ip)
         else:  # unknown type
             print(f"error: Illegal IPv4 of type {type(ip)}")
             print_stack()
             exit(1)
 
-    def __is_legal(self, ip: str) -> bool:
+    def _is_legal(self, ip: str) -> bool:
         """
         @params:
             - ip: The IPv4 address as a string.
@@ -56,7 +56,7 @@ class _IPv4():
 
         return True
 
-    def __str_to_int(self, ip: str) -> int:
+    def _str_to_int(self, ip: str) -> int:
         """
         @params:
             - ip: The IPv4 address as a string, ex. "169.254.0.0"
@@ -73,7 +73,7 @@ class _IPv4():
         
         return ip
     
-    def __int_to_str(self, ip: int) -> str:
+    def _int_to_str(self, ip: int) -> str:
         """
         @params:
             - ip: The IPv4 as an integer, ex. 0x0a000001
@@ -106,7 +106,7 @@ class _CIDR():
             - Subnets that overlap public and private IP ranges are disallowed.
         """
 
-        if not self.__is_legal(cidr):
+        if not self._is_legal(cidr):
             print(f"error: Illegal CIDR {cidr}")
             print_stack()
             exit(1)
@@ -117,10 +117,10 @@ class _CIDR():
         self._ip = _IPv4(ip)
         self._prefix_len = int(prefix_len)
 
-        self._netmask = self.__netmask(self._prefix_len)
-        self._visibility = self.__visibility(self._ip, self._prefix_len)
+        self._netmask = self._netmask(self._prefix_len)
+        self._visibility = self._visibility(self._ip, self._prefix_len)
 
-    def __is_legal(self, cidr: str) -> bool:
+    def _is_legal(self, cidr: str) -> bool:
         """
         @params:
             - cidr: The subnet in CIDR notation, ex. "169.254.0.0/16"
@@ -140,7 +140,7 @@ class _CIDR():
         
         return True
 
-    def __netmask(self, prefix_len: int) -> _IPv4:
+    def _netmask(self, prefix_len: int) -> _IPv4:
         """
         @params:
             - prefix_len: The prefix length of the subnet.
@@ -151,7 +151,7 @@ class _CIDR():
         netmask: int = 0xffffffff ^ (2 ** suffix_len - 1)
         return _IPv4(netmask)
     
-    def __visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
+    def _visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
         """
         @params:
             - ip: The IPv4 object.
@@ -160,28 +160,28 @@ class _CIDR():
         """
         
         ip_private = _IPv4("10.0.0.0")
-        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 8)
+        visibility = self._visibility_internal(ip, prefix_len, ip_private, 8)
         if visibility == _Visibility.private:
             return visibility
 
         ip_private = _IPv4("169.254.0.0")
-        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 16)
+        visibility = self._visibility_internal(ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         ip_private = _IPv4("172.16.0.0")
-        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 12)
+        visibility = self._visibility_internal(ip, prefix_len, ip_private, 12)
         if visibility == _Visibility.private:
             return visibility
         
         ip_private = _IPv4("192.168.0.0")
-        visibility = self.__visibility_internal(ip, prefix_len, ip_private, 16)
+        visibility = self._visibility_internal(ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         return _Visibility.public
     
-    def __visibility_internal(self, ip: _IPv4, prefix_len: int, ip_private: _IPv4,
+    def _visibility_internal(self, ip: _IPv4, prefix_len: int, ip_private: _IPv4,
                               prefix_len_private: int) -> _Visibility:
         """
         @params:
@@ -193,7 +193,7 @@ class _CIDR():
         """
 
         prefix_len_min = min(prefix_len, prefix_len_private)
-        netmask_min = self.__netmask(prefix_len_min)
+        netmask_min = self._netmask(prefix_len_min)
 
         if ip._int & netmask_min._int == ip_private._int & netmask_min._int:
             if prefix_len < prefix_len_private:
@@ -215,7 +215,7 @@ class _CIDR():
         """
 
         _ip = _IPv4(ip)
-        if self.__visibility_internal(_ip, 32, self._ip, self._prefix_len) == _Visibility.private:
+        if self._visibility_internal(_ip, 32, self._ip, self._prefix_len) == _Visibility.private:
             return True
         return False
 
@@ -873,7 +873,7 @@ class LoadBalancer(_Service):
         assert(health_check != "")
         self._health_check = health_check
 
-        self._router_id = __get_router_id()
+        self._router_id = _get_router_id()
 
 
 # ROUTER **********************************************************************
@@ -906,7 +906,7 @@ class Router(_Service):
                          CongestionControlType.cubic, True, True, True, 64)
         
         self._ecmp = ecmp
-        self._router_id = __get_router_id()
+        self._router_id = _get_router_id()
 
     def add_iface(self, iface: Iface, cidr: str | None = None, ip: str | None = None, 
                   mtu: int | None = None, nat: NatType | None = None, cost: int = 10,
@@ -933,9 +933,9 @@ class Router(_Service):
         self._iface_configs.append(config)
 
 
-__router_id = 0   # necessary for ECMP advertisements; 0 is illegal
-def __get_router_id() -> int:
-    global __router_id
+_router_id = 0   # necessary for ECMP advertisements; 0 is illegal
+def _get_router_id() -> int:
+    global _router_id
 
-    __router_id += 1
-    return __router_id
+    _router_id += 1
+    return _router_id

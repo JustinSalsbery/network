@@ -61,6 +61,7 @@ def write_stats():
 
                 file = open(f"{OUTPUT}/{container_name}/hardware_stats.csv", "w")
                 containers[container_name] = file
+
                 file.write("timestamp,container_name,cpu_perc (%),mem_usage (Bytes)," \
                            + "mem_limit (Bytes),mem_perc (%),net_received (Bytes)," \
                            + "net_transmitted (Bytes),disk_read (Bytes)," \
@@ -71,7 +72,6 @@ def write_stats():
                        + f"{mem_perc},{net_received},{net_transmitted},{disk_read},"\
                        + f"{disk_write},{pids}\n")
             file.flush()
-        
         sleep(WAIT)
 
 

@@ -10,7 +10,7 @@ RUN apk add gcc musl-dev linux-headers
 # install locust
 # for venv, use an environment variable not source
 
-WORKDIR /app
+WORKDIR /app/
 
 RUN python3 -m venv venv
 ENV PATH="venv/bin:$PATH"
@@ -33,18 +33,18 @@ RUN apk add iptables iproute2 iputils busybox-extras
 RUN apk add python3
 ENV PATH="venv/bin:$PATH"
 
-COPY --from=0 /app /app
+COPY --from=0 /app/ /app/
 
-WORKDIR /app
+WORKDIR /app/
 
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
 
-RUN mkdir ./shared
+RUN mkdir shared/
 
-COPY ./scripts ./scripts
+COPY scripts/ scripts/
 
-COPY ./startup.sh .
-RUN chmod +x ./startup.sh
+COPY startup.sh startup.sh
+RUN chmod +x startup.sh
 
 CMD ["./startup.sh"]

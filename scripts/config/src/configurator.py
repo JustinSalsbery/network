@@ -32,22 +32,22 @@ class Configurator():
         
         # create a temporary subnet
 
-        self.__cidr = _CIDR(available_range)
-        self.__ip = self.__cidr._ip._int
+        self._cidr = _CIDR(available_range)
+        self._ip = self._cidr._ip._int
 
-        suffix_len = 32 - self.__cidr._prefix_len
-        self.__ip_max = self.__ip + 2 ** suffix_len
+        suffix_len = 32 - self._cidr._prefix_len
+        self._ip_max = self._ip + 2 ** suffix_len
 
-        self.__prefix_len = prefix_len
+        self._prefix_len = prefix_len
 
         # docker compose down will fail unless networks follow after services
         with open("docker-compose.yml", "w") as file:
-            self.__write_services(file)
-            self.__write_inets(file)
+            self._write_services(file)
+            self._write_inets(file)
 
         Grapher(color, extra)
 
-    def __write_services(self, file: TextIOWrapper):
+    def _write_services(self, file: TextIOWrapper):
         """
         @params:
             - file: File to write to.
@@ -63,7 +63,7 @@ class Configurator():
 
         for client in clients:
             assert isinstance(client, Client)
-            self.__write_service(file, client)
+            self._write_service(file, client)
 
         # write traffic generators
 
@@ -73,7 +73,7 @@ class Configurator():
 
         for tgen in tgens:
             assert isinstance(tgen, TrafficGenerator)
-            self.__write_service(file, tgen)
+            self._write_service(file, tgen)
 
             file.write(f"{_SPACE * 3}# Locust configuration:\n")
             file.write(f"{_SPACE * 3}TARGET: {tgen._target}\n")
@@ -94,7 +94,7 @@ class Configurator():
 
         for http_server in http_servers:
             assert isinstance(http_server, HTTPServer)
-            self.__write_service(file, http_server)
+            self._write_service(file, http_server)
 
         # write dhcp servers
 
@@ -104,7 +104,7 @@ class Configurator():
 
         for dhcp_server in dhcp_servers:
             assert isinstance(dhcp_server, DHCPServer)
-            self.__write_service(file, dhcp_server)
+            self._write_service(file, dhcp_server)
 
             lease_times = []
             lease_starts = []
@@ -130,7 +130,7 @@ class Configurator():
 
         for dns_server in dns_servers:
             assert isinstance(dns_server, DNSServer)
-            self.__write_service(file, dns_server)
+            self._write_service(file, dns_server)
 
             names = []
             ips = []
@@ -154,7 +154,7 @@ class Configurator():
 
         for lb in lbs:
             assert isinstance(lb, LoadBalancer)
-            self.__write_service(file, lb)
+            self._write_service(file, lb)
 
             backends = []
 
@@ -179,7 +179,7 @@ class Configurator():
 
         for router in routers:
             assert isinstance(router, Router)
-            self.__write_service(file, router)
+            self._write_service(file, router)
 
             ecmp = router._ecmp.name if router._ecmp else "none"
 
@@ -201,7 +201,7 @@ class Configurator():
             file.write(f"{_SPACE * 3}NATS: {" ".join(nats)}\n")
             file.write(f"{_SPACE * 3}COSTS: {" ".join(costs)}\n")
 
-    def __write_service(self, file: TextIOWrapper, service: _Service):
+    def _write_service(self, file: TextIOWrapper, service: _Service):
         """
         @params:
             - file: File to write to.
@@ -331,7 +331,7 @@ class Configurator():
         file.write(f"{_SPACE * 3}DUPLICATES: {" ".join(duplicates)}\n")
         file.write(f"{_SPACE * 3}QUEUE_LIMITS: {" ".join(queue_limits)}\n")
 
-    def __write_inets(self, file: TextIOWrapper):
+    def _write_inets(self, file: TextIOWrapper):
         """
         @params:
             - file: File to write to.
@@ -351,26 +351,26 @@ class Configurator():
             file.write(f"{_SPACE * 2}internal: true\n")
             file.write(f"{_SPACE * 2}ipam:\n")
             file.write(f"{_SPACE * 3}config:  # this is a workaround for a docker limitation\n")
-            file.write(f"{_SPACE * 4}- subnet: {self.__get_cidr()}  # temporary subnet\n")
+            file.write(f"{_SPACE * 4}- subnet: {self._get_cidr()}  # temporary subnet\n")
             file.write(f"{_SPACE * 2}driver_opts:  # os defines a suffix\n")
             file.write(f"{_SPACE * 3}com.docker.network.container_iface_prefix: {iface._name}_\n")
 
-    def __get_cidr(self) -> str:
+    def _get_cidr(self) -> str:
         """
         @returns: An IPv4 address in CIDR notation.
         """
 
-        if self.__ip >= self.__ip_max:
-            print(f"error: Allocated subnet {self.__cidr._str} exceeded.")
+        if self._ip >= self._ip_max:
+            print(f"error: Allocated subnet {self._cidr._str} exceeded.")
             print("info: Consider changing settings for the Configurator.")
             
             print_stack()
             exit(1)
 
-        ip = _IPv4(self.__ip)
-        cidr = f"{ip._str}/{self.__prefix_len}"
+        ip = _IPv4(self._ip)
+        cidr = f"{ip._str}/{self._prefix_len}"
 
-        suffix_len = 32 - self.__prefix_len
-        self.__ip += 2 ** suffix_len  # iterate
+        suffix_len = 32 - self._prefix_len
+        self._ip += 2 ** suffix_len  # iterate
 
         return cidr

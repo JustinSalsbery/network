@@ -21,11 +21,11 @@ def measure(wait: float, iface: str, path: str):
                    "disk_reads_count,disk_writes_count,disk_read_bytes,disk_write_bytes\n")
 
         while True:
-            __measure(file, cpu, iface)
+            _measure(file, cpu, iface)
             sleep(wait)
 
 
-def __measure(file: TextIOWrapper, cpu: int, iface: str):
+def _measure(file: TextIOWrapper, cpu: int, iface: str):
     file.write(f"{time():1f},")  # timestamp
 
     cpu_percents = psutil.cpu_percent(interval=None, percpu=True)

@@ -238,11 +238,11 @@ if [ "$LOG_QUERIES" = "true" ]; then
     echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
 fi
 
+# run
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
-# run
-trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
+trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     dnsmasq -k &

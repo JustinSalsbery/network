@@ -310,11 +310,11 @@ echo -e "\timport none;" >> $FILE
 echo -e "\texport all;" >> $FILE
 echo "}" >> $FILE
 
+# run
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
-# run
-trap "chmod -R 666 shared/$HOSTNAME; exit 0" SIGTERM
+trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     bird -f &
