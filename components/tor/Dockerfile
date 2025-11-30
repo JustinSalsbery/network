@@ -1,4 +1,3 @@
-
 FROM alpine:latest
 RUN apk upgrade --no-cache
 
@@ -7,9 +6,9 @@ RUN apk upgrade --no-cache
 RUN apk add --no-cache curl tcpdump net-tools bind-tools ethtool
 RUN apk add --no-cache iptables iproute2 iputils busybox-extras
 
-# setup lb
+# setup tor
 
-RUN apk add --no-cache bird haproxy
+RUN apk add --no-cache tor nyx torsocks
 
 WORKDIR /app/
 
@@ -18,7 +17,6 @@ WORKDIR /app/
 
 RUN mkdir shared/
 
-COPY ssl/ ssl/
 COPY scripts/ scripts/
 
 COPY startup.sh startup.sh

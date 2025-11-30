@@ -417,6 +417,7 @@ class _ServiceType(Enum):
     client = auto()
     dhcp = auto()
     dns = auto()  # nameserver
+    tor = auto()
 
 
 class CongestionControlType(Enum):

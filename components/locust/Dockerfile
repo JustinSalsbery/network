@@ -4,8 +4,8 @@ RUN apk upgrade --no-cache
 
 # install build dependencies
 
-RUN apk add python3 python3-dev py3-pip
-RUN apk add gcc musl-dev linux-headers
+RUN apk add --no-cache python3 python3-dev py3-pip
+RUN apk add --no-cache gcc musl-dev linux-headers
 
 # install locust
 # for venv, use an environment variable not source
@@ -25,12 +25,12 @@ RUN apk upgrade --no-cache
 
 # additional tools
 
-RUN apk add curl tcpdump net-tools bind-tools ethtool
-RUN apk add iptables iproute2 iputils busybox-extras
+RUN apk add --no-cache curl tcpdump net-tools bind-tools ethtool
+RUN apk add --no-cache iptables iproute2 iputils busybox-extras
 
 # recreate environment
 
-RUN apk add python3
+RUN apk add --no-cache python3
 ENV PATH="venv/bin:$PATH"
 
 COPY --from=0 /app/ /app/

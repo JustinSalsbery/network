@@ -3,12 +3,12 @@ RUN apk upgrade --no-cache
 
 # additional tools
 
-RUN apk add curl tcpdump net-tools bind-tools ethtool
-RUN apk add iptables iproute2 iputils busybox-extras
+RUN apk add --no-cache curl tcpdump net-tools bind-tools ethtool
+RUN apk add --no-cache iptables iproute2 iputils busybox-extras
 
 # setup nginx
 
-RUN apk add nginx
+RUN apk add --no-cache nginx
 
 WORKDIR /app/
 
