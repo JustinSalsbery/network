@@ -206,6 +206,10 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
+# setup shared
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
 # configure ecmp
 if [ "$ECMP" = "l3" ]; then
     sysctl -w net.ipv4.fib_multipath_hash_policy=0
@@ -311,9 +315,6 @@ echo -e "\texport all;" >> $FILE
 echo "}" >> $FILE
 
 # run
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then

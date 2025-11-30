@@ -206,10 +206,104 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# run
+# setup shared
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
+# setup tor
+# configured for a single interface
+DATA_DIR="/var/lib/tor/"
+LOG_DIR="/app/shared/$HOSTNAME/"
+
+# if tor creates the data directory, the directory will be owned by the tor account
+# we are running tor with the root account, which will result in errors
+mkdir -p $DATA_DIR
+
+for IFACE in $IFACES; do
+    IP="$(echo $IPS | cut -d' ' -f1)"
+    IPS="$(echo $IPS | cut -d' ' -f2-)"    
+
+    # wait for directory authority
+    while ! [ -f "shared/$TOR_AUTH/ready" ]; then
+        echo "waiting for shared/$TOR_AUTH/ready"
+        sleep 1  # seconds
+    fi
+
+    AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
+    AUTH_CERT="$(cat shared/$TOR_AUTH/certificate)"
+    AUTH_FINGERPRINT="$(cat shared/$TOR_AUTH/fingerprint)"
+
+    # setup torrc
+    FILE="/etc/tor/torrc"
+
+    echo "DataDirectory $DATA_DIR" > $FILE
+    echo "TestingTorNetwork 1" >> $FILE
+    echo "DirAuthority $TOR_AUTH no-v2 v3ident=$AUTH_CERT $AUTH_IP:7000 $AUTH_FINGERPRINT orport=5000" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "RunAsDaemon 0" >> $FILE
+    echo "ShutdownWaitLength 0" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "AssumeReachable 1" >> $FILE
+    echo "PathsNeededToBuildCircuits 0.25" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "# Remove requirements" >> $FILE
+    echo "TestingDirAuthVoteGuard *" >> $FILE
+    echo "TestingDirAuthVoteExit *" >> $FILE
+    echo "TestingDirAuthVoteHSDir *" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "SafeLogging 0" >> $FILE
+    echo "Log notice file $LOG_DIR/notice.log" >> $FILE
+    echo "Log info file $LOG_DIR/info.log" >> $FILE
+    echo "Log debug file $LOG_DIR/debug.log" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "Nickname $HOSTNAME" >> $FILE
+    echo "Address $IP" >> $FILE
+    echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "SocksPort 9050 ExtendedErrors" >> $FILE
+    echo "OrPort 5000" >> $FILE
+    echo "DirPort 7000" >> $FILE
+    echo "" >> $FILE  # new line
+
+    if ! [ "TOR_BRIDGE" = "" ]; then
+        while ! [ -f "shared/$TOR_BRIDGE/ready" ]; then
+            echo "waiting for shared/$TOR_BRIDGE/ready"
+            sleep 1  # seconds
+        fi
+
+        BRIDGE_IP="$(cat shared/$TOR_BRIDGE/ip)"
+        BRIDGE_FINGERPRINT="$(cat shared/$TOR_BRIDGE/fingerprint)"
+
+        echo "UseBridges 1" >> $FILE
+        echo "Bridge $BRIDGE_IP:5000 $BRIDGE_FINGERPRINT" >> $FILE
+    fi
+
+    if ! [ "TOR_MIDDLE" = "" ]; then
+        while ! [ -f "shared/$TOR_MIDDLE/ready" ]; then
+            echo "waiting for shared/$TOR_MIDDLE/ready"
+            sleep 1  # seconds
+        fi
+
+        MIDDLE_FINGERPRINT="$(cat shared/$TOR_MIDDLE/fingerprint)"
+        echo "MiddleNodes $MIDDLE_FINGERPRINT" >> $FILE
+    fi
+
+    if ! [ "TOR_EXIT" = "" ]; then
+        while ! [ -f "shared/$TOR_EXIT/ready" ]; then
+            echo "waiting for shared/$TOR_EXIT/ready"
+            sleep 1  # seconds
+        fi
+
+        EXIT_FINGERPRINT="$(cat shared/$TOR_EXIT/fingerprint)"
+        echo "ExitNodes $EXIT_FINGERPRINT" >> $FILE
+    fi
+done
+
+if [ "TOR" = "true" ]; then
+    tor &
+fi
+
+# run
 trap "exit 0" SIGTERM
 
 sleep infinity &

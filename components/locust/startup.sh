@@ -206,6 +206,10 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
+# setup shared
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
 # setup locust
 FILE="locustfile.py"
 
@@ -239,9 +243,6 @@ echo -e "\tdef close(self):" >> $FILE
 echo -e "\t\tself.client.client.close()" >> $FILE
 
 # run
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then

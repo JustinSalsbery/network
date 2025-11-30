@@ -210,6 +210,10 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
+# setup shared
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
 # setup hosts
 for HOST_NAME in $HOST_NAMES; do
     HOST_IP="$(echo $HOST_IPS | cut -d' ' -f1)"
@@ -239,9 +243,6 @@ if [ "$LOG_QUERIES" = "true" ]; then
 fi
 
 # run
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then

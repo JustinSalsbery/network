@@ -206,13 +206,15 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup tor
+# setup shared
 mkdir -p shared/$HOSTNAME/
 chmod 666 shared/$HOSTNAME/
 
-DATA_DIR="/var/lib/tor/"
-
+# setup tor
 # configured for a single interface
+DATA_DIR="/var/lib/tor/"
+LOG_DIR="/app/shared/$HOSTNAME/"
+
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"
     IPS="$(echo $IPS | cut -d' ' -f2-)"
@@ -240,11 +242,9 @@ for IFACE in $IFACES; do
 
     # wait for directory authority
     # if the node is a directory authority, the node will read it's own information
-    while ! [ -f "shared/$TOR_AUTH/ip" ] || \
-          ! [ -f "shared/$TOR_AUTH/certificate" ] || \
-          ! [ -f "shared/$TOR_AUTH/fingerprint" ]; then
+    while ! [ -f "shared/$TOR_AUTH/ready" ]; then
         echo "waiting for $TOR_AUTH to write to shared/"
-        sleep 3  # seconds
+        sleep 1  # seconds
     fi
 
     AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
@@ -253,18 +253,12 @@ for IFACE in $IFACES; do
 
     # setup torrc
     FILE="/etc/tor/torrc"
-    LOG_DIR="/app/shared/$HOSTNAME/"
 
     echo "DataDirectory $DATA_DIR" > $FILE
     echo "TestingTorNetwork 1" >> $FILE
     echo "DirAuthority $TOR_AUTH no-v2 v3ident=$AUTH_CERT $AUTH_IP:7000 $AUTH_FINGERPRINT orport=5000" >> $FILE
     echo "" >> $FILE  # new line
-    if [ "$AUTO_RESTART" = "true" ]; then
-        echo "RunAsDaemon 0" >> $FILE
-    else
-        echo "RunAsDaemon 1" >> $FILE
-    fi
-
+    echo "RunAsDaemon 0" >> $FILE
     echo "ShutdownWaitLength 0" >> $FILE
     echo "" >> $FILE  # new line
     echo "AssumeReachable 1" >> $FILE
@@ -315,8 +309,9 @@ trap "exit 0" SIGTERM
 if [ "$AUTO_RESTART" = "true" ]; then
     tor &
 else
-    tor
+    tor &
     sleep infinity &
 fi
 
+echo "" > shared/$HOSTNAME/ready
 wait $!

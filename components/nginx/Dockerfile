@@ -5,6 +5,7 @@ RUN apk upgrade --no-cache
 
 RUN apk add --no-cache curl tcpdump net-tools bind-tools ethtool
 RUN apk add --no-cache iptables iproute2 iputils busybox-extras
+RUN apk add --no-cache tor nyx torsocks
 
 # setup nginx
 

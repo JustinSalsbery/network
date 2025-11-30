@@ -206,6 +206,10 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
+# setup shared
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
 # setup bird
 # advertise all known routes, but do not import any routes
 FILE="/etc/bird.conf"
@@ -374,9 +378,6 @@ elif [ "$TYPE" = "l5" ]; then
 fi
 
 # run
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 trap "exit 0" SIGTERM
 
 LOGFILE="shared/$HOSTNAME/haproxy.log"

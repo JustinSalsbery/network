@@ -26,6 +26,7 @@ RUN apk upgrade --no-cache
 
 RUN apk add --no-cache curl tcpdump net-tools bind-tools ethtool
 RUN apk add --no-cache nmap iptables iproute2 iputils busybox-extras
+RUN apk add --no-cache tor nyx torsocks
 
 # hping3 is only in the testing repository
 RUN apk add --no-cache hping3 --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing

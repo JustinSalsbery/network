@@ -206,6 +206,10 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
+# setup shared
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
 # create index
 FILE="./www/index.html"
 echo "<html>" > $FILE
@@ -315,9 +319,6 @@ echo -e "\t}" >> $FILE
 echo "}" >> $FILE
 
 # run
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then

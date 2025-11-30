@@ -206,6 +206,10 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
+# setup shared
+mkdir -p shared/$HOSTNAME/
+chmod 666 shared/$HOSTNAME/
+
 # setup dhcp
 # configured for a single interface
 for IFACE in $IFACES; do
@@ -258,9 +262,6 @@ for IFACE in $IFACES; do
 done
 
 # run
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
-
 trap "exit 0" SIGTERM
 
 LOGFILE="shared/$HOSTNAME/udhcpd.log"
