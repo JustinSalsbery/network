@@ -303,6 +303,11 @@ if [ "TOR" = "true" ]; then
     tor &
 fi
 
+# torsocks:
+#   To access a server: `torsocks curl <Server IP>/<Page>`
+#   To access a hidden server: `torsocks curl <Server Hostname>/<Page>`
+#       - The `hostname` can be found at: `shared/${SERVER}/hostname`
+
 # run
 trap "exit 0" SIGTERM
 
