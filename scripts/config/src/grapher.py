@@ -15,6 +15,7 @@ COLOR_MAP = {
     _ServiceType.http.name: "lightskyblue",
     _ServiceType.router.name: "palegreen",
     _ServiceType.lb.name: "plum",
+    _ServiceType.tor.name: "coral",
 }
 
 FILE_NAME = "config-graph"
