@@ -588,16 +588,17 @@ class _Service():
         assert(0 < ttl <= 255)
         self._ttl = ttl
 
+        self._iface_configs: list[_IfaceConfig] = []
+
         # add to components
         name = type.name
         if name not in _components:
             _components[name] = []
 
         count = len(_components[name])
-        _components[name].append(self)
-
         self._name = f"{name}-{count}"
-        self._iface_configs: list[_IfaceConfig] = []
+
+        _components[name].append(self)
 
     def add_iface(
             self,

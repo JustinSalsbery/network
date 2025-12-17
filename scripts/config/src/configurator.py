@@ -10,8 +10,14 @@ from src.grapher import Grapher
 _SPACE = "  "
 
 class Configurator():
-    def __init__(self, available_range: str = "10.0.0.0/8", prefix_len: int = 22, 
-                 color: bool = True, extra: bool = False):
+    def __init__(
+            self,
+            available_range: str = "10.0.0.0/8",
+            prefix_len: int = 22,
+            color: bool = True,
+            extra: bool = False,
+        ):
+
         """
         Outputs the configuration as `docker-compose.yml`.
         @params:
@@ -65,6 +71,25 @@ class Configurator():
             assert isinstance(client, Client)
             self._write_service(file, client)
 
+            tor_dir = client._tor_dir._name \
+                if client._tor_dir \
+                else ""
+            tor_bridge = client._tor_bridge._name \
+                if client._tor_bridge \
+                else ""
+            tor_middle = client._tor_middle._name \
+                if client._tor_middle \
+                else ""
+            tor_exit = client._tor_exit._name \
+                if client._tor_exit \
+                else ""
+
+            file.write(f"{_SPACE * 3}# Tor configuration:\n")
+            file.write(f"{_SPACE * 3}TOR_AUTH: {tor_dir}\n")
+            file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
+            file.write(f"{_SPACE * 3}TOR_MIDDLE: {tor_middle}\n")
+            file.write(f"{_SPACE * 3}TOR_EXIT: {tor_exit}\n")
+
         # write traffic generators
 
         tgens = []
@@ -95,6 +120,25 @@ class Configurator():
         for http_server in http_servers:
             assert isinstance(http_server, HTTPServer)
             self._write_service(file, http_server)
+
+            tor_dir = http_server._tor_dir._name \
+                if http_server._tor_dir \
+                else ""
+            tor_bridge = http_server._tor_bridge._name \
+                if http_server._tor_bridge \
+                else ""
+            tor_middle = http_server._tor_middle._name \
+                if http_server._tor_middle \
+                else ""
+            tor_exit = http_server._tor_exit._name \
+                if http_server._tor_exit \
+                else ""
+
+            file.write(f"{_SPACE * 3}# Tor configuration:\n")
+            file.write(f"{_SPACE * 3}TOR_AUTH: {tor_dir}\n")
+            file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
+            file.write(f"{_SPACE * 3}TOR_MIDDLE: {tor_middle}\n")
+            file.write(f"{_SPACE * 3}TOR_EXIT: {tor_exit}\n")
 
         # write dhcp servers
 
@@ -160,7 +204,6 @@ class Configurator():
 
             for backend in lb._backends:
                 assert isinstance(backend, _IPv4)
-
                 backends.append(backend._str)
 
             file.write(f"{_SPACE * 3}# Load Balancer configuration:\n")
@@ -170,6 +213,25 @@ class Configurator():
             file.write(f"{_SPACE * 3}ADVERTISE: {str(lb._advertise).lower()}\n")
             file.write(f"{_SPACE * 3}CHECK: {lb._health_check}\n")
             file.write(f"{_SPACE * 3}BACKENDS: {" ".join(backends)}\n")
+
+        # write tor nodes
+
+        tor_nodes = []
+        if _ServiceType.tor.name in _components:
+            tor_nodes = _components[_ServiceType.tor.name]
+
+        for tor_node in tor_nodes:
+            assert isinstance(tor_node, TorNode)
+            self._write_service(file, tor_node)
+
+            dir_auth = tor_node._tor_dir._name \
+                if tor_node._tor_dir \
+                else tor_node._name
+
+            file.write(f"{_SPACE * 3}# Tor configuration:\n")
+            file.write(f"{_SPACE * 3}TOR_AUTH: {dir_auth}\n")
+            file.write(f"{_SPACE * 3}TOR_BRIDGE: {str(tor_node._bridge).lower()}\n")
+            file.write(f"{_SPACE * 3}TOR_EXIT: {str(tor_node._exit).lower()}\n")
 
         # write routers
 
