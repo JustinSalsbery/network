@@ -1,7 +1,7 @@
 
 from io import TextIOWrapper
 
-from src.components import _comps, Iface, _ServiceType, _Service, _IfaceConfig
+from src.components import _components, Iface, _ServiceType, _Service, _IfaceConfig
 
 
 # supported colors: https://graphviz.org/doc/info/colors.html
@@ -30,7 +30,7 @@ class Grapher():
         """
 
         try:
-            self._comps = _comps.copy()  # remove ifaces without affecting external
+            self._comps = _components.copy()  # remove ifaces without affecting external
             self._ifaces = self._comps.pop("iface")
         except Exception as _:
             print("Warning: No interfaces found. Stopping...")

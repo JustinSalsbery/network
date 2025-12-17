@@ -3,7 +3,7 @@ from io import TextIOWrapper
 from traceback import print_stack
 
 from src.components import *  # private must be imported manually
-from src.components import _comps, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
+from src.components import _components, _ServiceType, _Service, _IfaceConfig, _IPv4, _CIDR, _Domain
 from src.grapher import Grapher
 
 
@@ -58,8 +58,8 @@ class Configurator():
         # write clients
 
         clients = []
-        if _ServiceType.client.name in _comps:
-            clients = _comps[_ServiceType.client.name]
+        if _ServiceType.client.name in _components:
+            clients = _components[_ServiceType.client.name]
 
         for client in clients:
             assert isinstance(client, Client)
@@ -68,8 +68,8 @@ class Configurator():
         # write traffic generators
 
         tgens = []
-        if _ServiceType.tgen.name in _comps:
-            tgens = _comps[_ServiceType.tgen.name]
+        if _ServiceType.tgen.name in _components:
+            tgens = _components[_ServiceType.tgen.name]
 
         for tgen in tgens:
             assert isinstance(tgen, TrafficGenerator)
@@ -89,8 +89,8 @@ class Configurator():
         # write http servers
 
         http_servers = []
-        if _ServiceType.http.name in _comps:
-            http_servers = _comps[_ServiceType.http.name]
+        if _ServiceType.http.name in _components:
+            http_servers = _components[_ServiceType.http.name]
 
         for http_server in http_servers:
             assert isinstance(http_server, HTTPServer)
@@ -99,8 +99,8 @@ class Configurator():
         # write dhcp servers
 
         dhcp_servers = []
-        if _ServiceType.dhcp.name in _comps:
-            dhcp_servers = _comps[_ServiceType.dhcp.name]
+        if _ServiceType.dhcp.name in _components:
+            dhcp_servers = _components[_ServiceType.dhcp.name]
 
         for dhcp_server in dhcp_servers:
             assert isinstance(dhcp_server, DHCPServer)
@@ -125,8 +125,8 @@ class Configurator():
         # write dns servers
 
         dns_servers = []
-        if _ServiceType.dns.name in _comps:
-            dns_servers = _comps[_ServiceType.dns.name]
+        if _ServiceType.dns.name in _components:
+            dns_servers = _components[_ServiceType.dns.name]
 
         for dns_server in dns_servers:
             assert isinstance(dns_server, DNSServer)
@@ -149,8 +149,8 @@ class Configurator():
         # write load balancers
 
         lbs = []
-        if _ServiceType.lb.name in _comps:
-            lbs = _comps[_ServiceType.lb.name]
+        if _ServiceType.lb.name in _components:
+            lbs = _components[_ServiceType.lb.name]
 
         for lb in lbs:
             assert isinstance(lb, LoadBalancer)
@@ -174,8 +174,8 @@ class Configurator():
         # write routers
 
         routers = []
-        if _ServiceType.router.name in _comps:
-            routers = _comps[_ServiceType.router.name]
+        if _ServiceType.router.name in _components:
+            routers = _components[_ServiceType.router.name]
 
         for router in routers:
             assert isinstance(router, Router)
@@ -338,8 +338,8 @@ class Configurator():
         """
 
         ifaces = []
-        if "iface" in _comps:
-            ifaces = _comps["iface"]
+        if "iface" in _components:
+            ifaces = _components["iface"]
             file.write("networks:\n")
 
         for iface in ifaces:

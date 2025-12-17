@@ -1,6 +1,11 @@
 
+from __future__ import annotations
 from enum import Enum, auto
 from traceback import print_stack
+
+
+# created components are registered here
+_components: dict[str, list[Iface | _Service]] = {}
 
 
 # IPv4 ************************************************************************
@@ -181,8 +186,14 @@ class _CIDR():
 
         return _Visibility.public
     
-    def _visibility_internal(self, ip: _IPv4, prefix_len: int, ip_private: _IPv4,
-                              prefix_len_private: int) -> _Visibility:
+    def _visibility_internal(
+            self,
+            ip: _IPv4,
+            prefix_len: int,
+            ip_private: _IPv4,
+            prefix_len_private: int
+        ) -> _Visibility:
+
         """
         @params:
             - ip: The IPv4 object.
@@ -224,8 +235,17 @@ class _CIDR():
 
 
 class TCRule():
-    def __init__(self, rate: int = 0, drop: int = 0, corrupt: int = 0, duplicate: int = 0,
-                 delay: int = 0, jitter: int = 0, queue_limit: int =  2500):
+    def __init__(
+            self,
+            rate: int = 0,
+            drop: int = 0,
+            corrupt: int = 0,
+            duplicate: int = 0,
+            delay: int = 0,
+            jitter: int = 0,
+            queue_limit: int =  2500,
+        ):
+
         """
         @params:
             - rate: Set link bandwidth. A rate of 0 is unlimited. In units of kilobits per second.
@@ -315,20 +335,32 @@ class NatType(Enum):
 
 class Iface():
     def __init__(self):  # add to components
-        if "iface" not in _comps:
-            _comps["iface"] = []
+        if "iface" not in _components:
+            _components["iface"] = []
         
-        count = len(_comps["iface"])
-        _comps["iface"].append(self)
+        count = len(_components["iface"])
+        _components["iface"].append(self)
 
         self._name = f"network-{count}"
 
 
 class _IfaceConfig():
-    def __init__(self, iface: Iface, cidr: str | None, ip: str | None, gateway: str | None, 
-                 mtu: int | None, tc_rule: TCRule | None, firewall: FirewallType | None, 
-                 lease_time: int | None = None, lease_start: str | None = None, 
-                 lease_end: str | None = None, nat: NatType | None = None, cost: int | None = None):
+    def __init__(
+            self,
+            iface: Iface,
+            cidr: str | None,
+            ip: str | None,
+            gateway: str | None,
+            mtu: int | None,
+            tc_rule: TCRule | None,
+            firewall: FirewallType | None,
+            lease_time: int | None = None,
+            lease_start: str | None = None,
+            lease_end: str | None = None,
+            nat: NatType | None = None,
+            cost: int | None = None
+        ):
+
         """
         @params:
             - iface: The network interface.
@@ -461,23 +493,40 @@ class SynCookieType(Enum):
 
 
 class _Service():
-    def __init__(self, type: _ServiceType, image: str, auto_restart: bool, 
-                 dns_servers: list[str] | str | None, log_queries: bool, cpu_limit: float, 
-                 mem_limit: int, swap_limit: int, forward: bool, syn_cookie: SynCookieType, 
-                 congestion_control: CongestionControlType, fast_retran: bool, 
-                 sack: bool, timestamp: bool, ttl: int):
+    def __init__(
+            self,
+            type: _ServiceType,
+            image: str,
+            cpu_limit: float,
+            mem_limit: int,
+            swap_limit: int,
+            auto_restart: bool = True,
+            dns_servers: list[str] | str | None = None,
+            forward: bool = False,
+            syn_cookie: SynCookieType = SynCookieType.enable,
+            congestion_control: CongestionControlType = CongestionControlType.cubic,
+            fast_retran: bool = True,
+            sack: bool = True,
+            timestamp: bool = True,
+            ttl: int = 64,
+            log_queries: bool = False,
+            tor_dir: TorNode | None = None,
+            tor_bridge: TorNode | None = None,
+            tor_middle: TorNode | None = None,
+            tor_exit: TorNode | None = None,
+        ):
+
         """
         @params:
             - type: The type of the service.
             - image: The name of the Docker image.
-            - auto_restart: If disabled, allows manually editing the configurations. 
-                            Useful for development.
-            - dns_servers: The IPv4 addresses of the DNS servers.
-            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
             - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
+            - auto_restart: If disabled, allows manually editing the configurations. 
+                            Useful for development.
+            - dns_servers: The IPv4 addresses of the DNS servers.
             - forward: Enable or disable packet forwarding.
             - syn_cookie: Configure SYN cookies.
             - congestion_control: Configure congestion control.
@@ -485,6 +534,11 @@ class _Service():
             - sack: Enable or disable selective acknowledgments.
             - timestamp: Enable or disable tcp timestamps.
             - ttl: Configure the default ttl for packets.
+            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
+            - tor_dir: Specify the tor directory. Enables the tor network if present.
+            - tor_bridge: Optional. Specify the guard node in the tor circuit.
+            - tor_middle: Optional. Specify the middle node in the tor circuit.
+            - tor_exit: Optional. Specify the exit node in the tor circuit.
         """
 
         self._type = type
@@ -516,6 +570,14 @@ class _Service():
                 self._dns_servers.append(ip)
 
         self._log_queries = log_queries
+        self._tor_dir = tor_dir
+        self._tor_bridge = tor_bridge
+        self._tor_middle = tor_middle
+        self._tor_exit = tor_exit
+
+        if tor_bridge or tor_middle or tor_exit:
+            assert(tor_dir)
+
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
@@ -528,18 +590,26 @@ class _Service():
 
         # add to components
         name = type.name
-        if name not in _comps:
-            _comps[name] = []
+        if name not in _components:
+            _components[name] = []
 
-        count = len(_comps[name])
-        _comps[name].append(self)
+        count = len(_components[name])
+        _components[name].append(self)
 
         self._name = f"{name}-{count}"
         self._iface_configs: list[_IfaceConfig] = []
 
-    def add_iface(self, iface: Iface, cidr: str | None = None, ip: str | None = None, 
-                  gateway: str | None = None, mtu: int | None = 1500, tc_rule: TCRule | None = None, 
-                  firewall: FirewallType | None = None):
+    def add_iface(
+            self,
+            iface: Iface, 
+            cidr: str | None = None, 
+            ip: str | None = None, 
+            gateway: str | None = None, 
+            mtu: int | None = 1500, 
+            tc_rule: TCRule | None = None, 
+            firewall: FirewallType | None = None,
+        ):
+
         """
         @params:
             - iface: The network interface.
@@ -560,19 +630,33 @@ class _Service():
         self._iface_configs.append(config)
 
 
-_comps: dict[str, list[Iface | _Service]] = {}  # created components are registered here
-
-
 # CLIENT **********************************************************************
 
 
 class Client(_Service):
-    def __init__(self, dns_server: str | None = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
+    def __init__(
+            self,
+            dns_server: str | None = None,
+            tor_dir: TorNode | None = None,
+            tor_bridge: TorNode | None = None,
+            tor_middle: TorNode | None = None,
+            tor_exit: TorNode | None = None,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+            congestion_control: CongestionControlType = CongestionControlType.cubic,
+            fast_retran: bool = True,
+            sack: bool = True,
+            ttl: int = 64,
+        ):
+
         """
         @params:
             - dns_server: The IPv4 addresses of the DNS server.
+            - tor_dir: Specify the tor directory. Enables the tor network if present.
+            - tor_bridge: Optional. Specify the guard node in the tor circuit.
+            - tor_middle: Optional. Specify the middle node in the tor circuit.
+            - tor_exit: Optional. Specify the exit node in the tor circuit.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -583,9 +667,22 @@ class Client(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        super().__init__(_ServiceType.client, "client", True, dns_server, False, 
-                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
-                         congestion_control, fast_retran, sack, True, ttl)
+        super().__init__(
+            type=_ServiceType.client,
+            image="client",
+            dns_servers=dns_server,
+            tor_dir=tor_dir,
+            tor_bridge=tor_bridge,
+            tor_middle=tor_middle,
+            tor_exit=tor_exit,
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+            congestion_control=congestion_control,
+            fast_retran=fast_retran,
+            sack=sack,
+            ttl=ttl,
+        )
 
 
 # TRAFFIC GENERATOR ***********************************************************
@@ -597,12 +694,27 @@ class Protocol(Enum):
 
 
 class TrafficGenerator(_Service):
-    def __init__(self, target: str, proto: Protocol = Protocol.http, requests: list[str] = ["/"],
-                 conn_max: int = 50, conn_rate: int = 5, conn_dur: int = 10, wait_min: float = 5, 
-                 wait_max: float = 15, gzip: bool = False, dns_server: str | None = None, 
-                 cpu_limit: float = 0.5, mem_limit: int = 256, swap_limit: int = 64,
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
+    def __init__(
+            self,
+            target: str,
+            proto: Protocol = Protocol.http,
+            requests: list[str] = ["/"],
+            conn_max: int = 50,
+            conn_rate: int = 5,
+            conn_dur: int = 10,
+            wait_min: float = 5,
+            wait_max: float = 15,
+            gzip: bool = False,
+            dns_server: str | None = None,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+            congestion_control: CongestionControlType = CongestionControlType.cubic,
+            fast_retran: bool = True,
+            sack: bool = True,
+            ttl: int = 64,
+        ):
+
         """
         @params:
             - target: The IP address, or the domain name, of the target server.
@@ -629,10 +741,19 @@ class TrafficGenerator(_Service):
             - The traffic generator prioritizes creating new connections over successful requests.
         """
 
-        super().__init__(_ServiceType.tgen, "locust", True, dns_server, False, 
-                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
-                         congestion_control, fast_retran, sack, True, ttl)
-        
+        super().__init__(
+            type=_ServiceType.tgen,
+            image="locust",
+            dns_servers=dns_server,
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+            congestion_control=congestion_control,
+            fast_retran=fast_retran,
+            sack=sack,
+            ttl=ttl,
+        )
+
         assert(target != "")
         self._target = target
 
@@ -663,13 +784,30 @@ class TrafficGenerator(_Service):
 
 
 class HTTPServer(_Service):
-    def __init__(self, log_queries: bool = True, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
+    def __init__(
+            self,
+            log_queries: bool = True,
+            tor_dir: TorNode | None = None,
+            tor_bridge: TorNode | None = None,
+            tor_middle: TorNode | None = None,
+            tor_exit: TorNode | None = None,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+            syn_cookie: SynCookieType = SynCookieType.enable,
+            congestion_control: CongestionControlType = CongestionControlType.cubic,
+            fast_retran: bool = True,
+            sack: bool = True,
+            ttl: int = 64,
+        ):
+
         """
         @params:
             - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
+            - tor_dir: Specify the tor directory. Enables the tor network if present.
+            - tor_bridge: Optional. Specify the guard node in the tor circuit.
+            - tor_middle: Optional. Specify the middle node in the tor circuit.
+            - tor_exit: Optional. Specify the exit node in the tor circuit.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -688,17 +826,37 @@ class HTTPServer(_Service):
               as by NTP, is unnecessary.
         """
 
-        super().__init__(_ServiceType.http, "nginx", True, None, log_queries, cpu_limit, 
-                         mem_limit, swap_limit, False, syn_cookie, congestion_control, 
-                         fast_retran, sack, True, ttl)
+        super().__init__(
+            type=_ServiceType.http,
+            image="nginx",
+            log_queries=log_queries,
+            tor_dir=tor_dir,
+            tor_bridge=tor_bridge,
+            tor_middle=tor_middle,
+            tor_exit=tor_exit,
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+            syn_cookie=syn_cookie,
+            congestion_control=congestion_control,
+            fast_retran=fast_retran,
+            sack=sack,
+            ttl=ttl,
+        )
 
 
 # DHCP SERVER *****************************************************************
 
 
 class DHCPServer(_Service):
-    def __init__(self, dns_server: str | None = None, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64):
+    def __init__(
+            self,
+            dns_server: str | None = None,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+        ):
+
         """
         @params:
             - dns_server: The IPv4 addresses of the DNS server. The nameserver will be advertised.
@@ -710,14 +868,29 @@ class DHCPServer(_Service):
             - The DHCP server will configure the DNS server, IP, CIDR, gateway, and MTU.
         """
 
-        super().__init__(_ServiceType.dhcp, "udhcpd", True, dns_server, False, 
-                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
-                         CongestionControlType.cubic, True, True, True, 64)
-        
-    def add_iface(self, iface: Iface, cidr: str, ip: str, lease_time: int = 600, 
-                  lease_start: str | None = None, lease_end: str | None = None, 
-                  gateway: str | None = None, mtu: int | None = 1500, tc_rule: TCRule | None = None, 
-                  firewall: FirewallType | None = None):
+        super().__init__(
+            type=_ServiceType.dhcp,
+            image="udhcpd",
+            dns_servers=dns_server,
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+        )
+
+    def add_iface(
+            self,
+            iface: Iface,
+            cidr: str,
+            ip: str,
+            lease_time: int = 600,
+            lease_start: str | None = None,
+            lease_end: str | None = None,
+            gateway: str | None = None,
+            mtu: int | None = 1500,
+            tc_rule: TCRule | None = None,
+            firewall: FirewallType | None = None,
+        ):
+
         """
         @params:
             - iface: The network interface.
@@ -748,9 +921,18 @@ class DHCPServer(_Service):
             lease_end = _IPv4(_cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
 
-        config = _IfaceConfig(iface, cidr, ip, gateway, mtu, tc_rule, firewall, 
-                              lease_time = lease_time, lease_start = lease_start, 
-                              lease_end = lease_end)
+        config = _IfaceConfig(
+            iface=iface,
+            cidr=cidr,
+            ip=ip,
+            gateway=gateway,
+            mtu=mtu,
+            tc_rule=tc_rule,
+            firewall=firewall,
+            lease_time=lease_time,
+            lease_start=lease_start,
+            lease_end=lease_end,
+        )
 
         assert(len(self._iface_configs) == 0)  # only one interface
         self._iface_configs.append(config)
@@ -768,15 +950,23 @@ class _Domain():
         """
 
         assert(name and name != "")
-        self._name = name
 
+        self._name = name
         self._ip = _IPv4(ip)
-    
+
 
 class DNSServer(_Service):
-    def __init__(self, cache: int = 600, dns_servers: list[str] | str | None = None, 
-                 log_queries: bool = True, cpu_limit: float = 0.5, mem_limit: int = 256, 
-                 swap_limit: int = 64, ttl: int = 64):
+    def __init__(
+            self,
+            cache: int = 600,
+            dns_servers: list[str] | str | None = None,
+            log_queries: bool = True,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+            ttl: int = 64,
+        ):
+
         """
         @params:
             - cache: The cache duration for the resolved record in seconds.
@@ -795,13 +985,20 @@ class DNSServer(_Service):
               use a local Nameserver.
         """
 
-        super().__init__(_ServiceType.dns, "dnsmasq", True, dns_servers, log_queries, 
-                         cpu_limit, mem_limit, swap_limit, False, SynCookieType.enable, 
-                         CongestionControlType.cubic, True, True, True, ttl)
-        
+        super().__init__(
+            type=_ServiceType.dns,
+            image="dnsmasq",
+            dns_servers=dns_servers,
+            log_queries=log_queries,
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+            ttl=ttl,
+        )
+
         assert(cache > 0)
         self._cache = cache
-        
+
         self._domains: list[_Domain] = []
 
     def register(self, name: str, ip: str):
@@ -832,12 +1029,24 @@ class LBAlgorithm(Enum):
 
 
 class LoadBalancer(_Service):
-    def __init__(self, backends: list[str], type: LBType = LBType.l5, 
-                 algorithm: LBAlgorithm = LBAlgorithm.leastconn, advertise: bool = False, 
-                 health_check: str = "/", log_queries: bool = True, cpu_limit: float = 0.5, 
-                 mem_limit: int = 256, swap_limit: int = 64, syn_cookie: SynCookieType = SynCookieType.enable, 
-                 congestion_control: CongestionControlType = CongestionControlType.cubic,
-                 fast_retran: bool = True, sack: bool = True, ttl: int = 64):
+    def __init__(
+            self,
+            backends: list[str],
+            type: LBType = LBType.l5,
+            algorithm: LBAlgorithm = LBAlgorithm.leastconn,
+            advertise: bool = False,
+            health_check: str = "/",
+            log_queries: bool = True,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+            syn_cookie: SynCookieType = SynCookieType.enable,
+            congestion_control: CongestionControlType = CongestionControlType.cubic,
+            fast_retran: bool = True,
+            sack: bool = True,
+            ttl: int = 64,
+        ):
+
         """
         @params:
             - backends: The list of IPv4 addresses to balance between.
@@ -857,16 +1066,27 @@ class LoadBalancer(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        super().__init__(_ServiceType.lb, "haproxy", True, None, log_queries, 
-                         cpu_limit, mem_limit, swap_limit, False, syn_cookie, 
-                         congestion_control, fast_retran, sack, True, ttl)
+        super().__init__(
+            type=_ServiceType.lb,
+            image="haproxy",
+            log_queries=log_queries,
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+            syn_cookie=syn_cookie,
+            congestion_control=congestion_control,
+            fast_retran=fast_retran,
+            sack=sack,
+            ttl=ttl,
+        )
 
         assert(len(backends) > 0)
+
         self._backends: list[_IPv4] = []
         for backend in backends:
             ip = _IPv4(backend)
             self._backends.append(ip)
-        
+
         self._type = type
         self._algorithm = algorithm
         self._advertise = advertise
@@ -877,6 +1097,56 @@ class LoadBalancer(_Service):
         self._router_id = _get_router_id()
 
 
+# TOR NODE ********************************************************************
+
+
+class TorNode(_Service):
+    def __init__(
+            self,
+            dir_auth: TorNode | None = None,
+            bridge: bool = False,
+            exit: bool = False,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+            congestion_control: CongestionControlType = CongestionControlType.cubic,
+            fast_retran: bool = True,
+            sack: bool = True,
+            ttl: int = 64,
+        ):
+
+        """
+        @params:
+            - dir_auth: If None, configures the node as a directory authority.
+            - bridge: Configure the node as a bridge relay.
+            - exit: Configure the node as a exit relay.
+            - cpu_limit: Limit service cpu time. In units of number of logical cores. 
+                         Ex. 0.1 is 10% of a logical core.
+            - mem_limit: Limit service memory. In units of megabytes.
+            - swap_limit: Limit swap memory. Set to 0 to disable swap. In units of megabytes.
+            - congestion_control: Configure congestion control.
+            - fast_retran: Enable or disable fast retransmission.
+            - sack: Enable or disable selective acknowledgments.
+            - ttl: Configure the default ttl for packets.
+        """
+
+        self._bridge = bridge
+        self._exit = exit
+
+        super().__init__(
+            type=_ServiceType.tor,
+            image="tor",
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+            congestion_control=congestion_control,
+            fast_retran=fast_retran,
+            sack=sack,
+            ttl=ttl,
+            tor_dir=dir_auth,
+        )
+
+
 # ROUTER **********************************************************************
 
 
@@ -885,9 +1155,23 @@ class ECMPType(Enum):
     l4 = auto()  # (Source IP, Destination IP, Source Port, Destination Port, IP Protocol)
 
 
+_router_id = 0   # necessary for ECMP advertisements; 0 is illegal
+def _get_router_id() -> int:
+    global _router_id
+
+    _router_id += 1
+    return _router_id
+
+
 class Router(_Service):
-    def __init__(self, ecmp: ECMPType | None = None, cpu_limit: float = 0.5, 
-                 mem_limit: int = 256, swap_limit: int = 64):
+    def __init__(
+            self,
+            ecmp: ECMPType | None = None,
+            cpu_limit: float = 0.5,
+            mem_limit: int = 256,
+            swap_limit: int = 64,
+        ):
+
         """
         @params:
             - ecmp: Configure ECMP.
@@ -902,16 +1186,29 @@ class Router(_Service):
               See: `grep CONFIG_IP_ROUTE_MULTIPATH /boot/config-$(uname -r)`
         """
 
-        super().__init__(_ServiceType.router, "bird", True, None, False, cpu_limit, 
-                         mem_limit, swap_limit, True, SynCookieType.enable, 
-                         CongestionControlType.cubic, True, True, True, 64)
-        
+        super().__init__(
+            type=_ServiceType.router,
+            image="bird",
+            cpu_limit=cpu_limit,
+            mem_limit=mem_limit,
+            swap_limit=swap_limit,
+        )
+
         self._ecmp = ecmp
         self._router_id = _get_router_id()
 
-    def add_iface(self, iface: Iface, cidr: str | None = None, ip: str | None = None, 
-                  mtu: int | None = None, nat: NatType | None = None, cost: int = 10,
-                  tc_rule: TCRule | None = None, firewall: FirewallType | None = None):
+    def add_iface(
+            self,
+            iface: Iface,
+            cidr: str | None = None,
+            ip: str | None = None,
+            mtu: int | None = None,
+            nat: NatType | None = None,
+            cost: int = 10,
+            tc_rule: TCRule | None = None,
+            firewall: FirewallType | None = None,
+        ):
+
         """
         @params:
             - iface: The network interface.
@@ -927,16 +1224,16 @@ class Router(_Service):
               gateway, and nameserver.
         """
 
-        config = _IfaceConfig(iface, cidr, ip, None, mtu, tc_rule, firewall, 
-                              nat = nat, cost = cost)
-        
+        config = _IfaceConfig(
+            iface=iface,
+            cidr=cidr,
+            ip=ip,
+            mtu=mtu,
+            tc_rule=tc_rule,
+            firewall=firewall,
+            nat=nat,
+            cost=cost,
+        )
+
         assert(config not in self._iface_configs)
         self._iface_configs.append(config)
-
-
-_router_id = 0   # necessary for ECMP advertisements; 0 is illegal
-def _get_router_id() -> int:
-    global _router_id
-
-    _router_id += 1
-    return _router_id
