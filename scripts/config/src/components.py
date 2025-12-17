@@ -210,9 +210,9 @@ class _CIDR():
             if prefix_len < prefix_len_private:
                 cidr_public = f"{ip._str}/{prefix_len}"
                 cidr_private = f"{ip_private._str}/{prefix_len_private}"
+
                 print(f"error: Public subnet {cidr_public} overlaps private subnet {cidr_private}.")
                 print_stack()
-
                 exit(1)
 
             return _Visibility.private
@@ -624,7 +624,15 @@ class _Service():
               gateway, and nameservers.
         """
 
-        config = _IfaceConfig(iface, cidr, ip, gateway, mtu, tc_rule, firewall)
+        config = _IfaceConfig(
+            iface=iface,
+            cidr=cidr,
+            ip=ip,
+            gateway=gateway,
+            mtu=mtu,
+            tc_rule=tc_rule,
+            firewall=firewall,
+        )
 
         assert(config not in self._iface_configs)
         self._iface_configs.append(config)
@@ -912,11 +920,13 @@ class DHCPServer(_Service):
 
         if not lease_start:  # default lease_start
             assert(_cidr._prefix_len <= 28)
+
             lease_start = _IPv4(_cidr._ip._int + 10)
             lease_start = lease_start._str
 
         if not lease_end:  # default lease_end
             assert(_cidr._prefix_len <= 28)
+
             suffix_len = 32 - _cidr._prefix_len
             lease_end = _IPv4(_cidr._ip._int + 2 ** suffix_len - 2)
             lease_end = lease_end._str
@@ -1081,8 +1091,8 @@ class LoadBalancer(_Service):
         )
 
         assert(len(backends) > 0)
-
         self._backends: list[_IPv4] = []
+
         for backend in backends:
             ip = _IPv4(backend)
             self._backends.append(ip)
@@ -1130,9 +1140,6 @@ class TorNode(_Service):
             - ttl: Configure the default ttl for packets.
         """
 
-        self._bridge = bridge
-        self._exit = exit
-
         super().__init__(
             type=_ServiceType.tor,
             image="tor",
@@ -1145,6 +1152,9 @@ class TorNode(_Service):
             ttl=ttl,
             tor_dir=dir_auth,
         )
+
+        self._bridge = bridge
+        self._exit = exit
 
 
 # ROUTER **********************************************************************
