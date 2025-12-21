@@ -26,4 +26,4 @@ http_1 = HTTPServer()  # will not be blackholed
 http_1.add_iface(iface_1, cidr=cidr_1, ip="100.0.1.16", gateway="100.0.1.1")
 
 
-conf = Configurator()
+Configurator()

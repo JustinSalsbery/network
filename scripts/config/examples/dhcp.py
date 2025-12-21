@@ -15,4 +15,4 @@ client_1 = Client()
 client_1.add_iface(iface_0)
 
 
-conf = Configurator()
+Configurator()

@@ -39,4 +39,4 @@ tgen_0 = TrafficGenerator(target="170.0.0.2")
 tgen_0.add_iface(iface_3, cidr=cidr_3, ip="169.254.1.2", gateway="169.254.1.1")
 
 
-conf = Configurator()
+Configurator()

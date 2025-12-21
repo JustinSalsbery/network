@@ -16,4 +16,4 @@ http_0.add_iface(iface_0, cidr="169.254.0.0/16", ip="169.254.0.3")
 dns_0.register("server-0", "169.254.0.3")  # add "server-0" domain to dns_0
 
 
-conf = Configurator()
+Configurator()

@@ -12,4 +12,4 @@ client_0 = Client()
 client_0.add_iface(iface_0, cidr="100.0.0.0/24", ip="100.0.0.2")
 
 
-conf = Configurator()
+Configurator()
