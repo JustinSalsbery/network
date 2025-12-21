@@ -66,7 +66,7 @@ down:
 	fi
 
 	docker compose down --timeout 2
-	sudo chmod -R 666 shared/ || true
+	sudo chmod -R 777 shared/ || true
 
 # down depends upon the docker-compose file
 # before we generate a new configuration, we must bring down the current network
@@ -74,6 +74,7 @@ down:
 .PHONY: config
 config: down clean-shared
 	mkdir -p shared/
+	export PYTHONPATH="scripts/config/"
 	${PYTHON} scripts/config/${CONFIG}
 
 .PHONY: list

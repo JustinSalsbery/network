@@ -624,7 +624,7 @@ class _Service():
             - firewall: The configured firewall.
         Note:
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
-              gateway, and nameservers.
+              cidr, gateway, and nameservers.
         """
 
         config = _IfaceConfig(
@@ -1234,7 +1234,7 @@ class Router(_Service):
             - firewall: The configured firewall.
         Note:
             - If the IP is empty, then the service will attempt to use DHCP for the IP, 
-              gateway, and nameserver.
+              cidr, gateway, and nameserver.
         """
 
         config = _IfaceConfig(
