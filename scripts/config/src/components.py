@@ -1205,6 +1205,7 @@ class Router(_Service):
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,
+            forward=True,
         )
 
         self._ecmp = ecmp
@@ -1233,8 +1234,10 @@ class Router(_Service):
             - tc_rule: The configured TC rule.
             - firewall: The configured firewall.
         Note:
-            - If the IP is empty, then the service will attempt to use DHCP for the IP, 
-              cidr, gateway, and nameserver.
+            - If the IP is empty, then the service will attempt to use DHCP for
+              the IP, cidr, gateway, and nameserver.
+            - Routers only advertise public subnets. Routers should also segregate
+              private subnets, but these routers do not.
         """
 
         config = _IfaceConfig(
