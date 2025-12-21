@@ -40,7 +40,7 @@ for IFACE in $IFACES; do
     if [ "$MTU" != "none" ]; then
         # the tcp packet never reaches the NIC and therefore will never segment
         ethtool -K ${IFACE}_0 tso off # disable tcp segmentation offloading
-        
+
         ifconfig ${IFACE}_0 mtu $MTU
     fi
 
@@ -212,7 +212,7 @@ chmod 666 shared/$HOSTNAME/
 
 # setup tor
 # configured for a single interface
-if ! [ "TOR_AUTH" = "" ]; then
+if ! [ "$TOR_AUTH" = "" ]; then
     DATA_DIR="/var/lib/tor/"
     LOG_DIR="/app/shared/$HOSTNAME/"
 
@@ -222,13 +222,13 @@ if ! [ "TOR_AUTH" = "" ]; then
 
     for IFACE in $IFACES; do
         IP="$(echo $IPS | cut -d' ' -f1)"
-        IPS="$(echo $IPS | cut -d' ' -f2-)"    
+        IPS="$(echo $IPS | cut -d' ' -f2-)"
 
         # wait for directory authority
-        while ! [ -f "shared/$TOR_AUTH/ready" ]; then
+        while ! [ -f "shared/$TOR_AUTH/ready" ]; do
             echo "waiting for shared/$TOR_AUTH/ready"
             sleep 1  # seconds
-        fi
+        done
 
         AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
         AUTH_CERT="$(cat shared/$TOR_AUTH/certificate)"
@@ -266,11 +266,11 @@ if ! [ "TOR_AUTH" = "" ]; then
         echo "DirPort 7000" >> $FILE
         echo "" >> $FILE  # new line
 
-        if ! [ "TOR_BRIDGE" = "" ]; then
-            while ! [ -f "shared/$TOR_BRIDGE/ready" ]; then
+        if ! [ "$TOR_BRIDGE" = "" ]; then
+            while ! [ -f "shared/$TOR_BRIDGE/ready" ]; do
                 echo "waiting for shared/$TOR_BRIDGE/ready"
                 sleep 1  # seconds
-            fi
+            done
 
             BRIDGE_IP="$(cat shared/$TOR_BRIDGE/ip)"
             BRIDGE_FINGERPRINT="$(cat shared/$TOR_BRIDGE/fingerprint)"
@@ -279,21 +279,21 @@ if ! [ "TOR_AUTH" = "" ]; then
             echo "Bridge $BRIDGE_IP:5000 $BRIDGE_FINGERPRINT" >> $FILE
         fi
 
-        if ! [ "TOR_MIDDLE" = "" ]; then
-            while ! [ -f "shared/$TOR_MIDDLE/ready" ]; then
+        if ! [ "$TOR_MIDDLE" = "" ]; then
+            while ! [ -f "shared/$TOR_MIDDLE/ready" ]; do
                 echo "waiting for shared/$TOR_MIDDLE/ready"
                 sleep 1  # seconds
-            fi
+            done
 
             MIDDLE_FINGERPRINT="$(cat shared/$TOR_MIDDLE/fingerprint)"
             echo "MiddleNodes $MIDDLE_FINGERPRINT" >> $FILE
         fi
 
-        if ! [ "TOR_EXIT" = "" ]; then
-            while ! [ -f "shared/$TOR_EXIT/ready" ]; then
+        if ! [ "$TOR_EXIT" = "" ]; then
+            while ! [ -f "shared/$TOR_EXIT/ready" ]; do
                 echo "waiting for shared/$TOR_EXIT/ready"
                 sleep 1  # seconds
-            fi
+            done
 
             EXIT_FINGERPRINT="$(cat shared/$TOR_EXIT/fingerprint)"
             echo "ExitNodes $EXIT_FINGERPRINT" >> $FILE

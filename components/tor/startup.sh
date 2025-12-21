@@ -40,7 +40,7 @@ for IFACE in $IFACES; do
     if [ "$MTU" != "none" ]; then
         # the tcp packet never reaches the NIC and therefore will never segment
         ethtool -K ${IFACE}_0 tso off # disable tcp segmentation offloading
-        
+
         ifconfig ${IFACE}_0 mtu $MTU
     fi
 
@@ -242,10 +242,10 @@ for IFACE in $IFACES; do
 
     # wait for directory authority
     # if the node is a directory authority, the node will read it's own information
-    while ! [ -f "shared/$TOR_AUTH/ready" ]; then
+    while ! [ -f "shared/$TOR_AUTH/ready" ]; do
         echo "waiting for $TOR_AUTH to write to shared/"
         sleep 1  # seconds
-    fi
+    done
 
     AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
     AUTH_CERT="$(cat shared/$TOR_AUTH/certificate)"

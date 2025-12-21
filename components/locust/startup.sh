@@ -40,7 +40,7 @@ for IFACE in $IFACES; do
     if [ "$MTU" != "none" ]; then
         # the tcp packet never reaches the NIC and therefore will never segment
         ethtool -K ${IFACE}_0 tso off # disable tcp segmentation offloading
-        
+
         ifconfig ${IFACE}_0 mtu $MTU
     fi
 

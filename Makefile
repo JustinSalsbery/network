@@ -61,18 +61,18 @@ up: config
 .PHONY: down
 down:
 	if ! [ -f "docker-compose.yml" ]; then
-		echo "info: No docker compose file found."
-		exit 1
+		echo "info: no docker compose file found."
+		exit 0
 	fi
 
 	docker compose down --timeout 2
-	sudo chmod -R 666 shared/
+	sudo chmod -R 666 shared/ || true
 
 # down depends upon the docker-compose file
 # before we generate a new configuration, we must bring down the current network
 
 .PHONY: config
-config: down .WAIT clean-shared
+config: down clean-shared
 	mkdir -p shared/
 	${PYTHON} scripts/config/${CONFIG}
 
@@ -111,9 +111,10 @@ stats:
 
 .PHONY: clean
 clean: clean-shared clean-certs clean-docker
+	rm -f docker-compose.yml
 
 .PHONY: clean-shared
-clean-shared:
+clean-shared: down
 	sudo rm -rf shared/
 
 .PHONY: clean-certs
@@ -122,7 +123,11 @@ clean-certs:
 	rm -r ${CERTS_LB}
 
 .PHONY: clean-docker
-clean-docker:
+clean-docker: down
+	docker system prune --force
+
+.PHONY: reset-docker
+reset-docker:
 	docker container stop $$(docker container ls -a -q)
 	docker image rm $$(docker image ls -a -q)
 	docker system prune --force

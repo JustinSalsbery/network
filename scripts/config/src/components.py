@@ -122,8 +122,8 @@ class _CIDR():
         self._ip = _IPv4(ip)
         self._prefix_len = int(prefix_len)
 
-        self._netmask = self._netmask(self._prefix_len)
-        self._visibility = self._visibility(self._ip, self._prefix_len)
+        self._netmask = self._get_netmask(self._prefix_len)
+        self._visibility = self._get_visibility(self._ip, self._prefix_len)
 
     def _is_legal(self, cidr: str) -> bool:
         """
@@ -145,7 +145,7 @@ class _CIDR():
         
         return True
 
-    def _netmask(self, prefix_len: int) -> _IPv4:
+    def _get_netmask(self, prefix_len: int) -> _IPv4:
         """
         @params:
             - prefix_len: The prefix length of the subnet.
@@ -156,7 +156,7 @@ class _CIDR():
         netmask: int = 0xffffffff ^ (2 ** suffix_len - 1)
         return _IPv4(netmask)
     
-    def _visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
+    def _get_visibility(self, ip: _IPv4, prefix_len: int) -> _Visibility:
         """
         @params:
             - ip: The IPv4 object.
@@ -165,28 +165,28 @@ class _CIDR():
         """
         
         ip_private = _IPv4("10.0.0.0")
-        visibility = self._visibility_internal(ip, prefix_len, ip_private, 8)
+        visibility = self._get_visibility_internal(ip, prefix_len, ip_private, 8)
         if visibility == _Visibility.private:
             return visibility
 
         ip_private = _IPv4("169.254.0.0")
-        visibility = self._visibility_internal(ip, prefix_len, ip_private, 16)
+        visibility = self._get_visibility_internal(ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         ip_private = _IPv4("172.16.0.0")
-        visibility = self._visibility_internal(ip, prefix_len, ip_private, 12)
+        visibility = self._get_visibility_internal(ip, prefix_len, ip_private, 12)
         if visibility == _Visibility.private:
             return visibility
         
         ip_private = _IPv4("192.168.0.0")
-        visibility = self._visibility_internal(ip, prefix_len, ip_private, 16)
+        visibility = self._get_visibility_internal(ip, prefix_len, ip_private, 16)
         if visibility == _Visibility.private:
             return visibility
 
         return _Visibility.public
     
-    def _visibility_internal(
+    def _get_visibility_internal(
             self,
             ip: _IPv4,
             prefix_len: int,
@@ -204,7 +204,7 @@ class _CIDR():
         """
 
         prefix_len_min = min(prefix_len, prefix_len_private)
-        netmask_min = self._netmask(prefix_len_min)
+        netmask_min = self._get_netmask(prefix_len_min)
 
         if ip._int & netmask_min._int == ip_private._int & netmask_min._int:
             if prefix_len < prefix_len_private:
@@ -226,7 +226,9 @@ class _CIDR():
         """
 
         _ip = _IPv4(ip)
-        if self._visibility_internal(_ip, 32, self._ip, self._prefix_len) == _Visibility.private:
+        visibility = self._get_visibility_internal(_ip, 32, self._ip, self._prefix_len)
+
+        if visibility == _Visibility.private:
             return True
         return False
 

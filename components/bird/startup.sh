@@ -40,7 +40,7 @@ for IFACE in $IFACES; do
     if [ "$MTU" != "none" ]; then
         # the tcp packet never reaches the NIC and therefore will never segment
         ethtool -K ${IFACE}_0 tso off # disable tcp segmentation offloading
-        
+
         ifconfig ${IFACE}_0 mtu $MTU
     fi
 
@@ -146,7 +146,7 @@ for IFACE in $IFACES; do
     elif [ "$FIREWALL" = "block_l4" ]; then
         iptables -A INPUT -i ${IFACE}_0 -p tcp -j DROP
         iptables -A INPUT -i ${IFACE}_0 -p udp -j DROP
-        
+
         iptables -A OUTPUT -o ${IFACE}_0 -p tcp -j DROP
         iptables -A OUTPUT -o ${IFACE}_0 -p udp -j DROP
     fi
