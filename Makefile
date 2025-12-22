@@ -13,17 +13,17 @@ CONFIG ?= main.py # default configuration for network
 options help:
 	echo "Options:"
 	echo -e "\t- build"
-	echo -e "\t- up       # write docker-compose and launch"
+	echo -e "\t- up             # write docker-compose and launch"
 	echo -e "\t- down"
-	echo -e "\t- clean    # deletes shared; stops all containers and deletes any dangling images"
+	echo -e "\t- clean          # deletes shared; stops all containers and deletes any dangling images"
 	
 	echo "" # New line
 
 	echo "Helper:"
-	echo -e "\t- config   # write docker-compose only"
-	echo -e "\t- list     # list available configurations"
-	echo -e "\t- graph    # create network graph"
-	echo -e "\t- stats    # record hardware utilization"
+	echo -e "\t- config         # write docker-compose only"
+	echo -e "\t- list-examples  # list available configurations"
+	echo -e "\t- graph          # create network graph"
+	echo -e "\t- stats          # record hardware utilization"
 
 	echo "" # New line
 
@@ -77,11 +77,11 @@ config: down clean-shared
 	export PYTHONPATH="scripts/config/"
 	${PYTHON} scripts/config/${CONFIG}
 
-.PHONY: list
-list:
-	echo "Configurations:"
+.PHONY: list-examples
+list-examples:
+	echo "Example configurations:  # run with: make up CONFIG=<NAME>"
 
-	CONFIGS="$$(ls scripts/config/*.py)"
+	CONFIGS="$$(ls scripts/config/examples/*.py)"
 	for CONFIG in $${CONFIGS}; do
 		NAME="$$(basename $${CONFIG})"
 
@@ -89,7 +89,7 @@ list:
 			continue
 		fi
 
-		echo -e "\t- $${NAME}"
+		echo -e "\t- examples/$${NAME}"
 	done
 
 GRAPH := shared/config-graph
@@ -107,6 +107,8 @@ graph:
 
 .PHONY: stats
 stats:
+	sudo chmod -R 777 shared/ || true
+
 	echo "Exit with ctrl + c ..."
 	${PYTHON} scripts/stats/main.py
 

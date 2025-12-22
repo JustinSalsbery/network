@@ -259,8 +259,18 @@ echo "defaults" > $FILE
 
 if [ "$TYPE" = "l4" ]; then
     echo -e "\tmode tcp" >> $FILE
+
+    if [ "$LOG_QUERIES" = "true" ]; then
+        echo -e "\toption tcplog" >> $FILE
+        echo -e "\tlog stdout local0" >> $FILE
+    fi
 elif [ "$TYPE" = "l5" ]; then
     echo -e "\tmode http" >> $FILE
+
+    if [ "$LOG_QUERIES" = "true" ]; then
+        echo -e "\toption httplog" >> $FILE
+        echo -e "\tlog stdout local0" >> $FILE
+    fi
 fi
 
 echo "" >> $FILE  # new line
@@ -270,12 +280,6 @@ echo -e "\ttimeout server 30s"  >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\tcompression algo gzip" >> $FILE
 echo "" >> $FILE  # new line
-
-if [ "$LOG_QUERIES" = "true" ]; then
-    echo -e "\tlog stdout local0" >> $FILE
-    echo -e "\toption httplog" >> $FILE
-    echo "" >> $FILE  # new line
-fi
 
 if [ "$TYPE" = "l5" ]; then
     echo "cache www-cache" >> $FILE
@@ -294,7 +298,7 @@ if [ "$TYPE" = "l5" ]; then
     echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
     echo -e "\thttp-response cache-store www-cache" >> $FILE
 else
-    echo -e "\t# caching requires l5"
+    echo -e "\t# caching requires l5" >> $FILE
 fi
 
 echo "" >> $FILE  # new line
@@ -314,7 +318,7 @@ if [ "$TYPE" = "l5" ]; then
     echo -e "\thttp-request cache-use www-cache if { path_beg /cache/ }" >> $FILE
     echo -e "\thttp-response cache-store www-cache" >> $FILE
 else
-    echo -e "\t# caching requires l5"
+    echo -e "\t# caching requires l5" >> $FILE
 fi
 
 echo "" >> $FILE  # new line
@@ -381,10 +385,12 @@ fi
 trap "exit 0" SIGTERM
 
 LOGFILE="shared/$HOSTNAME/haproxy.log"
+ERRORFILE="shared/$HOSTNAME/error.log"
+
 if [ "$AUTO_RESTART" = "true" ]; then
-    haproxy -f $FILE > $LOGFILE &
+    haproxy -f $FILE 1> $LOGFILE 2> $ERRORFILE &
 else
-    haproxy -f $FILE > $LOGFILE &
+    haproxy -f $FILE 1> $LOGFILE 2> $ERRORFILE &
     sleep infinity &
 fi
 
