@@ -198,11 +198,11 @@ for _ in range(1):  # setup backbone routers
                     print(f"Unknown algorithm: {balance_method}")
                     exit(1)
 
-                servers = []  # the IP addresses of the backend servers
+                backends = []  # the IP addresses of the backend servers
                 for n in range(COMPS_PER):
-                    servers.append(f"182.{server}.0.{n + 3}")
+                    backends.append(f"182.{server}.0.{n + 3}")
 
-                lb = LoadBalancer(servers, type=lb_layer, algorithm=lb_algorithm,
+                lb = LoadBalancer(backends=backends, type=lb_layer, algorithm=lb_algorithm,
                                   cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
                 lb.add_iface(iface, cidr=cidr, ip=f"182.{server}.0.2", gateway=f"182.{server}.0.1")
 
