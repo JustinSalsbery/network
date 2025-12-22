@@ -19,13 +19,13 @@ class Configurator():
         ):
 
         """
-        Outputs the configuration as `docker-compose.yml`.
         @params:
             - available_range: The available IP range in CIDR notation for creating temporary subnets.
             - prefix_len: The size of each temporary subnet.
             - color: Enables or disables color in the graph.
             - extra: Enables or disables extra information in the graph.
         Note:
+            - Outputs the configuration as `docker-compose.yml`.
             - The configurator MUST be called for the configuration to be created.
             - By default, Docker only supports around 30 network interfaces.
               By writing temporary subnets in the Docker Compose file we can exceed this limitation.

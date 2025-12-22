@@ -15,11 +15,12 @@ from src.configurator import *
 
 PROTOCOL = Protocol.http
 REQUESTS = ["/40.html"]
+GZIP = True
 WAIT_MIN = 5
 WAIT_MAX = 5
 CONN_RATE = 20
-CONN_MAX = 1000
-CPU_LIMIT = 0.5
+CONN_MAX = 500
+CPU_LIMIT = 1.0
 MEM_LIMIT = 512
 
 
@@ -69,7 +70,7 @@ for i in range(SERVERS):
         target = f"182.{i}.1.2"
     elif balance_method == "NONE":
         target = f"182.{i}.0.2"
-    elif "LB" in balance_method:
+    elif balance_method.startswith("LB"):
         target = f"182.{i}.0.2"
     else:
         print(f"Unknown balance method: {balance_method}")
@@ -130,8 +131,8 @@ for _ in range(1):  # setup backbone routers
             target = targets[home]
             for n in range(COMPS_PER):
                 tgen = TrafficGenerator(target=target, proto=PROTOCOL, requests=REQUESTS,
-                                        conn_max=CONN_MAX, conn_rate=CONN_RATE, 
-                                        wait_min=WAIT_MIN, wait_max=WAIT_MAX, 
+                                        conn_max=CONN_MAX, conn_rate=CONN_RATE,
+                                        wait_min=WAIT_MIN, wait_max=WAIT_MAX, gzip=GZIP,
                                         dns_server="172.16.0.2",  # dns server may not exist
                                         cpu_limit=CPU_LIMIT, mem_limit=MEM_LIMIT)
                 tgen.add_iface(iface, cidr=cidr, ip=f"172.16.0.{n + 3}", gateway="172.16.0.1")
