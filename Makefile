@@ -2,33 +2,33 @@
 SHELL := /bin/bash
 PYTHON ?= python3
 
-CONFIG ?= main.py # default configuration for network
-
 
 .ONESHELL:
 .SILENT:
 
 
+# help
+
 .PHONY: options help
 options help:
 	echo "Options:"
 	echo -e "\t- build"
-	echo -e "\t- up             # write docker-compose and launch"
+	echo -e "\t- up            # specify config with CONFIG=<NAME>"
 	echo -e "\t- down"
-	echo -e "\t- clean          # deletes shared; stops all containers and deletes any dangling images"
+	echo -e "\t- script        # specify script with SCRIPT=<NAME>"
+	echo -e "\t- clean"
 	
 	echo "" # New line
 
 	echo "Helper:"
-	echo -e "\t- config         # write docker-compose only"
-	echo -e "\t- list-examples  # list available configurations"
-	echo -e "\t- graph          # create network graph"
-	echo -e "\t- stats          # record hardware utilization"
+	echo -e "\t- list-configs  # list available configs"
+	echo -e "\t- list-scripts  # list available scripts"
+	echo -e "\t- graph         # create network graph"
+	echo -e "\t- stats         # record hardware utilization"
+	echo -e "\t- config        # write docker-compose only"
 
-	echo "" # New line
 
-	echo "Notes:"
-	echo -e "\t- Choose a specific config: 'make {config, up} CONFIG=NAME'"
+# config
 
 CERTS_SERVER := components/nginx/ssl/
 CERTS_LB := components/haproxy/ssl/
@@ -71,25 +71,23 @@ down:
 # down depends upon the docker-compose file
 # before we generate a new configuration, we must bring down the current network
 
+CONFIG ?= main.py # default configuration for network
+
 .PHONY: config
 config: down clean-shared
 	mkdir -p shared/
 	export PYTHONPATH="scripts/config/"
 	${PYTHON} scripts/config/${CONFIG}
 
-.PHONY: list-examples
-list-examples:
-	echo "Example configurations:  # run with: make up CONFIG=<NAME>"
+.PHONY: list-configs
+list-configs:
+	echo "Network configurations:  # run with: make up CONFIG=<NAME>"
 
-	CONFIGS="$$(ls scripts/config/examples/*.py)"
+	CONFIGS="$$(cd scripts/config; \
+		find . -name '*.py' -not -path './src/*' -not -path './tests/*')"
+
 	for CONFIG in $${CONFIGS}; do
-		NAME="$$(basename $${CONFIG})"
-
-		if [[ "$${NAME}" =~ ^test* ]]; then
-			continue
-		fi
-
-		echo -e "\t- examples/$${NAME}"
+		echo -e "\t- $${CONFIG}"
 	done
 
 GRAPH := shared/config-graph
@@ -105,12 +103,38 @@ graph:
 	# dot -Ksfdp produces a similar image
 	neato -T${GRAPH_FORMAT} ${GRAPH}.gv -o ${GRAPH}.${GRAPH_FORMAT}
 
+
+# stats
+
 .PHONY: stats
 stats:
 	sudo chmod -R 777 shared/ || true
 
 	echo "Exit with ctrl + c ..."
 	${PYTHON} scripts/stats/main.py
+
+
+# script
+
+SCRIPT ?= example.py
+
+.PHONY: script
+script:
+	${PYTHON} scripts/script/${SCRIPT}
+
+.PHONY: list-scripts
+list-scripts:
+	echo "Network scripts:  # run with: make script SCRIPT=<NAME>"
+
+	CONFIGS="$$(cd scripts/script; \
+		find . -name '*.py' -not -path './src/*')"
+
+	for CONFIG in $${CONFIGS}; do
+		echo -e "\t- $${CONFIG}"
+	done
+
+
+# clean
 
 .PHONY: clean
 clean: clean-shared clean-certs clean-docker
