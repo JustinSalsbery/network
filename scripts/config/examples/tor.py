@@ -44,7 +44,7 @@ router_3 = Router()
 router_3.add_iface(iface=iface_2, cidr=cidr_2, ip="20.2.0.2")
 router_3.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.1")
 
-client_0 = Client(dir_auth=tor_0)
+client_0 = Client(tor_dir=tor_0)
 client_0.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.2", gateway="20.4.0.1")
 
 router_4 = Router()
@@ -79,7 +79,7 @@ router_6 = Router()
 router_6.add_iface(iface=iface_3, cidr=cidr_3, ip="20.3.0.1")
 router_6.add_iface(iface=iface_7, cidr=cidr_7, ip="20.7.0.1")
 
-http_0 = HTTPServer(dir_auth=tor_0, tor_bridge=tor_4, tor_middle=tor_5, tor_exit=tor_6)
+http_0 = HTTPServer(tor_dir=tor_0, tor_bridge=tor_4, tor_middle=tor_5, tor_exit=tor_6)
 http_0.add_iface(iface=iface_7, cidr=cidr_7, ip="20.7.0.2", gateway="20.7.0.1")
 
 

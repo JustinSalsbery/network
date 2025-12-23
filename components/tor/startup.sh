@@ -222,7 +222,7 @@ for IFACE in $IFACES; do
     # if tor creates the data directory, the directory will be owned by the tor account
     # we are running tor with the root account, which will result in errors
     rm -rf $DATA_DIR
-    mkdir -p $DATA_DIR
+    mkdir -p $DATA_DIR/keys/
 
     echo $IP > shared/$HOSTNAME/ip
 
@@ -232,7 +232,7 @@ for IFACE in $IFACES; do
     exec 3<> $DATA_DIR/password  # open password as file descriptor 3
 
     tor-gencert --passphrase-fd 3 --create-identity-key -m 12 -a $IP:7000 -i $DATA_DIR/keys/authority_identity_key -s $DATA_DIR/keys/authority_signing_key -c $DATA_DIR/keys/authority_certificate
-    cat $DATA_DIR/authority_certificate | grep fingerprint | cut -d' ' -f2 > shared/$HOSTNAME/certificate
+    cat $DATA_DIR/keys/authority_certificate | grep fingerprint | cut -d' ' -f2 > shared/$HOSTNAME/certificate
 
     exec 3>&-  # close file descriptor 3
 
@@ -242,10 +242,12 @@ for IFACE in $IFACES; do
 
     # wait for directory authority
     # if the node is a directory authority, the node will read it's own information
-    while ! [ -f "shared/$TOR_AUTH/ready" ]; do
-        echo "waiting for $TOR_AUTH to write to shared/"
-        sleep 1  # seconds
-    done
+    if [ "$HOSTNAME" != "$TOR_AUTH" ]; then
+        while ! [ -f "shared/$TOR_AUTH/ready" ]; do
+            echo "waiting for $TOR_AUTH to write to shared/"
+            sleep 3  # seconds
+        done
+    fi
 
     AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
     AUTH_CERT="$(cat shared/$TOR_AUTH/certificate)"
@@ -256,7 +258,10 @@ for IFACE in $IFACES; do
 
     echo "DataDirectory $DATA_DIR" > $FILE
     echo "TestingTorNetwork 1" >> $FILE
-    echo "DirAuthority $TOR_AUTH no-v2 v3ident=$AUTH_CERT $AUTH_IP:7000 $AUTH_FINGERPRINT orport=5000" >> $FILE
+
+    DIR_NICKNAME=$(echo $TOR_AUTH | sed 's/-//g')
+    echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
+
     echo "" >> $FILE  # new line
     echo "RunAsDaemon 0" >> $FILE
     echo "ShutdownWaitLength 0" >> $FILE
@@ -274,9 +279,12 @@ for IFACE in $IFACES; do
     echo "Log info file $LOG_DIR/info.log" >> $FILE
     echo "Log debug file $LOG_DIR/debug.log" >> $FILE
     echo "" >> $FILE  # new line
-    echo "Nickname $HOSTNAME" >> $FILE
+
+    TOR_NICKNAME=$(echo $HOSTNAME | sed 's/-//g')
+    echo "Nickname $TOR_NICKNAME" >> $FILE
     echo "Address $IP" >> $FILE
-    echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
+    echo "ContactInfo $TOR_NICKNAME@ewu.edu" >> $FILE
+
     echo "" >> $FILE  # new line
     echo "SocksPort 0" >> $FILE
     echo "OrPort 5000" >> $FILE

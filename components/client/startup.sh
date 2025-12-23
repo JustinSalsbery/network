@@ -239,7 +239,10 @@ if ! [ "$TOR_AUTH" = "" ]; then
 
         echo "DataDirectory $DATA_DIR" > $FILE
         echo "TestingTorNetwork 1" >> $FILE
-        echo "DirAuthority $TOR_AUTH no-v2 v3ident=$AUTH_CERT $AUTH_IP:7000 $AUTH_FINGERPRINT orport=5000" >> $FILE
+
+        DIR_NICKNAME=$(echo $TOR_AUTH | sed 's/-//g')
+        echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
+
         echo "" >> $FILE  # new line
         echo "RunAsDaemon 0" >> $FILE
         echo "ShutdownWaitLength 0" >> $FILE
@@ -257,9 +260,12 @@ if ! [ "$TOR_AUTH" = "" ]; then
         echo "Log info file $LOG_DIR/info.log" >> $FILE
         echo "Log debug file $LOG_DIR/debug.log" >> $FILE
         echo "" >> $FILE  # new line
-        echo "Nickname $HOSTNAME" >> $FILE
+
+        TOR_NICKNAME=$(echo $HOSTNAME | sed 's/-//g')
+        echo "Nickname $TOR_NICKNAME" >> $FILE
         echo "Address $IP" >> $FILE
-        echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
+        echo "ContactInfo $TOR_NICKNAME@ewu.edu" >> $FILE
+
         echo "" >> $FILE  # new line
         echo "SocksPort 9050 ExtendedErrors" >> $FILE
         echo "OrPort 5000" >> $FILE
