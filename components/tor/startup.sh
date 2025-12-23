@@ -242,16 +242,16 @@ for IFACE in $IFACES; do
 
     # wait for directory authority
     # if the node is a directory authority, the node will read it's own information
-    if [ "$HOSTNAME" != "$TOR_AUTH" ]; then
-        while ! [ -f "shared/$TOR_AUTH/ready" ]; do
-            echo "waiting for $TOR_AUTH to write to shared/"
+    if [ "$HOSTNAME" != "$TOR_DIR" ]; then
+        while ! [ -f "shared/$TOR_DIR/ready" ]; do
+            echo "waiting for $TOR_DIR to write to shared/"
             sleep 3  # seconds
         done
     fi
 
-    AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
-    AUTH_CERT="$(cat shared/$TOR_AUTH/certificate)"
-    AUTH_FINGERPRINT="$(cat shared/$TOR_AUTH/fingerprint)"
+    AUTH_IP="$(cat shared/$TOR_DIR/ip)"
+    AUTH_CERT="$(cat shared/$TOR_DIR/certificate)"
+    AUTH_FINGERPRINT="$(cat shared/$TOR_DIR/fingerprint)"
 
     # setup torrc
     FILE="/etc/tor/torrc"
@@ -259,7 +259,7 @@ for IFACE in $IFACES; do
     echo "DataDirectory $DATA_DIR" > $FILE
     echo "TestingTorNetwork 1" >> $FILE
 
-    DIR_NICKNAME=$(echo $TOR_AUTH | sed 's/-//g')
+    DIR_NICKNAME=$(echo $TOR_DIR | sed 's/-//g')
     echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
 
     echo "" >> $FILE  # new line
@@ -291,19 +291,19 @@ for IFACE in $IFACES; do
     echo "DirPort 7000" >> $FILE
     echo "" >> $FILE  # new line
 
-    if [ "$TOR_BRIDGE" = "true" ]; then
+    if [ "$IS_BRIDGE" = "true" ]; then
         echo "BridgeRelay 1" >> $FILE
     else
         echo "BridgeRelay 0" >> $FILE
     fi
 
-    if [ "$TOR_EXIT" = "true" ]; then
+    if [ "$IS_EXIT" = "true" ]; then
         echo "ExitRelay 1" >> $FILE
     else
         echo "ExitRelay 0" >> $FILE
     fi
 
-    if [ "$TOR_AUTH" = "$HOSTNAME" ]; then
+    if [ "$TOR_DIR" = "$HOSTNAME" ]; then
         echo "" >> $FILE  # new line
         echo "AuthoritativeDirectory 1" >> $FILE
         echo "V3AuthoritativeDirectory 1" >> $FILE

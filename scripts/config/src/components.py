@@ -1116,9 +1116,9 @@ class LoadBalancer(_Service):
 class TorNode(_Service):
     def __init__(
             self,
-            dir_auth: TorNode | None = None,
-            bridge: bool = False,
-            exit: bool = False,
+            tor_dir: TorNode | None = None,
+            is_bridge: bool = False,
+            is_exit: bool = False,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -1130,9 +1130,9 @@ class TorNode(_Service):
 
         """
         @params:
-            - dir_auth: If None, configures the node as a directory authority.
-            - bridge: Configure the node as a bridge relay.
-            - exit: Configure the node as a exit relay.
+            - tor_dir: If None, configures the node as a directory authority.
+            - is_bridge: Configure the node as a bridge relay.
+            - is_exit: Configure the node as a exit relay.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -1153,11 +1153,11 @@ class TorNode(_Service):
             fast_retran=fast_retran,
             sack=sack,
             ttl=ttl,
-            tor_dir=dir_auth,
+            tor_dir=tor_dir,
         )
 
-        self._bridge = bridge
-        self._exit = exit
+        self._is_bridge = is_bridge
+        self._is_exit = is_exit
 
 
 # ROUTER **********************************************************************

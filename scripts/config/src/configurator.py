@@ -85,7 +85,7 @@ class Configurator():
                 else ""
 
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
-            file.write(f"{_SPACE * 3}TOR_AUTH: {tor_dir}\n")
+            file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
             file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
             file.write(f"{_SPACE * 3}TOR_MIDDLE: {tor_middle}\n")
             file.write(f"{_SPACE * 3}TOR_EXIT: {tor_exit}\n")
@@ -135,7 +135,7 @@ class Configurator():
                 else ""
 
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
-            file.write(f"{_SPACE * 3}TOR_AUTH: {tor_dir}\n")
+            file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
             file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
             file.write(f"{_SPACE * 3}TOR_MIDDLE: {tor_middle}\n")
             file.write(f"{_SPACE * 3}TOR_EXIT: {tor_exit}\n")
@@ -224,14 +224,14 @@ class Configurator():
             assert isinstance(tor_node, TorNode)
             self._write_service(file, tor_node)
 
-            dir_auth = tor_node._tor_dir._name \
+            tor_dir = tor_node._tor_dir._name \
                 if tor_node._tor_dir \
                 else tor_node._name
 
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
-            file.write(f"{_SPACE * 3}TOR_AUTH: {dir_auth}\n")
-            file.write(f"{_SPACE * 3}TOR_BRIDGE: {str(tor_node._bridge).lower()}\n")
-            file.write(f"{_SPACE * 3}TOR_EXIT: {str(tor_node._exit).lower()}\n")
+            file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
+            file.write(f"{_SPACE * 3}IS_BRIDGE: {str(tor_node._is_bridge).lower()}\n")
+            file.write(f"{_SPACE * 3}IS_EXIT: {str(tor_node._is_exit).lower()}\n")
 
         # write routers
 

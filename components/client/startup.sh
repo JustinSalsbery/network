@@ -212,7 +212,7 @@ chmod 666 shared/$HOSTNAME/
 
 # setup tor
 # configured for a single interface
-if ! [ "$TOR_AUTH" = "" ]; then
+if ! [ "$TOR_DIR" = "" ]; then
     DATA_DIR="/var/lib/tor/"
     LOG_DIR="/app/shared/$HOSTNAME/"
 
@@ -225,14 +225,14 @@ if ! [ "$TOR_AUTH" = "" ]; then
         IPS="$(echo $IPS | cut -d' ' -f2-)"
 
         # wait for directory authority
-        while ! [ -f "shared/$TOR_AUTH/ready" ]; do
-            echo "waiting for shared/$TOR_AUTH/ready"
+        while ! [ -f "shared/$TOR_DIR/ready" ]; do
+            echo "waiting for shared/$TOR_DIR/ready"
             sleep 1  # seconds
         done
 
-        AUTH_IP="$(cat shared/$TOR_AUTH/ip)"
-        AUTH_CERT="$(cat shared/$TOR_AUTH/certificate)"
-        AUTH_FINGERPRINT="$(cat shared/$TOR_AUTH/fingerprint)"
+        AUTH_IP="$(cat shared/$TOR_DIR/ip)"
+        AUTH_CERT="$(cat shared/$TOR_DIR/certificate)"
+        AUTH_FINGERPRINT="$(cat shared/$TOR_DIR/fingerprint)"
 
         # setup torrc
         FILE="/etc/tor/torrc"
@@ -240,7 +240,7 @@ if ! [ "$TOR_AUTH" = "" ]; then
         echo "DataDirectory $DATA_DIR" > $FILE
         echo "TestingTorNetwork 1" >> $FILE
 
-        DIR_NICKNAME=$(echo $TOR_AUTH | sed 's/-//g')
+        DIR_NICKNAME=$(echo $TOR_DIR | sed 's/-//g')
         echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
 
         echo "" >> $FILE  # new line

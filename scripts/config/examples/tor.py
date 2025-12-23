@@ -51,13 +51,13 @@ router_4 = Router()
 router_4.add_iface(iface=iface_2, cidr=cidr_2, ip="20.2.0.3")
 router_4.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.1")
 
-tor_1 = TorNode(dir_auth=tor_0, exit=True)
+tor_1 = TorNode(tor_dir=tor_0, is_exit=True)
 tor_1.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.2", gateway="20.5.0.1")
 
-tor_2 = TorNode(dir_auth=tor_0, exit=True)
+tor_2 = TorNode(tor_dir=tor_0, is_exit=True)
 tor_2.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.3", gateway="20.5.0.1")
 
-tor_3 = TorNode(dir_auth=tor_0, exit=True)
+tor_3 = TorNode(tor_dir=tor_0, is_exit=True)
 tor_3.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.4", gateway="20.5.0.1")
 
 # server
@@ -66,13 +66,13 @@ router_5 = Router()
 router_5.add_iface(iface=iface_3, cidr=cidr_3, ip="20.3.0.1")
 router_5.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.1")
 
-tor_4 = TorNode(dir_auth=tor_0, bridge=True)
+tor_4 = TorNode(tor_dir=tor_0, is_bridge=True)
 tor_4.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.2", gateway="20.6.0.1")
 
-tor_5 = TorNode(dir_auth=tor_0)
+tor_5 = TorNode(tor_dir=tor_0)
 tor_5.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.3", gateway="20.6.0.1")
 
-tor_6 = TorNode(dir_auth=tor_0, exit=True)
+tor_6 = TorNode(tor_dir=tor_0, is_exit=True)
 tor_6.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.4", gateway="20.6.0.1")
 
 router_6 = Router()
