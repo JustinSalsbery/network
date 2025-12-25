@@ -18,7 +18,7 @@ COLOR_MAP = {
     _ServiceType.tor.name: "coral",
 }
 
-FILE_NAME = "config-graph"
+FILE_NAME = "network-graph"
 
 
 class Grapher():

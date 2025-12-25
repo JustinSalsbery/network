@@ -13,22 +13,22 @@ PYTHON ?= python3
 options help:
 	echo "Options:"
 	echo -e "\t- build"
-	echo -e "\t- up            # specify config with CONFIG=<NAME>"
+	echo -e "\t- up            # specify config with NETWORK=<NAME>"
 	echo -e "\t- down"
-	echo -e "\t- script        # specify script with SCRIPT=<NAME>"
+	echo -e "\t- test          # specify test with TEST=<NAME>"
 	echo -e "\t- clean"
 	
 	echo "" # New line
 
 	echo "Helper:"
-	echo -e "\t- list-configs  # list available configs"
-	echo -e "\t- list-scripts  # list available scripts"
+	echo -e "\t- list-networks # list available networks"
+	echo -e "\t- list-tests    # list available tests"
 	echo -e "\t- graph         # create network graph"
 	echo -e "\t- stats         # record hardware utilization"
 	echo -e "\t- config        # write docker-compose only"
 
 
-# config
+# network
 
 CERTS_SERVER := components/nginx/ssl/
 CERTS_LB := components/haproxy/ssl/
@@ -76,21 +76,21 @@ CONFIG ?= main.py # default configuration for network
 .PHONY: config
 config: down clean-logs
 	mkdir -p logs/
-	export PYTHONPATH="scripts/config/"
-	${PYTHON} scripts/config/${CONFIG}
+	export PYTHONPATH="scripts/network/"
+	${PYTHON} scripts/network/${NETWORK}
 
-.PHONY: list-configs
-list-configs:
-	echo "Network configurations:  # run with: make up CONFIG=<NAME>"
+.PHONY: list-networks
+list-networks:
+	echo "Network configurations:  # run with: make up NETWORK=<NAME>"
 
-	CONFIGS="$$(cd scripts/config; \
+	NETWORKS="$$(cd scripts/network; \
 		find . -name '*.py' -not -path './src/*' -not -path './tests/*')"
 
-	for CONFIG in $${CONFIGS}; do
-		echo -e "\t- $${CONFIG}"
+	for NETWORK in $${NETWORKS}; do
+		echo -e "\t- $${NETWORK}"
 	done
 
-GRAPH := logs/config-graph
+GRAPH := logs/network-graph
 GRAPH_FORMAT := png  # options: jpeg, png, pdf, svg
 
 .PHONY: graph
@@ -114,23 +114,23 @@ stats:
 	${PYTHON} scripts/stats/main.py
 
 
-# script
+# test
 
-SCRIPT ?= example.py
+TEST ?= example.py
 
-.PHONY: script
-script:
-	${PYTHON} scripts/script/${SCRIPT}
+.PHONY: test
+test:
+	${PYTHON} scripts/test/${TEST}
 
-.PHONY: list-scripts
-list-scripts:
-	echo "Network scripts:  # run with: make script SCRIPT=<NAME>"
+.PHONY: list-tests
+list-tests:
+	echo "Network tests:  # run with: make test TEST=<NAME>"
 
-	CONFIGS="$$(cd scripts/script; \
+	TESTS="$$(cd scripts/test; \
 		find . -name '*.py' -not -path './src/*')"
 
-	for CONFIG in $${CONFIGS}; do
-		echo -e "\t- $${CONFIG}"
+	for TEST in $${TESTS}; do
+		echo -e "\t- $${TEST}"
 	done
 
 
