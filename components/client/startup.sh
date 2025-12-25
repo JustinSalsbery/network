@@ -239,19 +239,18 @@ if ! [ "$TOR_DIR" = "" ]; then
         FILE="/etc/tor/torrc"
 
         echo "DataDirectory $DATA_DIR" > $FILE
-        echo "TestingTorNetwork 1" >> $FILE
+        echo "RunAsDaemon 0" >> $FILE
+        echo "ShutdownWaitLength 0" >> $FILE
+        echo "" >> $FILE  # new line
 
         DIR_NICKNAME=$(echo $TOR_DIR | sed 's/-//g')
         echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
 
-        echo "" >> $FILE  # new line
-        echo "RunAsDaemon 0" >> $FILE
-        echo "ShutdownWaitLength 0" >> $FILE
-        echo "" >> $FILE  # new line
         echo "AssumeReachable 1" >> $FILE
         echo "PathsNeededToBuildCircuits 0.25" >> $FILE
         echo "" >> $FILE  # new line
         echo "# Remove requirements" >> $FILE
+        echo "TestingTorNetwork 1" >> $FILE
         echo "TestingDirAuthVoteGuard *" >> $FILE
         echo "TestingDirAuthVoteExit *" >> $FILE
         echo "TestingDirAuthVoteHSDir *" >> $FILE

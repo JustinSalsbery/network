@@ -306,6 +306,13 @@ class Configurator():
         # memory swap represents the total amount of memory and swap that can be used.
         file.write(f"{_SPACE * 2}memswap_limit: {service._swap_limit + service._mem_limit}mb\n")
 
+        # write logging
+
+        file.write(f"{_SPACE * 2}logging:  # limit log size\n")
+        file.write(f"{_SPACE * 3}driver: json-file\n")
+        file.write(f"{_SPACE * 3}options:\n")
+        file.write(f"{_SPACE * 4}max-size: 16mb\n")
+
         # write volumes
 
         file.write(f"{_SPACE * 2}volumes:\n")
