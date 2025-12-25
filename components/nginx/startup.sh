@@ -287,44 +287,6 @@ if ! [ "$TOR_DIR" = "" ]; then
             echo "Bridge $BRIDGE_IP:5000 $BRIDGE_FINGERPRINT" >> $FILE
         fi
 
-        if [ "$TOR_MIDDLES" != "" ]; then
-            for TOR_MIDDLE in $TOR_MIDDLES; do
-                while ! [ -f "shared/$TOR_MIDDLE/ready" ]; do
-                    echo "waiting for shared/$TOR_MIDDLE/ready"
-                    sleep 3  # seconds
-                done
-
-                MIDDLE_FINGERPRINT="$(cat shared/$TOR_MIDDLE/fingerprint)"
-
-                if [ "$MIDDLE_FINGERPRINTS" = "" ]; then
-                    MIDDLE_FINGERPRINTS="$MIDDLE_FINGERPRINT"
-                else
-                    MIDDLE_FINGERPRINTS="$MIDDLE_FINGERPRINTS,$MIDDLE_FINGERPRINT"
-                fi
-            done
-
-            echo "MiddleNodes $MIDDLE_FINGERPRINTS" >> $FILE
-        fi
-
-        if [ "$TOR_EXITS" != "" ]; then
-            for TOR_EXIT in $TOR_EXITS; do
-                while ! [ -f "shared/$TOR_EXIT/ready" ]; do
-                    echo "waiting for shared/$TOR_EXIT/ready"
-                    sleep 3  # seconds
-                done
-
-                EXIT_FINGERPRINT="$(cat shared/$TOR_EXIT/fingerprint)"
-
-                if [ "$EXIT_FINGERPRINTS" = "" ]; then
-                    EXIT_FINGERPRINTS="$EXIT_FINGERPRINT"
-                else
-                    EXIT_FINGERPRINTS="$EXIT_FINGERPRINTS,$EXIT_FINGERPRINT"
-                fi
-            done
-
-            echo "ExitNodes $EXIT_FINGERPRINTS" >> $FILE
-        fi
-
         echo "" >> $FILE  # new line
         echo "# Hidden Service - uses Tor for encryption not HTTPS" >> $FILE
         echo "HiddenServiceDir $DATA_DIR/www" >> $FILE
@@ -413,7 +375,7 @@ echo -e "\t# Set the Vary HTTP header as defined in the RFC 2616." >> $FILE
 echo -e "\tgzip_vary on; # Default is 'off'." >> $FILE
 echo "" >> $FILE  # new line
 
-if [ "$LOG_QUERIES" = "true" ]; then
+if [ "$QUERY_LOG" = "true" ]; then
     echo -e "\t# Specifies the main log format." >> $FILE
     echo -e "\tlog_format main '\$remote_addr - \$remote_user [\$time_local] \"\$request\" '" >> $FILE
     echo -e "\t\t\t'\$status \$body_bytes_sent \"\$http_referer\" '" >> $FILE

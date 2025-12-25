@@ -236,7 +236,7 @@ echo "# without filtering, AAAA requests will return a REFUSED error" >> $FILE
 echo "# various utilities, such as socket.getaddrinfo, will throw a gaierror in response" >> $FILE
 echo "filter-AAAA  # return a FILTERED response" >> $FILE
 
-if [ "$LOG_QUERIES" = "true" ]; then
+if [ "$QUERY_LOG" = "true" ]; then
     echo "" >> $FILE  # new line
     echo "log-queries" >> $FILE
     echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE

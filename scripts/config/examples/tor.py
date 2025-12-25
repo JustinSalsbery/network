@@ -44,21 +44,21 @@ router_3 = Router()
 router_3.add_iface(iface=iface_2, cidr=cidr_2, ip="20.2.0.2")
 router_3.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.1")
 
-client_0 = Client(tor_dir=tor_0)
-client_0.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.2", gateway="20.4.0.1")
+tor_1 = TorNode(tor_dir=tor_0, is_exit=True)
+tor_1.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.2", gateway="20.4.0.1")
+
+tor_2 = TorNode(tor_dir=tor_0, is_exit=True)
+tor_2.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.3", gateway="20.4.0.1")
+
+tor_3 = TorNode(tor_dir=tor_0, is_exit=True)
+tor_3.add_iface(iface=iface_4, cidr=cidr_4, ip="20.4.0.4", gateway="20.4.0.1")
 
 router_4 = Router()
 router_4.add_iface(iface=iface_2, cidr=cidr_2, ip="20.2.0.3")
 router_4.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.1")
 
-tor_1 = TorNode(tor_dir=tor_0, is_exit=True)
-tor_1.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.2", gateway="20.5.0.1")
-
-tor_2 = TorNode(tor_dir=tor_0, is_exit=True)
-tor_2.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.3", gateway="20.5.0.1")
-
-tor_3 = TorNode(tor_dir=tor_0, is_exit=True)
-tor_3.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.4", gateway="20.5.0.1")
+client_0 = Client(tor_dir=tor_0, tor_bridge=tor_1, tor_middles=tor_2, tor_exits=tor_3)
+client_0.add_iface(iface=iface_5, cidr=cidr_5, ip="20.5.0.2", gateway="20.5.0.1")
 
 # server
 
@@ -82,7 +82,7 @@ router_6 = Router()
 router_6.add_iface(iface=iface_3, cidr=cidr_3, ip="20.3.0.3")
 router_6.add_iface(iface=iface_7, cidr=cidr_7, ip="20.7.0.1")
 
-http_0 = HTTPServer(tor_dir=tor_0, tor_bridge=tor_4, tor_middles=[tor_5, tor_6], tor_exits=tor_7)
+http_0 = HTTPServer(tor_dir=tor_0)
 http_0.add_iface(iface=iface_7, cidr=cidr_7, ip="20.7.0.2", gateway="20.7.0.1")
 
 

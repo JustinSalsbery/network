@@ -138,23 +138,9 @@ class Configurator():
                 if http_server._tor_bridge \
                 else ""
 
-            tor_middles = []
-            if http_server._tor_middles:
-                for tor_middle in http_server._tor_middles:
-                    assert isinstance(tor_middle, TorNode)
-                    tor_middles.append(tor_middle._name)
-
-            tor_exits = []
-            if http_server._tor_exits:
-                for tor_exit in http_server._tor_exits:
-                    assert isinstance(tor_exit, TorNode)
-                    tor_exits.append(tor_exit._name)
-
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
             file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
             file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
-            file.write(f"{_SPACE * 3}TOR_MIDDLES: {" ".join(tor_middles)}\n")
-            file.write(f"{_SPACE * 3}TOR_EXITS: {" ".join(tor_exits)}\n")
             file.write(f"{_SPACE * 3}TOR_LOG: {str(http_server._tor_log).lower()}\n")
             file.write(f"{_SPACE * 3}TOR_CURL: 'curl --socks5-hostname localhost:9050'\n")
 
@@ -351,7 +337,7 @@ class Configurator():
 
         file.write(f"{_SPACE * 3}# Host configuration:\n")
         file.write(f"{_SPACE * 3}NAMESERVERS: {" ".join(dns_servers)}\n")
-        file.write(f"{_SPACE * 3}LOG_QUERIES: {str(service._log_queries).lower()}\n")
+        file.write(f"{_SPACE * 3}QUERY_LOG: {str(service._query_log).lower()}\n")
         file.write(f"{_SPACE * 3}FORWARD: {str(service._forward).lower()}\n")
         file.write(f"{_SPACE * 3}SYN_COOKIE: {service._syn_cookie.name}\n")
         file.write(f"{_SPACE * 3}CONGESTION_CONTROL: {service._congestion_control.name}\n")

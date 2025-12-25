@@ -260,14 +260,14 @@ echo "defaults" > $FILE
 if [ "$TYPE" = "l4" ]; then
     echo -e "\tmode tcp" >> $FILE
 
-    if [ "$LOG_QUERIES" = "true" ]; then
+    if [ "$QUERY_LOG" = "true" ]; then
         echo -e "\toption tcplog" >> $FILE
         echo -e "\tlog stdout local0" >> $FILE
     fi
 elif [ "$TYPE" = "l5" ]; then
     echo -e "\tmode http" >> $FILE
 
-    if [ "$LOG_QUERIES" = "true" ]; then
+    if [ "$QUERY_LOG" = "true" ]; then
         echo -e "\toption httplog" >> $FILE
         echo -e "\tlog stdout local0" >> $FILE
     fi

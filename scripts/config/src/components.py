@@ -511,7 +511,7 @@ class _Service():
             sack: bool = True,
             timestamp: bool = True,
             ttl: int = 64,
-            log_queries: bool = False,
+            query_log: bool = False,
             tor_dir: TorNode | None = None,
             tor_bridge: TorNode | None = None,
             tor_middles: list[TorNode] | TorNode | None = None,
@@ -537,7 +537,7 @@ class _Service():
             - sack: Enable or disable selective acknowledgments.
             - timestamp: Enable or disable tcp timestamps.
             - ttl: Configure the default ttl for packets.
-            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
+            - query_log: Configure logging of queries. Implemented on DNS, HTTP, and LB.
             - tor_dir: Specify the tor directory. Enables the tor network if present.
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
             - tor_middles: Optional. Specify the middle nodes in the tor circuit.
@@ -573,7 +573,7 @@ class _Service():
                 ip = _IPv4(dns_server)
                 self._dns_servers.append(ip)
 
-        self._log_queries = log_queries
+        self._query_log = query_log
         self._tor_dir = tor_dir
         self._tor_bridge = tor_bridge
 
@@ -675,7 +675,7 @@ class Client(_Service):
         @params:
             - dns_server: The IPv4 addresses of the DNS server.
             - tor_dir: Specify the tor directory. Enables the tor network if present.
-            - tor_bridge: Optional. Specify the guard node in the tor circuit.
+            - tor_bridge: Optional. Specify a bridge node in the tor circuit.
             - tor_middles: Optional. Specify the middle nodes in the tor circuit.
             - tor_exits: Optional. Specify the exit nodes in the tor circuit.
             - tor_log: Configure whether tor will log.
@@ -799,7 +799,7 @@ class TrafficGenerator(_Service):
         assert(wait_min >= 0 and wait_min <= wait_max)
         self._wait_min = wait_min
 
-        assert(wait_max >= 0)  # must be >= wait_min
+        assert(wait_max >= 0)
         self._wait_max = wait_max
 
         self._gzip = gzip
@@ -811,11 +811,9 @@ class TrafficGenerator(_Service):
 class HTTPServer(_Service):
     def __init__(
             self,
-            log_queries: bool = True,
+            query_log: bool = True,
             tor_dir: TorNode | None = None,
             tor_bridge: TorNode | None = None,
-            tor_middles: list[TorNode] | None = None,
-            tor_exits: list[TorNode] | TorNode | None = None,
             tor_log: bool = False,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
@@ -829,12 +827,9 @@ class HTTPServer(_Service):
 
         """
         @params:
-            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
+            - query_log: Configure logging of queries.
             - tor_dir: Specify the tor directory. Enables the tor network if present.
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
-            - tor_middles: Optional. Specify the middle nodes in the tor circuit.
-                           Requires at least two middle nodes.
-            - tor_exits: Optional. Specify the exit nodes in the tor circuit.
             - tor_log: Configure whether tor will log.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
@@ -855,17 +850,12 @@ class HTTPServer(_Service):
             - Tor builds a 4 node circuit for hidden services.
         """
 
-        if tor_middles:
-            assert(len(tor_middles) >= 2)
-
         super().__init__(
             type=_ServiceType.http,
             image="nginx",
-            log_queries=log_queries,
+            query_log=query_log,
             tor_dir=tor_dir,
             tor_bridge=tor_bridge,
-            tor_middles=tor_middles,
-            tor_exits=tor_exits,
             tor_log=tor_log,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
@@ -995,7 +985,7 @@ class DNSServer(_Service):
             self,
             cache: int = 600,
             dns_servers: list[str] | str | None = None,
-            log_queries: bool = True,
+            query_log: bool = True,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -1006,7 +996,7 @@ class DNSServer(_Service):
         @params:
             - cache: The cache duration for the resolved record in seconds.
             - dns_servers: The IPv4 addresses of the DNS servers.
-            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
+            - query_log: Configure logging of queries.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -1024,7 +1014,7 @@ class DNSServer(_Service):
             type=_ServiceType.dns,
             image="dnsmasq",
             dns_servers=dns_servers,
-            log_queries=log_queries,
+            query_log=query_log,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,
@@ -1071,7 +1061,7 @@ class LoadBalancer(_Service):
             algorithm: LBAlgorithm = LBAlgorithm.leastconn,
             advertise: bool = False,
             health_check: str = "/",
-            log_queries: bool = True,
+            query_log: bool = True,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -1089,7 +1079,7 @@ class LoadBalancer(_Service):
             - algorithm: The algorithm to use for backend selection.
             - advertise: If enabled, all interfaces will be advertised by OSPF.
             - health_check: The server page to request for health checks.
-            - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
+            - query_log: Configure logging of queries.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -1104,7 +1094,7 @@ class LoadBalancer(_Service):
         super().__init__(
             type=_ServiceType.lb,
             image="haproxy",
-            log_queries=log_queries,
+            query_log=query_log,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,
@@ -1166,8 +1156,8 @@ class TorNode(_Service):
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
         Note:
-            - The Tor network requires about 10 minutes to establish. If the client
-              or http server specify middle or exit nodes, circuit establishment is slower.
+            - The Tor network requires about 20 minutes to establish. If the client
+              specifies circuit nodes, circuit establishment may be slower.
         """
 
         super().__init__(
