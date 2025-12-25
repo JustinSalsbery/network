@@ -282,13 +282,19 @@ for IFACE in $IFACES; do
 
     TOR_NICKNAME=$(echo $HOSTNAME | sed 's/-//g')
     echo "Nickname $TOR_NICKNAME" >> $FILE
-    echo "Address $IP" >> $FILE
-    echo "ContactInfo $TOR_NICKNAME@ewu.edu" >> $FILE
 
+    echo "Address $IP" >> $FILE
+    echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
     echo "" >> $FILE  # new line
     echo "SocksPort 0" >> $FILE
-    echo "OrPort 5000" >> $FILE
-    echo "DirPort 7000" >> $FILE
+
+    if [ "$TOR_DIR" != "$HOSTNAME" ]; then
+        echo "OrPort 5000" >> $FILE  # relay
+    else
+        echo "DirPort 7000" >> $FILE  # directory authority
+    fi
+
+    echo "ControlPort 9051" >> $FILE
     echo "" >> $FILE  # new line
 
     if [ "$IS_BRIDGE" = "true" ]; then
