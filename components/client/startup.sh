@@ -239,7 +239,7 @@ if ! [ "$TOR_DIR" = "" ]; then
         FILE="/etc/tor/torrc"
 
         echo "DataDirectory $DATA_DIR" > $FILE
-        echo "RunAsDaemon 0" >> $FILE
+        echo "RunAsDaemon 1" >> $FILE
         echo "ShutdownWaitLength 0" >> $FILE
         echo "" >> $FILE  # new line
 
@@ -326,7 +326,7 @@ if ! [ "$TOR_DIR" = "" ]; then
         fi
     done
 
-    tor &
+    tor
 fi
 
 # Useful tor commands:

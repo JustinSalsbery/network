@@ -502,7 +502,7 @@ class _Service():
             cpu_limit: float,
             mem_limit: int,
             swap_limit: int,
-            auto_restart: bool = False,
+            auto_restart: bool = True,
             dns_servers: list[str] | str | None = None,
             forward: bool = False,
             syn_cookie: SynCookieType = SynCookieType.enable,

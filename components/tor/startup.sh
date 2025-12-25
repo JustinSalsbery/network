@@ -257,7 +257,13 @@ for IFACE in $IFACES; do
     FILE="/etc/tor/torrc"
 
     echo "DataDirectory $DATA_DIR" > $FILE
-    echo "RunAsDaemon 0" >> $FILE
+
+    if [ "$AUTO_RESTART" = "true" ]; then
+        echo "RunAsDaemon 0" >> $FILE
+    else
+        echo "RunAsDaemon 1" >> $FILE
+    fi
+
     echo "ShutdownWaitLength 0" >> $FILE
     echo "" >> $FILE  # new line
 
@@ -330,7 +336,7 @@ trap "exit 0" SIGTERM
 if [ "$AUTO_RESTART" = "true" ]; then
     tor &
 else
-    tor &
+    tor
     sleep infinity &
 fi
 

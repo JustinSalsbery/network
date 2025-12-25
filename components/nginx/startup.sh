@@ -239,7 +239,7 @@ if ! [ "$TOR_DIR" = "" ]; then
         FILE="/etc/tor/torrc"
 
         echo "DataDirectory $DATA_DIR" > $FILE
-        echo "RunAsDaemon 0" >> $FILE
+        echo "RunAsDaemon 1" >> $FILE
         echo "ShutdownWaitLength 0" >> $FILE
         echo "" >> $FILE  # new line
 
@@ -331,7 +331,7 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "HiddenServicePort 80 127.0.0.1:80" >> $FILE
     done
 
-    tor &
+    tor
 
     # wait for hostname
     while ! [ -f "$DATA_DIR/www/hostname" ]; do
