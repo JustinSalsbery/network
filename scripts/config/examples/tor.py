@@ -72,14 +72,17 @@ tor_4.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.2", gateway="20.6.0.1")
 tor_5 = TorNode(tor_dir=tor_0)
 tor_5.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.3", gateway="20.6.0.1")
 
-tor_6 = TorNode(tor_dir=tor_0, is_exit=True)
+tor_6 = TorNode(tor_dir=tor_0)
 tor_6.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.4", gateway="20.6.0.1")
+
+tor_7 = TorNode(tor_dir=tor_0, is_exit=True)
+tor_7.add_iface(iface=iface_6, cidr=cidr_6, ip="20.6.0.5", gateway="20.6.0.1")
 
 router_6 = Router()
 router_6.add_iface(iface=iface_3, cidr=cidr_3, ip="20.3.0.3")
 router_6.add_iface(iface=iface_7, cidr=cidr_7, ip="20.7.0.1")
 
-http_0 = HTTPServer(tor_dir=tor_0, tor_bridge=tor_4, tor_middle=tor_5, tor_exit=tor_6)
+http_0 = HTTPServer(tor_dir=tor_0, tor_bridge=tor_4, tor_middles=[tor_5, tor_6], tor_exits=tor_7)
 http_0.add_iface(iface=iface_7, cidr=cidr_7, ip="20.7.0.2", gateway="20.7.0.1")
 
 

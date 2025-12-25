@@ -74,21 +74,28 @@ class Configurator():
             tor_dir = client._tor_dir._name \
                 if client._tor_dir \
                 else ""
+
             tor_bridge = client._tor_bridge._name \
                 if client._tor_bridge \
                 else ""
-            tor_middle = client._tor_middle._name \
-                if client._tor_middle \
-                else ""
-            tor_exit = client._tor_exit._name \
-                if client._tor_exit \
-                else ""
+
+            tor_middles = []
+            if client._tor_middles:
+                for tor_middle in client._tor_middles:
+                    assert isinstance(tor_middle, TorNode)
+                    tor_middles.append(tor_middle._name)
+
+            tor_exits = []
+            if client._tor_exits:
+                for tor_exit in client._tor_exits:
+                    assert isinstance(tor_exit, TorNode)
+                    tor_exits.append(tor_exit._name)
 
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
             file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
             file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
-            file.write(f"{_SPACE * 3}TOR_MIDDLE: {tor_middle}\n")
-            file.write(f"{_SPACE * 3}TOR_EXIT: {tor_exit}\n")
+            file.write(f"{_SPACE * 3}TOR_MIDDLES: {" ".join(tor_middles)}\n")
+            file.write(f"{_SPACE * 3}TOR_EXITS: {" ".join(tor_exits)}\n")
 
         # write traffic generators
 
@@ -124,21 +131,28 @@ class Configurator():
             tor_dir = http_server._tor_dir._name \
                 if http_server._tor_dir \
                 else ""
+
             tor_bridge = http_server._tor_bridge._name \
                 if http_server._tor_bridge \
                 else ""
-            tor_middle = http_server._tor_middle._name \
-                if http_server._tor_middle \
-                else ""
-            tor_exit = http_server._tor_exit._name \
-                if http_server._tor_exit \
-                else ""
+
+            tor_middles = []
+            if http_server._tor_middles:
+                for tor_middle in http_server._tor_middles:
+                    assert isinstance(tor_middle, TorNode)
+                    tor_middles.append(tor_middle._name)
+
+            tor_exits = []
+            if http_server._tor_exits:
+                for tor_exit in http_server._tor_exits:
+                    assert isinstance(tor_exit, TorNode)
+                    tor_exits.append(tor_exit._name)
 
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
             file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
             file.write(f"{_SPACE * 3}TOR_BRIDGE: {tor_bridge}\n")
-            file.write(f"{_SPACE * 3}TOR_MIDDLE: {tor_middle}\n")
-            file.write(f"{_SPACE * 3}TOR_EXIT: {tor_exit}\n")
+            file.write(f"{_SPACE * 3}TOR_MIDDLES: {" ".join(tor_middles)}\n")
+            file.write(f"{_SPACE * 3}TOR_EXITS: {" ".join(tor_exits)}\n")
 
         # write dhcp servers
 

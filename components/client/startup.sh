@@ -257,9 +257,9 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "TestingDirAuthVoteHSDir *" >> $FILE
         echo "" >> $FILE  # new line
         echo "SafeLogging 0" >> $FILE
-        echo "Log notice file $LOG_DIR/notice.log" >> $FILE
-        echo "Log info file $LOG_DIR/info.log" >> $FILE
-        echo "Log debug file $LOG_DIR/debug.log" >> $FILE
+        echo "Log notice file $LOG_DIR/tor-notice.log" >> $FILE
+        echo "Log info file $LOG_DIR/tor-info.log" >> $FILE
+        echo "Log debug file $LOG_DIR/tor-debug.log" >> $FILE
         echo "" >> $FILE  # new line
 
         TOR_NICKNAME=$(echo $HOSTNAME | sed 's/-//g')
@@ -275,7 +275,7 @@ if ! [ "$TOR_DIR" = "" ]; then
         if [ "$TOR_BRIDGE" != "" ]; then
             while ! [ -f "shared/$TOR_BRIDGE/ready" ]; do
                 echo "waiting for shared/$TOR_BRIDGE/ready"
-                sleep 1  # seconds
+                sleep 3  # seconds
             done
 
             BRIDGE_IP="$(cat shared/$TOR_BRIDGE/ip)"
@@ -285,24 +285,42 @@ if ! [ "$TOR_DIR" = "" ]; then
             echo "Bridge $BRIDGE_IP:5000 $BRIDGE_FINGERPRINT" >> $FILE
         fi
 
-        if [ "$TOR_MIDDLE" != "" ]; then
-            while ! [ -f "shared/$TOR_MIDDLE/ready" ]; do
-                echo "waiting for shared/$TOR_MIDDLE/ready"
-                sleep 1  # seconds
+        if [ "$TOR_MIDDLES" != "" ]; then
+            for TOR_MIDDLE in $TOR_MIDDLES; do
+                while ! [ -f "shared/$TOR_MIDDLE/ready" ]; do
+                    echo "waiting for shared/$TOR_MIDDLE/ready"
+                    sleep 3  # seconds
+                done
+
+                MIDDLE_FINGERPRINT="$(cat shared/$TOR_MIDDLE/fingerprint)"
+
+                if [ "$MIDDLE_FINGERPRINTS" = "" ]; then
+                    MIDDLE_FINGERPRINTS="$MIDDLE_FINGERPRINT"
+                else
+                    MIDDLE_FINGERPRINTS="$MIDDLE_FINGERPRINTS,$MIDDLE_FINGERPRINT"
+                fi
             done
 
-            MIDDLE_FINGERPRINT="$(cat shared/$TOR_MIDDLE/fingerprint)"
-            echo "MiddleNodes $MIDDLE_FINGERPRINT" >> $FILE
+            echo "MiddleNodes $MIDDLE_FINGERPRINTS" >> $FILE
         fi
 
-        if [ "$TOR_EXIT" != "" ]; then
-            while ! [ -f "shared/$TOR_EXIT/ready" ]; do
-                echo "waiting for shared/$TOR_EXIT/ready"
-                sleep 1  # seconds
+        if [ "$TOR_EXITS" != "" ]; then
+            for TOR_EXIT in $TOR_EXITS; do
+                while ! [ -f "shared/$TOR_EXIT/ready" ]; do
+                    echo "waiting for shared/$TOR_EXIT/ready"
+                    sleep 3  # seconds
+                done
+
+                EXIT_FINGERPRINT="$(cat shared/$TOR_EXIT/fingerprint)"
+
+                if [ "$EXIT_FINGERPRINTS" = "" ]; then
+                    EXIT_FINGERPRINTS="$EXIT_FINGERPRINT"
+                else
+                    EXIT_FINGERPRINTS="$EXIT_FINGERPRINTS,$EXIT_FINGERPRINT"
+                fi
             done
 
-            EXIT_FINGERPRINT="$(cat shared/$TOR_EXIT/fingerprint)"
-            echo "ExitNodes $EXIT_FINGERPRINT" >> $FILE
+            echo "ExitNodes $EXIT_FINGERPRINTS" >> $FILE
         fi
     done
 

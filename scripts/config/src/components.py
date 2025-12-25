@@ -514,8 +514,8 @@ class _Service():
             log_queries: bool = False,
             tor_dir: TorNode | None = None,
             tor_bridge: TorNode | None = None,
-            tor_middle: TorNode | None = None,
-            tor_exit: TorNode | None = None,
+            tor_middles: list[TorNode] | TorNode | None = None,
+            tor_exits: list[TorNode] | TorNode | None = None,
         ):
 
         """
@@ -539,8 +539,8 @@ class _Service():
             - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - tor_dir: Specify the tor directory. Enables the tor network if present.
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
-            - tor_middle: Optional. Specify the middle node in the tor circuit.
-            - tor_exit: Optional. Specify the exit node in the tor circuit.
+            - tor_middles: Optional. Specify the middle nodes in the tor circuit.
+            - tor_exits: Optional. Specify the exit nodes in the tor circuit.
         """
 
         self._type = type
@@ -574,10 +574,16 @@ class _Service():
         self._log_queries = log_queries
         self._tor_dir = tor_dir
         self._tor_bridge = tor_bridge
-        self._tor_middle = tor_middle
-        self._tor_exit = tor_exit
 
-        if tor_bridge or tor_middle or tor_exit:
+        self._tor_middles = tor_middles
+        if isinstance(tor_middles, TorNode):
+            self._tor_middles = [tor_middles]
+
+        self._tor_exits = tor_exits
+        if isinstance(tor_exits, TorNode):
+            self._tor_exits = [tor_exits]
+
+        if tor_bridge or tor_middles or tor_exits:
             assert(tor_dir)
 
         self._forward = forward
@@ -650,8 +656,8 @@ class Client(_Service):
             dns_server: str | None = None,
             tor_dir: TorNode | None = None,
             tor_bridge: TorNode | None = None,
-            tor_middle: TorNode | None = None,
-            tor_exit: TorNode | None = None,
+            tor_middles: list[TorNode] | TorNode | None = None,
+            tor_exits: list[TorNode] | TorNode | None = None,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -666,8 +672,8 @@ class Client(_Service):
             - dns_server: The IPv4 addresses of the DNS server.
             - tor_dir: Specify the tor directory. Enables the tor network if present.
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
-            - tor_middle: Optional. Specify the middle node in the tor circuit.
-            - tor_exit: Optional. Specify the exit node in the tor circuit.
+            - tor_middles: Optional. Specify the middle nodes in the tor circuit.
+            - tor_exits: Optional. Specify the exit nodes in the tor circuit.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -676,6 +682,8 @@ class Client(_Service):
             - fast_retran: Enable or disable fast retransmission.
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
+        Note:
+            - Tor builds a 3 node circuit for clients.
         """
 
         super().__init__(
@@ -684,8 +692,8 @@ class Client(_Service):
             dns_servers=dns_server,
             tor_dir=tor_dir,
             tor_bridge=tor_bridge,
-            tor_middle=tor_middle,
-            tor_exit=tor_exit,
+            tor_middles=tor_middles,
+            tor_exits=tor_exits,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,
@@ -800,8 +808,8 @@ class HTTPServer(_Service):
             log_queries: bool = True,
             tor_dir: TorNode | None = None,
             tor_bridge: TorNode | None = None,
-            tor_middle: TorNode | None = None,
-            tor_exit: TorNode | None = None,
+            tor_middles: list[TorNode] | None = None,
+            tor_exits: list[TorNode] | TorNode | None = None,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -817,8 +825,9 @@ class HTTPServer(_Service):
             - log_queries: Enable or disable access logs. Implemented on DNS, HTTP, and LB.
             - tor_dir: Specify the tor directory. Enables the tor network if present.
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
-            - tor_middle: Optional. Specify the middle node in the tor circuit.
-            - tor_exit: Optional. Specify the exit node in the tor circuit.
+            - tor_middles: Optional. Specify the middle nodes in the tor circuit.
+                           Requires at least two middle nodes.
+            - tor_exits: Optional. Specify the exit nodes in the tor circuit.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -835,7 +844,11 @@ class HTTPServer(_Service):
             - Many encrypted protocols require clock synchronization, such as HTTPS 
               and Tor. Docker uses the host clock so explicit synchronization, such
               as by NTP, is unnecessary.
+            - Tor builds a 4 node circuit for hidden services.
         """
+
+        if tor_middles:
+            assert(len(tor_middles) >= 2)
 
         super().__init__(
             type=_ServiceType.http,
@@ -843,8 +856,8 @@ class HTTPServer(_Service):
             log_queries=log_queries,
             tor_dir=tor_dir,
             tor_bridge=tor_bridge,
-            tor_middle=tor_middle,
-            tor_exit=tor_exit,
+            tor_middles=tor_middles,
+            tor_exits=tor_exits,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,

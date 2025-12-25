@@ -275,9 +275,9 @@ for IFACE in $IFACES; do
     echo "TestingDirAuthVoteHSDir *" >> $FILE
     echo "" >> $FILE  # new line
     echo "SafeLogging 0" >> $FILE
-    echo "Log notice file $LOG_DIR/notice.log" >> $FILE
-    echo "Log info file $LOG_DIR/info.log" >> $FILE
-    echo "Log debug file $LOG_DIR/debug.log" >> $FILE
+    echo "Log notice file $LOG_DIR/tor-notice.log" >> $FILE
+    echo "Log info file $LOG_DIR/tor-info.log" >> $FILE
+    echo "Log debug file $LOG_DIR/tor-debug.log" >> $FILE
     echo "" >> $FILE  # new line
 
     TOR_NICKNAME=$(echo $HOSTNAME | sed 's/-//g')
@@ -287,11 +287,10 @@ for IFACE in $IFACES; do
     echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
     echo "" >> $FILE  # new line
     echo "SocksPort 0" >> $FILE
+    echo "OrPort 5000" >> $FILE
 
-    if [ "$TOR_DIR" != "$HOSTNAME" ]; then
-        echo "OrPort 5000" >> $FILE  # relay
-    else
-        echo "DirPort 7000" >> $FILE  # directory authority
+    if [ "$TOR_DIR" = "$HOSTNAME" ]; then
+        echo "DirPort 7000" >> $FILE
     fi
 
     echo "ControlPort 9051" >> $FILE
@@ -316,6 +315,12 @@ for IFACE in $IFACES; do
         echo "BridgeAuthoritativeDir 1" >> $FILE
     fi
 done
+
+# Useful tor commands:
+#   Circuit information: `nyx`
+#   Request from server: `torsocks curl <Server IP>/<Page>`
+#   Request from hidden server: `torsocks curl <Server Hostname>/<Page>`
+#       - The `hostname` can be found at: `shared/${SERVER}/hostname`
 
 # run
 trap "exit 0" SIGTERM
