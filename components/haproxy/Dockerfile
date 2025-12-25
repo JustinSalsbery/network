@@ -16,7 +16,7 @@ WORKDIR /app/
 # typically utilities, such as apk, are removed and the user is changed from sudo
 # for convenience, I am doing neither
 
-RUN mkdir shared/
+RUN mkdir logs/
 
 COPY ssl/ ssl/
 COPY scripts/ scripts/

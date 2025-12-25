@@ -206,15 +206,15 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup tor
 # configured for a single interface
 if ! [ "$TOR_DIR" = "" ]; then
     DATA_DIR="/var/lib/tor/"
-    LOG_DIR="/app/shared/$HOSTNAME/"
+    LOG_DIR="/app/logs/$HOSTNAME/"
 
     for IFACE in $IFACES; do
         IP="$(echo $IPS | cut -d' ' -f1)"
@@ -226,14 +226,14 @@ if ! [ "$TOR_DIR" = "" ]; then
         mkdir -p $DATA_DIR
 
         # wait for directory authority
-        while ! [ -f "shared/$TOR_DIR/ready" ]; do
-            echo "waiting for shared/$TOR_DIR/ready"
+        while ! [ -f "logs/$TOR_DIR/ready" ]; do
+            echo "waiting for logs/$TOR_DIR/ready"
             sleep 3  # seconds
         done
 
-        AUTH_IP="$(cat shared/$TOR_DIR/ip)"
-        AUTH_CERT="$(cat shared/$TOR_DIR/certificate)"
-        AUTH_FINGERPRINT="$(cat shared/$TOR_DIR/fingerprint)"
+        AUTH_IP="$(cat logs/$TOR_DIR/ip)"
+        AUTH_CERT="$(cat logs/$TOR_DIR/certificate)"
+        AUTH_FINGERPRINT="$(cat logs/$TOR_DIR/fingerprint)"
 
         # setup torrc
         FILE="/etc/tor/torrc"
@@ -275,13 +275,13 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "" >> $FILE  # new line
 
         if [ "$TOR_BRIDGE" != "" ]; then
-            while ! [ -f "shared/$TOR_BRIDGE/ready" ]; do
-                echo "waiting for shared/$TOR_BRIDGE/ready"
+            while ! [ -f "logs/$TOR_BRIDGE/ready" ]; do
+                echo "waiting for logs/$TOR_BRIDGE/ready"
                 sleep 3  # seconds
             done
 
-            BRIDGE_IP="$(cat shared/$TOR_BRIDGE/ip)"
-            BRIDGE_FINGERPRINT="$(cat shared/$TOR_BRIDGE/fingerprint)"
+            BRIDGE_IP="$(cat logs/$TOR_BRIDGE/ip)"
+            BRIDGE_FINGERPRINT="$(cat logs/$TOR_BRIDGE/fingerprint)"
 
             echo "UseBridges 1" >> $FILE
             echo "Bridge $BRIDGE_IP:5000 $BRIDGE_FINGERPRINT" >> $FILE
@@ -289,12 +289,12 @@ if ! [ "$TOR_DIR" = "" ]; then
 
         if [ "$TOR_MIDDLES" != "" ]; then
             for TOR_MIDDLE in $TOR_MIDDLES; do
-                while ! [ -f "shared/$TOR_MIDDLE/ready" ]; do
-                    echo "waiting for shared/$TOR_MIDDLE/ready"
+                while ! [ -f "logs/$TOR_MIDDLE/ready" ]; do
+                    echo "waiting for logs/$TOR_MIDDLE/ready"
                     sleep 3  # seconds
                 done
 
-                MIDDLE_FINGERPRINT="$(cat shared/$TOR_MIDDLE/fingerprint)"
+                MIDDLE_FINGERPRINT="$(cat logs/$TOR_MIDDLE/fingerprint)"
 
                 if [ "$MIDDLE_FINGERPRINTS" = "" ]; then
                     MIDDLE_FINGERPRINTS="$MIDDLE_FINGERPRINT"
@@ -308,12 +308,12 @@ if ! [ "$TOR_DIR" = "" ]; then
 
         if [ "$TOR_EXITS" != "" ]; then
             for TOR_EXIT in $TOR_EXITS; do
-                while ! [ -f "shared/$TOR_EXIT/ready" ]; do
-                    echo "waiting for shared/$TOR_EXIT/ready"
+                while ! [ -f "logs/$TOR_EXIT/ready" ]; do
+                    echo "waiting for logs/$TOR_EXIT/ready"
                     sleep 3  # seconds
                 done
 
-                EXIT_FINGERPRINT="$(cat shared/$TOR_EXIT/fingerprint)"
+                EXIT_FINGERPRINT="$(cat logs/$TOR_EXIT/fingerprint)"
 
                 if [ "$EXIT_FINGERPRINTS" = "" ]; then
                     EXIT_FINGERPRINTS="$EXIT_FINGERPRINT"
@@ -333,7 +333,7 @@ fi
 #   Circuit information: `nyx`
 #   Request from server: `$TOR_CURL <Server IP>/<Page>`
 #   Request from hidden server: `$TOR_CURL <Server Hostname>/<Page>`
-#       - The `hostname` can be found at: `shared/${SERVER}/hostname`
+#       - The `hostname` can be found at: `logs/${SERVER}/hostname`
 
 # run
 trap "exit 0" SIGTERM

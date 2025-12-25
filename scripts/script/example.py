@@ -9,7 +9,7 @@ def test_connectivity():
 
 
 def create_tcpdump():
-    run_background_command("client-0", "tcpdump -w shared/dump.pcap")
+    run_background_command("client-0", "tcpdump -w logs/dump.pcap")
 
     test_connectivity()
 

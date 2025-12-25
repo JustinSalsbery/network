@@ -4,7 +4,7 @@ from subprocess import getstatusoutput
 from time import time, sleep
 
 
-OUTPUT = "shared"
+OUTPUT = "logs"
 WAIT = 5  # seconds; polls hardware every <WAIT> seconds
 
 

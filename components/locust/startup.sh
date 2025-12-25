@@ -206,9 +206,9 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup locust
 FILE="locustfile.py"
@@ -247,10 +247,10 @@ trap "exit 0" SIGTERM
 
 if [ "$AUTO_RESTART" = "true" ]; then
     locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-        --csv shared/$HOSTNAME/locust 2> /dev/null &  # locust outputs traffic details to stderr
+        --csv logs/$HOSTNAME/locust 2> /dev/null &  # locust outputs traffic details to stderr
 else
     locust -f $FILE --headless -u $CONN_MAX -r $CONN_RATE --csv-full-history \
-        --csv shared/$HOSTNAME/locust 2> /dev/null &
+        --csv logs/$HOSTNAME/locust 2> /dev/null &
     sleep infinity &
 fi
 

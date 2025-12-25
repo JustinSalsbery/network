@@ -206,9 +206,9 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup dhcp
 # configured for a single interface
@@ -264,7 +264,7 @@ done
 # run
 trap "exit 0" SIGTERM
 
-LOGFILE="shared/$HOSTNAME/udhcpd.log"
+LOGFILE="logs/$HOSTNAME/udhcpd.log"
 if [ "$AUTO_RESTART" = "true" ]; then
     udhcpd -f 2> $LOGFILE &
 else

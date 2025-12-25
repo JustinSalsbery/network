@@ -206,14 +206,14 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup tor
 # configured for a single interface
 DATA_DIR="/var/lib/tor/"
-LOG_DIR="/app/shared/$HOSTNAME/"
+LOG_DIR="/app/logs/$HOSTNAME/"
 
 for IFACE in $IFACES; do
     IP="$(echo $IPS | cut -d' ' -f1)"
@@ -224,7 +224,7 @@ for IFACE in $IFACES; do
     rm -rf $DATA_DIR
     mkdir -p $DATA_DIR/keys/
 
-    echo $IP > shared/$HOSTNAME/ip
+    echo $IP > logs/$HOSTNAME/ip
 
     # setup certificate
     # cert is only necessary for directory authority
@@ -232,26 +232,26 @@ for IFACE in $IFACES; do
     exec 3<> $DATA_DIR/password  # open password as file descriptor 3
 
     tor-gencert --passphrase-fd 3 --create-identity-key -m 12 -a $IP:7000 -i $DATA_DIR/keys/authority_identity_key -s $DATA_DIR/keys/authority_signing_key -c $DATA_DIR/keys/authority_certificate
-    cat $DATA_DIR/keys/authority_certificate | grep fingerprint | cut -d' ' -f2 > shared/$HOSTNAME/certificate
+    cat $DATA_DIR/keys/authority_certificate | grep fingerprint | cut -d' ' -f2 > logs/$HOSTNAME/certificate
 
     exec 3>&-  # close file descriptor 3
 
     # setup fingerprint
     tor --list-fingerprint --orport 1 --dirserver "x 127.0.0.1:1 ffffffffffffffffffffffffffffffffffffffff" --datadirectory $DATA_DIR
-    cat $DATA_DIR/fingerprint | cut -d' ' -f2 > shared/$HOSTNAME/fingerprint
+    cat $DATA_DIR/fingerprint | cut -d' ' -f2 > logs/$HOSTNAME/fingerprint
 
     # wait for directory authority
     # if the node is a directory authority, the node will read it's own information
     if [ "$HOSTNAME" != "$TOR_DIR" ]; then
-        while ! [ -f "shared/$TOR_DIR/ready" ]; do
-            echo "waiting for $TOR_DIR to write to shared/"
+        while ! [ -f "logs/$TOR_DIR/ready" ]; do
+            echo "waiting for $TOR_DIR to write to logs/"
             sleep 3  # seconds
         done
     fi
 
-    AUTH_IP="$(cat shared/$TOR_DIR/ip)"
-    AUTH_CERT="$(cat shared/$TOR_DIR/certificate)"
-    AUTH_FINGERPRINT="$(cat shared/$TOR_DIR/fingerprint)"
+    AUTH_IP="$(cat logs/$TOR_DIR/ip)"
+    AUTH_CERT="$(cat logs/$TOR_DIR/certificate)"
+    AUTH_FINGERPRINT="$(cat logs/$TOR_DIR/fingerprint)"
 
     # setup torrc
     FILE="/etc/tor/torrc"
@@ -328,7 +328,7 @@ done
 #   Circuit information: `nyx`
 #   Request from server: `$TOR_CURL <Server IP>/<Page>`
 #   Request from hidden server: `$TOR_CURL <Server Hostname>/<Page>`
-#       - The `hostname` can be found at: `shared/${SERVER}/hostname`
+#       - The `hostname` can be found at: `logs/${SERVER}/hostname`
 
 # run
 trap "exit 0" SIGTERM
@@ -340,5 +340,5 @@ else
     sleep infinity &
 fi
 
-echo "" > shared/$HOSTNAME/ready
+echo "" > logs/$HOSTNAME/ready
 wait $!

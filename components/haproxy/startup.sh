@@ -206,9 +206,9 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup bird
 # advertise all known routes, but do not import any routes
@@ -384,8 +384,8 @@ fi
 # run
 trap "exit 0" SIGTERM
 
-LOGFILE="shared/$HOSTNAME/haproxy.log"
-ERRORFILE="shared/$HOSTNAME/error.log"
+LOGFILE="logs/$HOSTNAME/haproxy.log"
+ERRORFILE="logs/$HOSTNAME/error.log"
 
 if [ "$AUTO_RESTART" = "true" ]; then
     haproxy -f $FILE 1> $LOGFILE 2> $ERRORFILE &

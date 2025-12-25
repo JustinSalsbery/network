@@ -36,7 +36,7 @@ class Grapher():
             print("Warning: No interfaces found. Stopping...")
             return
 
-        with open("shared/config-graph.gv", "w") as file:
+        with open("logs/config-graph.gv", "w") as file:
             file.write("\n")  # new line
             file.write(f"# neato -Tjpeg {FILE_NAME}.gv -o {FILE_NAME}.jpeg\n")
             file.write("strict graph Network_Configuration {\n")

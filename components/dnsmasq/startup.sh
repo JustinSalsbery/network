@@ -210,9 +210,9 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup hosts
 for HOST_NAME in $HOST_NAMES; do
@@ -239,7 +239,7 @@ echo "filter-AAAA  # return a FILTERED response" >> $FILE
 if [ "$QUERY_LOG" = "true" ]; then
     echo "" >> $FILE  # new line
     echo "log-queries" >> $FILE
-    echo "log-facility=/app/shared/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
+    echo "log-facility=/app/logs/$HOSTNAME/dnsmasq.log  # requires absolute path" >> $FILE
 fi
 
 # run

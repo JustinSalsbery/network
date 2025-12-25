@@ -206,15 +206,15 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # setup tor
 # configured for a single interface
 if ! [ "$TOR_DIR" = "" ]; then
     DATA_DIR="/var/lib/tor/"
-    LOG_DIR="/app/shared/$HOSTNAME/"
+    LOG_DIR="/app/logs/$HOSTNAME/"
 
     for IFACE in $IFACES; do
         IP="$(echo $IPS | cut -d' ' -f1)"
@@ -226,14 +226,14 @@ if ! [ "$TOR_DIR" = "" ]; then
         mkdir -p $DATA_DIR/www
 
         # wait for directory authority
-        while ! [ -f "shared/$TOR_DIR/ready" ]; do
-            echo "waiting for shared/$TOR_DIR/ready"
+        while ! [ -f "logs/$TOR_DIR/ready" ]; do
+            echo "waiting for logs/$TOR_DIR/ready"
             sleep 3  # seconds
         done
 
-        AUTH_IP="$(cat shared/$TOR_DIR/ip)"
-        AUTH_CERT="$(cat shared/$TOR_DIR/certificate)"
-        AUTH_FINGERPRINT="$(cat shared/$TOR_DIR/fingerprint)"
+        AUTH_IP="$(cat logs/$TOR_DIR/ip)"
+        AUTH_CERT="$(cat logs/$TOR_DIR/certificate)"
+        AUTH_FINGERPRINT="$(cat logs/$TOR_DIR/fingerprint)"
 
         # setup torrc
         FILE="/etc/tor/torrc"
@@ -275,13 +275,13 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "" >> $FILE  # new line
 
         if [ "$TOR_BRIDGE" != "" ]; then
-            while ! [ -f "shared/$TOR_BRIDGE/ready" ]; do
-                echo "waiting for shared/$TOR_BRIDGE/ready"
+            while ! [ -f "logs/$TOR_BRIDGE/ready" ]; do
+                echo "waiting for logs/$TOR_BRIDGE/ready"
                 sleep 3  # seconds
             done
 
-            BRIDGE_IP="$(cat shared/$TOR_BRIDGE/ip)"
-            BRIDGE_FINGERPRINT="$(cat shared/$TOR_BRIDGE/fingerprint)"
+            BRIDGE_IP="$(cat logs/$TOR_BRIDGE/ip)"
+            BRIDGE_FINGERPRINT="$(cat logs/$TOR_BRIDGE/fingerprint)"
 
             echo "UseBridges 1" >> $FILE
             echo "Bridge $BRIDGE_IP:5000 $BRIDGE_FINGERPRINT" >> $FILE
@@ -301,14 +301,14 @@ if ! [ "$TOR_DIR" = "" ]; then
         sleep 3  # seconds
     done
 
-    cp $DATA_DIR/www/hostname shared/$HOSTNAME/hostname
+    cp $DATA_DIR/www/hostname logs/$HOSTNAME/hostname
 fi
 
 # Useful tor commands:
 #   Circuit information: `nyx`
 #   Request from server: `$TOR_CURL <Server IP>/<Page>`
 #   Request from hidden server: `$TOR_CURL <Server Hostname>/<Page>`
-#       - The `hostname` can be found at: `shared/${SERVER}/hostname`
+#       - The `hostname` can be found at: `logs/${SERVER}/hostname`
 
 # create index
 FILE="/app/www/index.html"
@@ -330,7 +330,7 @@ FILE="/etc/nginx/nginx.conf"
 echo "include /etc/nginx/modules/*.conf;" > $FILE
 echo "include /etc/nginx/conf.d/*.conf;" >> $FILE
 echo "" >> $FILE  # new line
-echo "error_log /app/shared/$HOSTNAME/nginx-error.log warn; # requires absolute path" >> $FILE
+echo "error_log /app/logs/$HOSTNAME/nginx-error.log warn; # requires absolute path" >> $FILE
 echo "" >> $FILE  # new line
 echo "worker_processes auto;" >> $FILE
 echo "events {" >> $FILE
@@ -359,8 +359,8 @@ echo "" >> $FILE  # new line
 echo -e "\t# Specifies that our cipher suits should be preferred over client ciphers." >> $FILE
 echo -e "\tssl_prefer_server_ciphers on; # Default is 'off'." >> $FILE
 echo "" >> $FILE  # new line
-echo -e "\t# Enables a shared SSL cache with size that can hold around 8000 sessions." >> $FILE
-echo -e "\tssl_session_cache shared:SSL:2m; # Default is 'none'." >> $FILE
+echo -e "\t# Enables a logs SSL cache with size that can hold around 8000 sessions." >> $FILE
+echo -e "\tssl_session_cache logs:SSL:2m; # Default is 'none'." >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\t# Specifies a time during which a client may reuse the session parameters." >> $FILE
 echo -e "\tssl_session_timeout 20m; # Default is '5m'." >> $FILE
@@ -382,7 +382,7 @@ if [ "$QUERY_LOG" = "true" ]; then
     echo -e "\t\t\t'\"\$http_user_agent\" \"\$http_x_forwarded_for\"';" >> $FILE
     echo "" >> $FILE  # new line
     echo -e "\t# Sets the path, format, and configuration for a buffered log write." >> $FILE
-    echo -e "\taccess_log /app/shared/$HOSTNAME/nginx-access.log main; # requires absolute path" >> $FILE
+    echo -e "\taccess_log /app/logs/$HOSTNAME/nginx-access.log main; # requires absolute path" >> $FILE
 else
     echo -e "\taccess_log off;"
 fi

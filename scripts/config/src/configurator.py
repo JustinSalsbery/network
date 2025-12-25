@@ -305,7 +305,7 @@ class Configurator():
         # write volumes
 
         file.write(f"{_SPACE * 2}volumes:\n")
-        file.write(f"{_SPACE * 3}- ./shared:/app/shared  # shared output\n")
+        file.write(f"{_SPACE * 3}- ./logs:/app/logs  # for logs\n")
         file.write(f"{_SPACE * 3}- /lib/modules:/lib/modules  # mount host kernel modules\n")
 
         # write networks

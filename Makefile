@@ -66,7 +66,7 @@ down:
 	fi
 
 	docker compose down --timeout 2
-	sudo chmod -R 777 shared/ || true
+	sudo chmod -R 777 logs/ || true
 
 # down depends upon the docker-compose file
 # before we generate a new configuration, we must bring down the current network
@@ -74,8 +74,8 @@ down:
 CONFIG ?= main.py # default configuration for network
 
 .PHONY: config
-config: down clean-shared
-	mkdir -p shared/
+config: down clean-logs
+	mkdir -p logs/
 	export PYTHONPATH="scripts/config/"
 	${PYTHON} scripts/config/${CONFIG}
 
@@ -90,7 +90,7 @@ list-configs:
 		echo -e "\t- $${CONFIG}"
 	done
 
-GRAPH := shared/config-graph
+GRAPH := logs/config-graph
 GRAPH_FORMAT := png  # options: jpeg, png, pdf, svg
 
 .PHONY: graph
@@ -108,7 +108,7 @@ graph:
 
 .PHONY: stats
 stats:
-	sudo chmod -R 777 shared/ || true
+	sudo chmod -R 777 logs/ || true
 
 	echo "Exit with ctrl + c ..."
 	${PYTHON} scripts/stats/main.py
@@ -137,12 +137,12 @@ list-scripts:
 # clean
 
 .PHONY: clean
-clean: clean-shared clean-certs clean-docker
+clean: clean-logs clean-certs clean-docker
 	rm -f docker-compose.yml
 
-.PHONY: clean-shared
-clean-shared: down
-	sudo rm -rf shared/
+.PHONY: clean-logs
+clean-logs: down
+	sudo rm -rf logs/
 
 .PHONY: clean-certs
 clean-certs:

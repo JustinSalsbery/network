@@ -8,7 +8,7 @@
 
 docker-compose.yml
 
-shared
+logs
 __pycache__
 
 # Exceptions:

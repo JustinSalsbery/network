@@ -206,9 +206,9 @@ fi
 echo "--insecure" > $HOME/.curlrc  # allow self-signed certificates
 echo "--verbose" >> $HOME/.curlrc
 
-# setup shared
-mkdir -p shared/$HOSTNAME/
-chmod 666 shared/$HOSTNAME/
+# setup logs
+mkdir -p logs/$HOSTNAME/
+chmod 666 logs/$HOSTNAME/
 
 # configure ecmp
 if [ "$ECMP" = "l3" ]; then
@@ -238,7 +238,7 @@ done
 FILE="/etc/bird.conf"
 
 echo "router id $ROUTER_ID;" > $FILE
-echo "log \"shared/${HOSTNAME}/bird.log\" all;" >> $FILE
+echo "log \"logs/${HOSTNAME}/bird.log\" all;" >> $FILE
 echo "" >> $FILE # new line
 echo "# The Device protocol is not a real routing protocol. It does not generate any" >> $FILE
 echo "# routes and it only serves as a module for getting information about network" >> $FILE
