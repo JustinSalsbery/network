@@ -516,6 +516,7 @@ class _Service():
             tor_bridge: TorNode | None = None,
             tor_middles: list[TorNode] | TorNode | None = None,
             tor_exits: list[TorNode] | TorNode | None = None,
+            tor_log: bool = False,
         ):
 
         """
@@ -541,6 +542,7 @@ class _Service():
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
             - tor_middles: Optional. Specify the middle nodes in the tor circuit.
             - tor_exits: Optional. Specify the exit nodes in the tor circuit.
+            - tor_log: Configure whether tor will log.
         """
 
         self._type = type
@@ -586,6 +588,7 @@ class _Service():
         if tor_bridge or tor_middles or tor_exits:
             assert(tor_dir)
 
+        self._tor_log = tor_log
         self._forward = forward
         self._syn_cookie = syn_cookie
         self._congestion_control = congestion_control
@@ -658,6 +661,7 @@ class Client(_Service):
             tor_bridge: TorNode | None = None,
             tor_middles: list[TorNode] | TorNode | None = None,
             tor_exits: list[TorNode] | TorNode | None = None,
+            tor_log: bool = False,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -674,6 +678,7 @@ class Client(_Service):
             - tor_bridge: Optional. Specify the guard node in the tor circuit.
             - tor_middles: Optional. Specify the middle nodes in the tor circuit.
             - tor_exits: Optional. Specify the exit nodes in the tor circuit.
+            - tor_log: Configure whether tor will log.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -694,6 +699,7 @@ class Client(_Service):
             tor_bridge=tor_bridge,
             tor_middles=tor_middles,
             tor_exits=tor_exits,
+            tor_log=tor_log,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,
@@ -810,6 +816,7 @@ class HTTPServer(_Service):
             tor_bridge: TorNode | None = None,
             tor_middles: list[TorNode] | None = None,
             tor_exits: list[TorNode] | TorNode | None = None,
+            tor_log: bool = False,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -828,6 +835,7 @@ class HTTPServer(_Service):
             - tor_middles: Optional. Specify the middle nodes in the tor circuit.
                            Requires at least two middle nodes.
             - tor_exits: Optional. Specify the exit nodes in the tor circuit.
+            - tor_log: Configure whether tor will log.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -858,6 +866,7 @@ class HTTPServer(_Service):
             tor_bridge=tor_bridge,
             tor_middles=tor_middles,
             tor_exits=tor_exits,
+            tor_log=tor_log,
             cpu_limit=cpu_limit,
             mem_limit=mem_limit,
             swap_limit=swap_limit,
@@ -1132,6 +1141,7 @@ class TorNode(_Service):
             tor_dir: TorNode | None = None,
             is_bridge: bool = False,
             is_exit: bool = False,
+            tor_log: bool = False,
             cpu_limit: float = 0.5,
             mem_limit: int = 256,
             swap_limit: int = 64,
@@ -1146,6 +1156,7 @@ class TorNode(_Service):
             - tor_dir: If None, configures the node as a directory authority.
             - is_bridge: Configure the node as a bridge relay.
             - is_exit: Configure the node as a exit relay.
+            - tor_log: Configure whether tor will log.
             - cpu_limit: Limit service cpu time. In units of number of logical cores. 
                          Ex. 0.1 is 10% of a logical core.
             - mem_limit: Limit service memory. In units of megabytes.
@@ -1154,6 +1165,9 @@ class TorNode(_Service):
             - fast_retran: Enable or disable fast retransmission.
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
+        Note:
+            - The Tor network requires about 10 minutes to establish. If the client
+              or http server specify middle or exit nodes, circuit establishment is slower.
         """
 
         super().__init__(
@@ -1167,6 +1181,7 @@ class TorNode(_Service):
             sack=sack,
             ttl=ttl,
             tor_dir=tor_dir,
+            tor_log=tor_log,
         )
 
         self._is_bridge = is_bridge

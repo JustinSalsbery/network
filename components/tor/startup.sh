@@ -274,11 +274,14 @@ for IFACE in $IFACES; do
     echo "TestingDirAuthVoteExit *" >> $FILE
     echo "TestingDirAuthVoteHSDir *" >> $FILE
     echo "" >> $FILE  # new line
-    echo "SafeLogging 0" >> $FILE
-    echo "Log notice file $LOG_DIR/tor-notice.log" >> $FILE
-    echo "Log info file $LOG_DIR/tor-info.log" >> $FILE
-    echo "Log debug file $LOG_DIR/tor-debug.log" >> $FILE
-    echo "" >> $FILE  # new line
+
+    if [ "$TOR_LOG" = "true" ]; then
+        echo "SafeLogging 0" >> $FILE
+        echo "Log notice file $LOG_DIR/tor-notice.log" >> $FILE
+        echo "Log info file $LOG_DIR/tor-info.log" >> $FILE
+        echo "Log debug file $LOG_DIR/tor-debug.log" >> $FILE
+        echo "" >> $FILE  # new line
+    fi
 
     TOR_NICKNAME=$(echo $HOSTNAME | sed 's/-//g')
     echo "Nickname $TOR_NICKNAME" >> $FILE
