@@ -331,8 +331,8 @@ fi
 
 # Useful tor commands:
 #   Circuit information: `nyx`
-#   Request from server: `torsocks curl <Server IP>/<Page>`
-#   Request from hidden server: `torsocks curl <Server Hostname>/<Page>`
+#   Request from server: `$TOR_CURL <Server IP>/<Page>`
+#   Request from hidden server: `$TOR_CURL <Server Hostname>/<Page>`
 #       - The `hostname` can be found at: `shared/${SERVER}/hostname`
 
 # run

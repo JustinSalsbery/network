@@ -97,6 +97,7 @@ class Configurator():
             file.write(f"{_SPACE * 3}TOR_MIDDLES: {" ".join(tor_middles)}\n")
             file.write(f"{_SPACE * 3}TOR_EXITS: {" ".join(tor_exits)}\n")
             file.write(f"{_SPACE * 3}TOR_LOG: {str(client._tor_log).lower()}\n")
+            file.write(f"{_SPACE * 3}TOR_CURL: 'curl --socks5-hostname localhost:9050'\n")
 
         # write traffic generators
 
@@ -155,6 +156,7 @@ class Configurator():
             file.write(f"{_SPACE * 3}TOR_MIDDLES: {" ".join(tor_middles)}\n")
             file.write(f"{_SPACE * 3}TOR_EXITS: {" ".join(tor_exits)}\n")
             file.write(f"{_SPACE * 3}TOR_LOG: {str(http_server._tor_log).lower()}\n")
+            file.write(f"{_SPACE * 3}TOR_CURL: 'curl --socks5-hostname localhost:9050'\n")
 
         # write dhcp servers
 
@@ -247,6 +249,7 @@ class Configurator():
             file.write(f"{_SPACE * 3}# Tor configuration:\n")
             file.write(f"{_SPACE * 3}TOR_DIR: {tor_dir}\n")
             file.write(f"{_SPACE * 3}TOR_LOG: {str(tor_node._tor_log).lower()}\n")
+            file.write(f"{_SPACE * 3}TOR_CURL: 'curl --socks5-hostname localhost:9050'\n")
             file.write(f"{_SPACE * 3}IS_BRIDGE: {str(tor_node._is_bridge).lower()}\n")
             file.write(f"{_SPACE * 3}IS_EXIT: {str(tor_node._is_exit).lower()}\n")
 
