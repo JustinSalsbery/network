@@ -242,18 +242,11 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "RunAsDaemon 1" >> $FILE
         echo "ShutdownWaitLength 0" >> $FILE
         echo "" >> $FILE  # new line
+        echo "TestingTorNetwork 1" >> $FILE
 
         DIR_NICKNAME=$(echo $TOR_DIR | sed 's/-//g')
         echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
 
-        echo "AssumeReachable 1" >> $FILE
-        echo "PathsNeededToBuildCircuits 0.25" >> $FILE
-        echo "" >> $FILE  # new line
-        echo "# Remove requirements" >> $FILE
-        echo "TestingTorNetwork 1" >> $FILE
-        echo "TestingDirAuthVoteGuard *" >> $FILE
-        echo "TestingDirAuthVoteExit *" >> $FILE
-        echo "TestingDirAuthVoteHSDir *" >> $FILE
         echo "" >> $FILE  # new line
 
         if [ "$TOR_LOG" = "true" ]; then
@@ -270,8 +263,8 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "Address $IP" >> $FILE
         echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
         echo "" >> $FILE  # new line
-        echo "SocksPort 0  # do not act as a client" >> $FILE
-        echo "ControlPort 9051  # allow nyx" >> $FILE
+        echo "SocksPort 0  # disable client" >> $FILE
+        echo "ControlPort 9051  # enable nyx" >> $FILE
         echo "" >> $FILE  # new line
 
         if [ "$TOR_BRIDGE" != "" ]; then

@@ -1156,8 +1156,7 @@ class TorNode(_Service):
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
         Note:
-            - The Tor network requires about 20 minutes to establish. If the client
-              specifies circuit nodes, circuit establishment may be slower.
+            - Clients require 15 minutes. Hidden services require 
         """
 
         super().__init__(
