@@ -15,7 +15,7 @@ cidr_1 = "174.0.0.0/8"
 cidr_2 = "192.168.0.0/16"
 cidr_3 = "175.0.0.0/24"
 
-client_0 = Client()
+client_0 = Client()  # The server IP is: 175.0.0.1
 client_0.add_iface(iface_0, cidr=cidr_0, ip="192.168.0.2", gateway="192.168.0.1")
 
 router_0 = Router(ecmp=ECMPType.l3)
@@ -43,7 +43,7 @@ backends = ["192.168.0.5", "192.168.0.6", "192.168.0.7", "192.168.0.8"]
 
 lb_0 = LoadBalancer(backends=backends, type=LBType.l4, advertise=True)
 lb_0.add_iface(iface_2, cidr=cidr_2, ip="192.168.0.3")
-lb_0.add_iface(iface_3, cidr=cidr_3, ip="175.0.0.1")  # The IP address the client should address.
+lb_0.add_iface(iface_3, cidr=cidr_3, ip="175.0.0.1")
 
 lb_1 = LoadBalancer(backends=backends, type=LBType.l4, advertise=True)
 lb_1.add_iface(iface_2, cidr=cidr_2, ip="192.168.0.4")
