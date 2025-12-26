@@ -294,11 +294,11 @@ for IFACE in $IFACES; do
     echo "Address $IP" >> $FILE
     echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
     echo "" >> $FILE  # new line
-    echo "SocksPort 0" >> $FILE
-    echo "OrPort 5000" >> $FILE
+    echo "SocksPort 0  # do not act as a client" >> $FILE
+    echo "OrPort 5000  # act as a relay" >> $FILE
 
     if [ "$TOR_DIR" = "$HOSTNAME" ]; then
-        echo "DirPort 7000" >> $FILE
+        echo "DirPort 7000  # act as a directory" >> $FILE
     fi
 
     echo "ControlPort 9051" >> $FILE

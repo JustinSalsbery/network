@@ -13,7 +13,7 @@ PYTHON ?= python3
 options help:
 	echo "Options:"
 	echo -e "\t- build"
-	echo -e "\t- up            # specify config with NETWORK=<NAME>"
+	echo -e "\t- up            # specify network with NETWORK=<NAME>"
 	echo -e "\t- down"
 	echo -e "\t- test          # specify test with TEST=<NAME>"
 	echo -e "\t- clean"
@@ -25,7 +25,7 @@ options help:
 	echo -e "\t- list-tests    # list available tests"
 	echo -e "\t- graph         # create network graph"
 	echo -e "\t- stats         # record hardware utilization"
-	echo -e "\t- config        # write docker-compose only"
+	echo -e "\t- compose        # write docker-compose only"
 
 
 # network
@@ -55,7 +55,7 @@ build: certs
 	done
 
 .PHONY: up
-up: config
+up: compose
 	docker compose up -d
 
 .PHONY: down
@@ -69,12 +69,12 @@ down:
 	sudo chmod -R 777 logs/ || true
 
 # down depends upon the docker-compose file
-# before we generate a new configuration, we must bring down the current network
+# before we create a new docker-compose file, we must bring down the current network
 
-CONFIG ?= main.py # default configuration for network
+NETWORK ?= main.py # default network
 
-.PHONY: config
-config: down clean-logs
+.PHONY: compose
+compose: down clean-logs
 	mkdir -p logs/
 	export PYTHONPATH="scripts/network/"
 	${PYTHON} scripts/network/${NETWORK}

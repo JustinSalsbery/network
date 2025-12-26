@@ -270,8 +270,8 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "Address $IP" >> $FILE
         echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
         echo "" >> $FILE  # new line
-        echo "SocksPort 9050 ExtendedErrors" >> $FILE
-        echo "ControlPort 9051" >> $FILE
+        echo "SocksPort 0  # do not act as a client" >> $FILE
+        echo "ControlPort 9051  # allow nyx" >> $FILE
         echo "" >> $FILE  # new line
 
         if [ "$TOR_BRIDGE" != "" ]; then
@@ -359,8 +359,8 @@ echo "" >> $FILE  # new line
 echo -e "\t# Specifies that our cipher suits should be preferred over client ciphers." >> $FILE
 echo -e "\tssl_prefer_server_ciphers on; # Default is 'off'." >> $FILE
 echo "" >> $FILE  # new line
-echo -e "\t# Enables a logs SSL cache with size that can hold around 8000 sessions." >> $FILE
-echo -e "\tssl_session_cache logs:SSL:2m; # Default is 'none'." >> $FILE
+echo -e "\t# Enables a shared SSL cache with size that can hold around 8000 sessions." >> $FILE
+echo -e "\tssl_session_cache shared:SSL:2m; # Default is 'none'." >> $FILE
 echo "" >> $FILE  # new line
 echo -e "\t# Specifies a time during which a client may reuse the session parameters." >> $FILE
 echo -e "\tssl_session_timeout 20m; # Default is '5m'." >> $FILE

@@ -76,7 +76,7 @@ def start_network(config: str, wait_for: int = 30):
     """
 
     print(f"starting network with config '{config}'")
-    s, o = getstatusoutput(f"make up CONFIG={config}")
+    s, o = getstatusoutput(f"make up NETWORK={config}")
 
     if s != 0:
         print(f"failed with status {s}: {o}")

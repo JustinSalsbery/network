@@ -270,8 +270,8 @@ if ! [ "$TOR_DIR" = "" ]; then
         echo "Address $IP" >> $FILE
         echo "ContactInfo $HOSTNAME@ewu.edu" >> $FILE
         echo "" >> $FILE  # new line
-        echo "SocksPort 9050 ExtendedErrors" >> $FILE
-        echo "ControlPort 9051" >> $FILE
+        echo "SocksPort 9050 ExtendedErrors  # act as a client" >> $FILE
+        echo "ControlPort 9051  # allow nyx" >> $FILE
         echo "" >> $FILE  # new line
 
         if [ "$TOR_BRIDGE" != "" ]; then
