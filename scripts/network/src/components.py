@@ -1156,7 +1156,7 @@ class TorNode(_Service):
             - sack: Enable or disable selective acknowledgments.
             - ttl: Configure the default ttl for packets.
         Note:
-            - Clients require 15 minutes. Hidden services require 
+            - Tor network requires about 15 minutes to initialize.
         """
 
         super().__init__(

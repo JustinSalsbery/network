@@ -254,6 +254,9 @@ for IFACE in $IFACES; do
     AUTH_FINGERPRINT="$(cat logs/$TOR_DIR/fingerprint)"
 
     # setup torrc
+    # for details: https://manpages.debian.org/testing/tor/torrc.5.en.html
+    # different man pages report different defaults, these settings may be redundant
+
     FILE="/etc/tor/torrc"
 
     echo "DataDirectory $DATA_DIR" > $FILE
@@ -267,6 +270,12 @@ for IFACE in $IFACES; do
     echo "ShutdownWaitLength 0" >> $FILE
     echo "" >> $FILE  # new line
     echo "TestingTorNetwork 1" >> $FILE
+    echo "TestingDirAuthVoteGuard *" >> $FILE
+    echo "TestingDirAuthVoteExit *" >> $FILE
+    echo "TestingDirAuthVoteHSDir *" >> $FILE
+    echo "" >> $FILE  # new line
+    echo "AssumeReachable 1" >> $FILE
+    echo "PathsNeededToBuildCircuits 0.25" >> $FILE
 
     DIR_NICKNAME=$(echo $TOR_DIR | sed 's/-//g')
     echo "DirAuthority $DIR_NICKNAME no-v2 v3ident=$AUTH_CERT orport=5000 $AUTH_IP:7000 $AUTH_FINGERPRINT" >> $FILE
