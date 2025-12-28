@@ -352,6 +352,7 @@ echo -e "\tbalance $ALGORITHM" >> $FILE
 if [ "$ALGORITHM" = "source" ]; then
     echo -e "\thash-type consistent  # deterministic routing" >> $FILE
 elif [ "$TYPE" = "l4" ]; then
+    echo -e "\t# client stickiness is maintained by ip alone" >> $FILE
     echo -e "\tstick-table type ip size 5m expire 10m  # 50 bytes per entry" >> $FILE
     echo -e "\tstick on src  # tcp must be sticky; use lookup table" >> $FILE
 elif [ "$TYPE" = "l5" ]; then

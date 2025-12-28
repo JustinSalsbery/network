@@ -215,9 +215,7 @@ chmod 666 logs/$HOSTNAME/
 DATA_DIR="/var/lib/tor/"
 LOG_DIR="/app/logs/$HOSTNAME/"
 
-for IFACE in $IFACES; do
-    IP="$(echo $IPS | cut -d' ' -f1)"
-    IPS="$(echo $IPS | cut -d' ' -f2-)"
+for IP in $IPS; do
 
     # if tor creates the data directory, the directory will be owned by the tor account
     # we are running tor with the root account, which will result in errors
